@@ -17,3 +17,5 @@ jobs:
               python3 scripts/check_outputs.py "$directory"
             fi
           done
+      - name: Verify coverage gate rejects broken outputs
+        run: python3 scripts/test_checker.py

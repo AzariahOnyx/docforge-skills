@@ -18,7 +18,8 @@ description: Draft audience-specific feature documentation, a task-focused how-t
    - How-to: one supported user goal, prerequisites, numbered actions, expected result, and only necessary notes. Every how-to guide must include a separate `## Expected result` section.
    - Release note: a short change summary and supported user impact, optimized for scanning.
 4. Follow templates/feature-doc.md, templates/how-to.md, and templates/release-note.md as adaptable structures. Delete placeholder sections with no supported content. Do not copy template instructions into final documents.
-5. Write the three required deliverables as `feature/feature-guide.md`, `how-to/how-to.md`, and `release-note/release-note.md` in the specified output directory. Additional requested articles may use descriptive filenames in the appropriate folder. Keep a compact claim-ID mapping in `analysis/HANDOVER.md`'s drafting notes or a review-only section; never put internal evidence labels in user-facing prose.
-6. Report which passages or deliverables remain blocked by questions. Do not claim publication readiness before independent proofreading.
+5. Write the three required deliverables as `feature/feature-guide.md`, `how-to/how-to.md`, and `release-note/release-note.md` in the specified output directory. Additional requested articles may use descriptive filenames in the appropriate folder.
+6. Read `templates/coverage.md` and create `analysis/COVERAGE.md`: account for each HANDOVER claim exactly once as INCLUDED, CONTEXT, DEFERRED, or BLOCKED. An INCLUDED claim needs a draft path and section; the other dispositions need a reason. Record unsupported passages for review. Keep the claim map out of user-facing prose.
+7. Report which passages or deliverables remain blocked by questions. Do not claim publication readiness before independent proofreading.
 
 Do not modify the source artifacts or silently answer clarification questions.

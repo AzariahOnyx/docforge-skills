@@ -6,7 +6,7 @@ This repository contains the three Tasket Tracks case-study deliverables and a r
 
 | Assignment part | Review |
 | --- | --- |
-| 1. Clarifications and assumptions | [Register](output/tracks/analysis/clarifications-and-assumptions.md), [evidence handover](output/tracks/analysis/HANDOVER.md), [content scope](output/tracks/analysis/CONTENT-PLAN.md) |
+| 1. Clarifications and assumptions | [Register](output/tracks/analysis/clarifications-and-assumptions.md), [evidence handover](output/tracks/analysis/HANDOVER.md), [content scope](output/tracks/analysis/CONTENT-PLAN.md), [claim coverage](output/tracks/analysis/COVERAGE.md) |
 | 2. Three documents | [Feature guide](output/tracks/feature/feature-guide.md), [how-to](output/tracks/how-to/how-to.md), [release note](output/tracks/release-note/release-note.md) |
 | 3. Reusable skill | [Generate docs](.agents/skills/generate-docs/SKILL.md), [live-round guide](demo/README.md) |
 | Review status | [QA report](output/tracks/qa/QA-REPORT.md) |
@@ -20,7 +20,7 @@ flowchart TD
     A["PRD and artifacts"] --> B["Analyzer"]
     B --> C["Handover, questions, content plan"]
     C --> D["Drafter"]
-    D --> E["Three reader-focused drafts"]
+    D --> E["Three drafts and coverage ledger"]
     E --> F["Source-first Proofreader"]
     A --> F
     F --> G["QA report and corrections"]
@@ -34,13 +34,13 @@ Each run creates a separate `output/<feature-slug>/` tree:
 
 | Folder | Files and purpose |
 | --- | --- |
-| `analysis/` | `HANDOVER.md` (classified claims), `clarifications-and-assumptions.md` (open questions), `CONTENT-PLAN.md` (CREATE / UPDATE / DEFER scope) |
+| `analysis/` | `HANDOVER.md` (classified claims), `clarifications-and-assumptions.md` (open questions), `CONTENT-PLAN.md` (CREATE / UPDATE / DEFER scope), `COVERAGE.md` (every claim's destination or reason for omission); optional `CHANGE-IMPACT.md` for a revised PRD |
 | `feature/` | `feature-guide.md` for a first-time user |
 | `how-to/` | `how-to.md` for one supported user goal |
 | `release-note/` | `release-note.md` for an existing user scanning the change |
 | `qa/` | `QA-REPORT.md` with source-first findings and readiness |
 
-Reusable structures live in `templates/`. [The documentation standard](standards/documentation.md) defines each article's purpose, structure, evidence rules, style, and review gates. The default run creates one file of each type; additional requested articles may use descriptive filenames in the same folders.
+Reusable structures live in `templates/`. [The documentation standard](standards/documentation.md) defines each article's purpose, structure, evidence rules, style, and review gates. The default run creates one file of each type; additional requested articles may use descriptive filenames in the same folders. A revised-source run compares old and new source evidence before drafting, writes `CHANGE-IMPACT.md`, and leaves the previous output intact.
 
 ## Run it in Codex CLI
 
@@ -58,6 +58,6 @@ For a new PRD, place it under `input/` with a distinct name and replace the two 
 python3 scripts/check_outputs.py output/tracks
 ```
 
-The checker catches missing files/headings, broken local links, placeholders, and unmatched claim/question IDs. GitHub Actions runs it on each generated set for pushes and pull requests. It does not establish whether a product claim is true. The Proofreader compares the source, handover, scope, and drafts, records PASS/WARNING/FAIL findings, and separates assignment review from publication readiness. No product build or existing Tasket documentation was supplied; proposed updates to existing help content remain candidates until that content is inventoried.
+The checker catches missing files/headings, broken local links, placeholders, unmatched claim/question IDs, and missing, duplicated, or invalid coverage dispositions. GitHub Actions runs it on each generated set for pushes and pull requests. It does not establish whether a product claim is true or whether a cited section truly supports it. The Proofreader compares the source, handover, scope, coverage, and drafts, records PASS/WARNING/FAIL findings, and separates assignment review from publication readiness. No product build or existing Tasket documentation was supplied; proposed updates to existing help content remain candidates until that content is inventoried.
 
 Download this branch as a ZIP from GitHub if a single folder is needed for submission. The [live-round guide](demo/README.md) gives a prompt and verification sequence for a different PRD.

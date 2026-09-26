@@ -3,7 +3,7 @@
 ## Scope and source coverage
 
 - Original source inspected: `input/Technical Writer - Case Study.pdf`, all six pages, with extracted text and rendered-page review. Assignment instructions are on pp. 1-2; the Tracks working PRD is on pp. 2-6. The permissions table on p. 5 and assignment table on p. 1 were visually checked.
-- Review artifacts: `analysis/HANDOVER.md`, `analysis/clarifications-and-assumptions.md`, and `analysis/CONTENT-PLAN.md`.
+- Review artifacts: `analysis/HANDOVER.md`, `analysis/clarifications-and-assumptions.md`, `analysis/CONTENT-PLAN.md`, and `analysis/COVERAGE.md`.
 - Drafts checked: `feature/feature-guide.md`, `how-to/how-to.md`, and `release-note/release-note.md`.
 - No supporting screenshots, product build, style guide, or other artifacts were provided. This is a source-fidelity review, not implementation verification.
 
@@ -26,12 +26,13 @@
 ## Checks
 
 - **Source fidelity and traceability: PASS for included claims.** The handover's claim IDs map to the three drafts. The original source, rather than the handover alone, was checked for each material passage.
+- **Claim coverage: PASS with publication warning.** All 41 register claims have one disposition in `analysis/COVERAGE.md`; partial uses and unsupported topics are called out, especially C20A/C20B (Q01). This ledger supports review but does not resolve the source conflict.
 - **Assumptions, unknowns, and contradictions: WARNING.** All 17 clarification entries carry an explicit editorial assumption. Q01 remains unresolved and no side is asserted.
 - **Procedure, permissions, and states: PASS for the selected how-to; WARNING for broader coverage.** The Mark Done procedure uses a named board action on an open In Progress task. Enablement, deletion, bulk start, and closed-task editing lack sufficient detail for procedures.
 - **Terminology, audience fit, clarity, and duplication: PASS.** The docs use task and track consistently; the conceptual guide, single-goal how-to, and scannable release note have distinct purposes.
 - **Invented UI and availability: PASS.** No Save button, settings path, modal, confirmation, release date, or counter formula was added.
 - **Content scope: PASS with warning.** The content plan identifies three new draft types and proposed update candidates; no existing Tasket documentation was supplied, so update targets remain unverified.
-- **Structural checker: PASS.** `python3 scripts/check_outputs.py output/tracks` found seven required files, required headings, claim/question ID linkage, and valid local links, with zero errors or warnings. It cannot verify product truth.
+- **Structural checker: PASS.** `python3 scripts/check_outputs.py output/tracks` found eight required files, required headings, claim/question ID linkage, complete unique coverage rows, and valid local links, with zero errors or warnings. It cannot verify product truth.
 
 ## Corrections made and recheck
 
