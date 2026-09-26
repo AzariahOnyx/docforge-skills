@@ -40,7 +40,7 @@ Each run creates a separate `output/<feature-slug>/` tree:
 | `release-note/` | `release-note.md` for an existing user scanning the change |
 | `qa/` | `QA-REPORT.md` with source-first findings and readiness |
 
-Reusable structures live in `templates/`. A run may use descriptive filenames inside the same folders when several topics of a type are requested. The default three-document run creates one of each.
+Reusable structures live in `templates/`. [The documentation standard](standards/documentation.md) defines each article's purpose, structure, evidence rules, style, and review gates. The default run creates one file of each type; additional requested articles may use descriptive filenames in the same folders.
 
 ## Run it in Codex CLI
 
@@ -58,6 +58,6 @@ For a new PRD, place it under `input/` with a distinct name and replace the two 
 python3 scripts/check_outputs.py output/tracks
 ```
 
-The checker catches missing files/headings, broken local links, placeholders, and unmatched claim/question IDs. It does not establish whether a product claim is true. The Proofreader compares the source, handover, scope, and drafts, records PASS/WARNING/FAIL findings, and separates assignment review from publication readiness. No product build or existing Tasket documentation was supplied; proposed updates to existing help content remain candidates until that content is inventoried.
+The checker catches missing files/headings, broken local links, placeholders, and unmatched claim/question IDs. GitHub Actions runs it on each generated set for pushes and pull requests. It does not establish whether a product claim is true. The Proofreader compares the source, handover, scope, and drafts, records PASS/WARNING/FAIL findings, and separates assignment review from publication readiness. No product build or existing Tasket documentation was supplied; proposed updates to existing help content remain candidates until that content is inventoried.
 
 Download this branch as a ZIP from GitHub if a single folder is needed for submission. The [live-round guide](demo/README.md) gives a prompt and verification sequence for a different PRD.

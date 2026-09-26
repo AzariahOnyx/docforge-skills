@@ -1,0 +1,19 @@
+name: Documentation structure
+
+on:
+  pull_request:
+  push:
+    branches: [main, build-reusable-doc-workflow]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check every generated documentation set
+        run: |
+          for directory in output/*; do
+            if [ -d "$directory" ]; then
+              python3 scripts/check_outputs.py "$directory"
+            fi
+          done
