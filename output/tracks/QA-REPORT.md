@@ -32,7 +32,7 @@
 
 ## Corrections made and recheck
 
-The drafting pass deliberately omitted the disable/re-enable retention claim and unsupported click paths before QA. The independent check found no remaining unsupported product claim requiring a post-draft correction. The three drafts were rechecked against the listed page locations. The unresolved source issues remain documented rather than silently fixed.
+The drafting pass deliberately omitted the disable/re-enable retention claim and unsupported click paths before QA. The separate source-first QA pass found no remaining unsupported product claim requiring a post-draft correction. The three drafts were rechecked against the listed page locations. The unresolved source issues remain documented rather than silently fixed.
 
 ## Readiness
 
