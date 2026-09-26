@@ -17,10 +17,10 @@ If the current Codex session does not show a new skill under `/skills`, referenc
 
 ## Revised-source rehearsal
 
-The fictional [revision](mock-prd-v2.md) changes the fixed option from **1 hour** to **2 hours** and makes **Resume now** online-only; it still leaves the “Until tomorrow” boundary undefined. To practice a real documentation update, run this prompt in Codex:
+The fictional [revision](mock-prd-v2.md) changes the fixed option from **1 hour** to **2 hours** and makes **Resume now** online-only; it still leaves the “Until tomorrow” boundary undefined. A [reviewed revised output](../output/quiet-hours-v2/analysis/CHANGE-IMPACT.md) demonstrates the source comparison and updated docs. To rerun it yourself without replacing that example, use this prompt in Codex:
 
 ```text
-Read .agents/skills/generate-docs/SKILL.md. Use update mode with previous source demo/mock-prd.md, revised source demo/mock-prd-v2.md, and previous output output/quiet-hours/. Write a fresh set to output/quiet-hours-v2/. Compare the sources first in analysis/CHANGE-IMPACT.md, then run Analyzer → Drafter → Proofreader. Keep output/quiet-hours/ intact. Check that the new how-to says 2 hours, Resume now is online-only, and the undefined Until tomorrow boundary remains UNKNOWN. Run the structural checker and report the QA result.
+Read .agents/skills/generate-docs/SKILL.md. Use update mode with previous source demo/mock-prd.md, revised source demo/mock-prd-v2.md, and previous output output/quiet-hours/. Write a fresh set to output/quiet-hours-v2-live/. Compare the sources first in analysis/CHANGE-IMPACT.md, then run Analyzer → Drafter → Proofreader. Keep output/quiet-hours/ and output/quiet-hours-v2/ intact. Check that the new how-to says 2 hours, Resume now is online-only, and the undefined Until tomorrow boundary remains UNKNOWN. Run the structural checker and report the QA result.
 ```
 
-Compare the source-change table to the two PRDs and [revision acceptance notes](revision-acceptance.md), inspect the updated passages and removed 1-hour claims, then run `python3 scripts/check_outputs.py output/quiet-hours-v2`. The checker verifies structure and coverage; the Proofreader validates semantic impact.
+Compare the source-change table to the two PRDs and [revision acceptance notes](revision-acceptance.md), inspect the updated passages and removed 1-hour claims, then run `python3 scripts/check_outputs.py output/quiet-hours-v2-live`. The checker verifies structure and coverage; the Proofreader validates semantic impact.
