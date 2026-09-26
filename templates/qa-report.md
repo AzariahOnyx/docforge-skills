@@ -2,7 +2,7 @@
 
 ## Scope and source coverage
 - Original sources inspected: [paths, pages/sections]
-- Handover and clarification register: [paths]
+- Handover, clarification register, and content plan: [paths]
 - Drafts inspected: [paths]
 - Uninspected or unreadable material: [none or details]
 
@@ -16,6 +16,7 @@
 - Assumptions, unknowns, and contradictions: [status, reason]
 - Procedures, permissions, and states: [status, reason]
 - Terminology, audience fit, clarity, and duplication: [status, reason]
+- Structural checker: [PASS/WARNING/FAIL; command and limits]
 
 ## Open questions and publication readiness
 [Q IDs and affected passages. Distinguish assignment-complete drafts from publication-ready docs.]

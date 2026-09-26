@@ -15,4 +15,9 @@ Use this workflow for any PRD: **Analyzer → structured handover → Drafter �
 3. **Drafter:** Draft the requested deliverable from the handover and sources, preserving uncertainty and unresolved contradictions.
 4. **Independent Proofreader:** Use a reviewer separate from the Drafter to check source fidelity, unsupported behavior, completeness, clarity, and consistency; report issues for revision.
 
-Keep this workflow generic across future PRDs. Create only the deliverables explicitly requested by the user.
+Keep this workflow generic across future PRDs. For the three-document workflow, use
+`output/<slug>/analysis/`, `feature/`, `how-to/`, `release-note/`, and `qa/`.
+Write an evidence-based content plan that distinguishes new content, updates to
+existing content, and deferred work; never assume an existing document exists
+without inspecting it. Do not create extra reader-facing articles without a
+specific supported need.

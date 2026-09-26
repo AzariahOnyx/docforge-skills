@@ -41,6 +41,8 @@
 | How-to guide | Complete [specific task] | [IDs] | [Q IDs] |
 | Release note | Scan the change | [IDs] | [Q IDs] |
 
+See `CONTENT-PLAN.md` for CREATE / UPDATE / DEFER decisions and destination paths.
+
 ## Drafter guidance
 - Preferred terms: [source-backed]
 - Claims not to assert: [IDs]

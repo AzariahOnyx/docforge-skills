@@ -56,7 +56,7 @@ For every material gap, record:
 
 ## Outputs
 
-When invoked for analysis, produce these two files in the assignment's designated output location. Leave source files unchanged.
+When invoked for analysis, produce these three files in the assignment's `analysis/` output directory. Leave source files unchanged. Read `templates/handover.md` and `templates/content-plan.md` as adaptable structures.
 
 ### HANDOVER.md
 
@@ -75,3 +75,7 @@ Structure the handover for the Drafter as follows:
 Provide the assignment's clarification register using every material-gap field above. Include all working assumptions, their rationale, evidence limits, and documentation impact. Reuse IDs from the handover. Keep unanswered questions and contradictions unresolved; never supply invented answers.
 
 Before handing off, verify source coverage, citations, classification consistency, and matching IDs across outputs. Explicitly report incomplete analysis.
+
+### CONTENT-PLAN.md
+
+Inventory supplied existing documentation, if any. For each topic, record its reader goal, proposed action (CREATE, UPDATE, or DEFER), destination, supporting claim IDs, open question IDs, and reason. If existing documentation was not supplied, mark its existence UNKNOWN and label update candidates as proposed, not confirmed edits. Link each of the three required drafts to a supported reader goal. Recommend a diagram only when relationships, flow, or state changes are clearer visually; use source-backed nodes and transitions, and flag unverified edges. Distinguish a content plan from an instruction to invent new product behavior.

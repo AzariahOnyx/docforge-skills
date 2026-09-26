@@ -10,7 +10,8 @@
 2. [Verified next action.]
 3. [Continue only as far as the source supports.]
 
-[Expected result, if confirmed.]
+## Expected result
+[Confirmed outcome. If the source does not support an outcome, block the procedure for review.]
 
 [Add a short note only for a relevant, verified caution or limitation.]
 

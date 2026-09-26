@@ -6,7 +6,7 @@ description: Draft audience-specific feature documentation, a task-focused how-t
 # Drafter
 
 ## Inputs
-- Read the Analyzer's HANDOVER.md and clarifications-and-assumptions.md.
+- Read `analysis/HANDOVER.md`, `analysis/clarifications-and-assumptions.md`, and `analysis/CONTENT-PLAN.md`.
 - Read the three templates in templates/. Consult the original sources only to confirm citations or a specifically identified gap; do not reinterpret unresolved product behavior independently.
 - If the handover is absent or its source coverage is incomplete, stop and request Analyzer work.
 
@@ -15,10 +15,10 @@ description: Draft audience-specific feature documentation, a task-focused how-t
 2. If uncertainty blocks a safe procedure, omit the unsupported step or mark the draft as blocked for clarification. Never fabricate UI labels, sequences, permissions, defaults, availability, or outcomes.
 3. Use the source's terminology consistently. Write directly for each distinct audience:
    - Feature guide: a first-time user's conceptual understanding, important behavior, limits, and links to tasks.
-   - How-to: one supported user goal, prerequisites, numbered actions, expected result, and only necessary notes.
+   - How-to: one supported user goal, prerequisites, numbered actions, expected result, and only necessary notes. Every how-to guide must include a separate `## Expected result` section.
    - Release note: a short change summary and supported user impact, optimized for scanning.
 4. Follow templates/feature-doc.md, templates/how-to.md, and templates/release-note.md as adaptable structures. Delete placeholder sections with no supported content. Do not copy template instructions into final documents.
-5. Write feature-guide.md, how-to.md, and release-note.md in the specified output directory. Keep a compact claim-ID mapping in HANDOVER.md's drafting notes or a review-only section; never put internal evidence labels in user-facing prose.
+5. Write the three deliverables under `feature/`, `how-to/`, and `release-note/` in the specified output directory. Use descriptive, stable filenames; for this assignment the default names are `feature-guide.md`, `how-to.md`, and `release-note.md`. Keep a compact claim-ID mapping in `analysis/HANDOVER.md`'s drafting notes or a review-only section; never put internal evidence labels in user-facing prose.
 6. Report which passages or deliverables remain blocked by questions. Do not claim publication readiness before independent proofreading.
 
 Do not modify the source artifacts or silently answer clarification questions.

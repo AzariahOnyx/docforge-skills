@@ -8,6 +8,19 @@ Tracks belong to a project. A task belongs to one project and can be started on 
 
 A task's overall status is separate: **Open**, **Completed**, or **Discarded**. Completed and Discarded tasks are called **closed**. Marking a task Done on one track does not complete the task or change its status on other tracks.
 
+For an open task, the documented transitions on an individual track are:
+
+```mermaid
+stateDiagram-v2
+    state "Not started" as not_started
+    state "In Progress" as in_progress
+    state "Done" as done
+    [*] --> not_started
+    not_started --> in_progress: Start
+    in_progress --> done: Mark Done
+    done --> in_progress: Mark Pending
+```
+
 ## See work on the Tracks board
 
 When Tracks is enabled for a project, open its **Tracks** tab. Each track has a column with an **In Progress** section and a **Done** section. Only open tasks appear on the board. A task started on several tracks appears in each corresponding column.
@@ -32,4 +45,4 @@ A team member can enable Tracks and create, rename, or move a track. Only an adm
 
 **Start**, **Mark Done**, and **Mark Pending** are available offline. These changes queue locally and reconcile when a connection returns. Switching the capability on or off and creating, renaming, moving, or deleting tracks require an online connection.
 
-To change a task's status on one track, see [Mark a task Done on a track](how-to.md).
+To change a task's status on one track, see [Mark a task Done on a track](../how-to/how-to.md).

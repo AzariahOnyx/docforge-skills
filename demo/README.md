@@ -1,10 +1,16 @@
-# Live round: use the workflow
+# Live-round rehearsal
 
-1. Practice with `demo/mock-prd.md`, or put a new PRD and supporting artifacts in `input/` under distinct filenames. Do not overwrite the Tracks source.
-2. In the repository root, launch Codex and request: "Use $generate-docs on demo/mock-prd.md and write to output/quiet-hours/. Review the source first and preserve unknowns." For a different PRD, change both paths.
-3. Inspect HANDOVER.md and clarifications-and-assumptions.md first. Check that each material claim cites the new source and both sides of any contradiction appear.
-4. Inspect the three audience-specific documents and QA-REPORT.md. Explain any publication blockers.
-5. For a live edit, ask Codex to change one rule in the relevant SKILL.md, review the Git diff, and rerun the affected stage or the full workflow. Compare outputs and explain the difference.
-6. For the practice PRD, verify the workflow flags the undefined meaning of “Until tomorrow” and never guesses a time zone or time. For an interview PRD, commit its source and outputs only when permitted.
+This is a 45-minute demonstration path. The fictional [Quiet Hours PRD](mock-prd.md) is unrelated to Tasket.
 
-If the CLI session does not list a newly added skill, refer to its repository path explicitly in the prompt. If PDF text extraction misses graphics or tables, inspect those pages visually and record the coverage limit.
+1. In the repository root, open Codex CLI. For the rehearsal, enter:
+
+   ```text
+   Read .agents/skills/generate-docs/SKILL.md and run its Analyzer → Drafter → Proofreader workflow on demo/mock-prd.md. Write to output/quiet-hours/. Use only that mock PRD as product evidence. Do not change Tracks files. Report the undefined “Until tomorrow” time and the structural checker result.
+   ```
+
+2. Open `output/quiet-hours/analysis/`. Check source citations, classifications, the question register, and `CONTENT-PLAN.md`. The PRD leaves “Until tomorrow” without a time zone or time of day; the workflow must not guess either.
+3. Open the three type folders and `qa/QA-REPORT.md`. Check one conceptual guide, one supported how-to, one short release note, and a source-first readiness decision.
+4. When asked to change a rule live, edit the relevant `.agents/skills/<stage>/SKILL.md`, show `git diff`, and rerun the affected stage. Example: require a separate `## Expected result` heading in every how-to, then compare the resulting how-to. This rule now exists in the Drafter skill as the recorded practice change.
+5. For the interview's new PRD, use a new `input/` filename and `output/<new-slug>/`. Re-run the master skill, review the new source and outputs, and run `python3 scripts/check_outputs.py output/<new-slug>`. Commit only when the interview permits it.
+
+If the current Codex session does not show a new skill under `/skills`, reference the SKILL.md path explicitly or restart Codex. For a PDF with tables or graphics, inspect those pages visually. A structural PASS does not replace source review.

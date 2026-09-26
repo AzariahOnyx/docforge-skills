@@ -103,6 +103,8 @@ The complete question, evidence, why, editorial assumption, and documentation im
 
 ## Documentation plan
 
+See `CONTENT-PLAN.md` for CREATE / UPDATE / DEFER scope, destinations, and information architecture.
+
 | Deliverable | Reader goal | Supported claim IDs | Excluded or blocked |
 | --- | --- | --- | --- |
 | Feature guide | Understand parallel workstreams, state, board, pill, and lifecycle | C05-C08, C12, C14-C19, C21-C24, C27-C32 | Disable retention Q01; counter meaning Q02; Delete procedure/permission Q03; closed-task edits Q10 |
@@ -119,8 +121,8 @@ The complete question, evidence, why, editorial assumption, and documentation im
 
 ## Draft claim map (review-only)
 
-- `feature-guide.md`: overview C05-C07; board C08-C09/C12; pill C14-C16; close/reopen C17/C30; rename/move/delete C18-C19; cross-project C21; permissions C22-C24; offline C31-C34.
-- `how-to.md`: prerequisite C04/C08/C23; board action C12/C28; outcome C08/C28; offline note C31.
-- `release-note.md`: C05-C06, C08, C14-C17, C28, C31.
+- `feature/feature-guide.md`: overview C05-C07; board C08-C09/C12; pill C14-C16; close/reopen C17/C30; rename/move/delete C18-C19; cross-project C21; permissions C22-C24; offline C31-C34.
+- `how-to/how-to.md`: prerequisite C04/C08/C23; board action C12/C28; outcome C08/C28; offline note C31.
+- `release-note/release-note.md`: C05-C06, C08, C14-C17, C28, C31.
 
 This map is for the reviewer and should be checked against the actual passages in the drafts.
