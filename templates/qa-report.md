@@ -2,7 +2,7 @@
 
 ## Scope and source coverage
 - Original sources inspected: [paths, pages/sections]
-- Handover, clarification register, and content plan: [paths]
+- Handover, clarification register, content plan, and claim coverage: [paths]
 - Drafts inspected: [paths]
 - Uninspected or unreadable material: [none or details]
 
@@ -13,6 +13,8 @@
 
 ## Checks
 - Source fidelity and claim traceability: [PASS/WARNING/FAIL, reason]
+- Claim coverage: [PASS/WARNING/FAIL; verify every handover claim, disposition, destination, and omissions against source and drafts]
+- Revised source impact, if applicable: [PASS/WARNING/FAIL; source-to-source comparison and stale passage review]
 - Assumptions, unknowns, and contradictions: [status, reason]
 - Procedures, permissions, and states: [status, reason]
 - Terminology, audience fit, clarity, and duplication: [status, reason]

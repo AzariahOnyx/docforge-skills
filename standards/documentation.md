@@ -7,6 +7,8 @@ Apply this to any PRD. The source and the Analyzer handover determine product tr
 - In the handover, label each material claim FACT, ASSUMPTION, INFERENCE, UNKNOWN, or CONTRADICTION with a source location. A PRD FACT is a stated requirement, not proof of implemented behavior.
 - Write unqualified product behavior in reader-facing docs only when the source supports it. Keep editorial assumptions and unresolved questions in review artifacts. Do not choose between contradictory requirements.
 - Record CREATE, UPDATE, or DEFER in the content plan. Inspect actual existing documentation before naming an update target. If none was supplied, label proposed updates as candidates.
+- After drafting, give every material handover claim exactly one row in `analysis/COVERAGE.md`: INCLUDED with a reader-facing destination, CONTEXT, DEFERRED, or BLOCKED with a reason. Review both the ledger and draft passages against the original source. A complete ledger alone does not establish source fidelity.
+- For a revised PRD, compare the previous and new source versions in `analysis/CHANGE-IMPACT.md` before changing reader-facing text. Record added, changed, removed, resolved, and conflicting requirements, affected sections, CREATE/UPDATE/DEFER/RETIRE-CANDIDATE actions, and evidence. Keep the previous output intact. If the old source is missing, state that the comparison is unavailable.
 - If a complete procedure lacks a verified starting point, action, or result, select another supported task or mark it blocked. Never fill in a UI click path.
 
 ## Feature guide: understand
@@ -29,4 +31,4 @@ Apply this to any PRD. The source and the Analyzer handover determine product tr
 
 - Use direct language, consistent source terminology, second person where useful, and bold for verified UI labels. Remove template placeholders and internal claim IDs from reader-facing articles.
 - Check links, headings, accessibility of diagrams, grammar, duplication, and that each article serves its audience.
-- The structural checker verifies files, headings, local links, and ID references. The source-first Proofreader verifies meaning, omissions, and publication risks. Record PASS, WARNING, or FAIL and distinguish an assignment-ready draft from publication-ready documentation.
+- The structural checker verifies files, headings, local links, ID references, and unique claim dispositions. The source-first Proofreader verifies meaning, coverage decisions, omissions, and publication risks. Record PASS, WARNING, or FAIL and distinguish an assignment-ready draft from publication-ready documentation.

@@ -21,3 +21,6 @@ Write an evidence-based content plan that distinguishes new content, updates to
 existing content, and deferred work; never assume an existing document exists
 without inspecting it. Do not create extra reader-facing articles without a
 specific supported need.
+After drafting, map every material handover claim in `analysis/COVERAGE.md`.
+For revised PRDs, compare two source versions before changing documentation;
+preserve the earlier output and record affected sections in `analysis/CHANGE-IMPACT.md`.

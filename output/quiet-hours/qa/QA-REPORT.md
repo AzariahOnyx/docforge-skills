@@ -3,7 +3,7 @@
 ## Scope and source coverage
 
 - Sole source inspected: `demo/mock-prd.md`, all sections. No product build or supporting artifacts were supplied.
-- Review artifacts: `analysis/HANDOVER.md`, `analysis/clarifications-and-assumptions.md`, `analysis/CONTENT-PLAN.md`.
+- Review artifacts: `analysis/HANDOVER.md`, `analysis/clarifications-and-assumptions.md`, `analysis/CONTENT-PLAN.md`, `analysis/COVERAGE.md`.
 - Drafts checked: `feature/feature-guide.md`, `how-to/how-to.md`, `release-note/release-note.md`.
 - This is a source-first review of the rehearsal set, not verification against a running product.
 
@@ -21,10 +21,11 @@
 ## Checks
 
 - **Source fidelity and claim traceability: PASS for included claims.** C01-C07 support the core copy; unknowns remain qualified or omitted.
+- **Claim coverage: PASS with publication warning.** All 11 register claims have one disposition in `analysis/COVERAGE.md`; C08-C11 remain blocked by Q01-Q04.
 - **Assumptions and contradictions: WARNING.** Q01-Q04 remain open; no contradictory statements were found.
 - **Procedure, permissions, and states: PASS for the 1 hour task.** Pausing online and changing only one's own setting follow the source.
 - **Audience fit and terminology: PASS.** Each document serves a distinct reader goal; the how-to has a separate Expected result section.
-- **Structural checker: PASS.** `python3 scripts/check_outputs.py output/quiet-hours` found seven required files with zero errors or warnings. It cannot verify product truth.
+- **Structural checker: PASS.** `python3 scripts/check_outputs.py output/quiet-hours` found eight required files with zero errors or warnings. It cannot verify product truth.
 
 ## Corrections made and recheck
 
