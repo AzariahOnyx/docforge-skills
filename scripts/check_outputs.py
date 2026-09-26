@@ -82,7 +82,7 @@ def main() -> int:
     for issue in warnings:
         print(f"WARNING: {issue}")
     print(f"{'FAIL' if errors else 'PASS'}: {len(texts)}/{len(REQUIRED)} files checked; "
-          f"{len(errors)} errors, {len(warnings)} warnings")
+          f"{len(errors)} error(s), {len(warnings)} warning(s)")
     print("Structural checks only; source fidelity requires the Proofreader.")
     return 1 if errors else 0
 
