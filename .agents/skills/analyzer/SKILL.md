@@ -12,6 +12,7 @@ Perform the analysis stage of Analyzer → structured handover → Drafter → i
 1. Accept the supplied PRD, supporting artifacts, and assignment requirements. Follow repository source-authority rules; here, `input/` contains the authoritative PRD and supporting artifacts.
 2. Inventory and read all sources in full, including tables, diagrams, notes, and appendices. Inspect visual content when extraction omits meaning. Record unreadable or inaccessible portions and their effect on coverage; never claim full review when incomplete.
 3. Cite relevant claims using source paths and page and/or section locators, adding table, figure, or line references where useful. For missing information, cite relevant sections reviewed and explain what they do not establish.
+4. Prefer stable section or page locators. If exact Markdown line numbers are useful, inspect the numbered source (for example, `nl -ba <source>`) immediately before writing the citation. Verify that the cited line contains the supporting text; do not cite a heading or blank line as if it proves a behavior. Use `path.md, line N` or `path.md, lines N-M` consistently and recheck after source edits.
 
 ## Claim classification
 
@@ -74,7 +75,7 @@ Structure the handover for the Drafter as follows:
 
 Provide the assignment's clarification register using every material-gap field above. Include all working assumptions, their rationale, evidence limits, and documentation impact. Reuse IDs from the handover. Keep unanswered questions and contradictions unresolved; never supply invented answers.
 
-Before handing off, verify source coverage, citations, classification consistency, and matching IDs across outputs. Explicitly report incomplete analysis.
+Before handing off, verify source coverage, every cited location against the actual source, classification consistency, and matching IDs across outputs. Explicitly report incomplete analysis.
 
 ### CONTENT-PLAN.md
 

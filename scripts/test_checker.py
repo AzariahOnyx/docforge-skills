@@ -62,6 +62,24 @@ def main() -> int:
             print("FAIL: incomplete change impact passed unexpectedly")
             return 1
         print("PASS: optional change-impact structure checked")
+        impact.write_text(
+            "# Change impact\n\n## Baseline\n\n"
+            "## Source changes\n\n"
+            "demo/mock-prd-v2.md, line 15 supports the changed option.\n\n"
+            "## Document actions\n\nUpdate.\n",
+            encoding="utf-8",
+        )
+        if run(root).returncode != 0:
+            print("FAIL: valid source line citation rejected")
+            return 1
+        impact.write_text(
+            impact.read_text(encoding="utf-8").replace("line 15", "line 14"),
+            encoding="utf-8",
+        )
+        if run(root).returncode == 0:
+            print("FAIL: blank source line citation passed unexpectedly")
+            return 1
+        print("PASS: blank source line citation rejected")
     return 0
 
 
