@@ -1,24 +1,17 @@
 ---
 name: demo-studio
-description: Run the Studio Approval Checkpoints PDF live demo in this repository, from safe branch and PDF preflight through the existing generate-docs workflow. Use when explicitly invoked for the Studio demo.
+description: Run the reusable documentation demo for any user-supplied PRD PDF. Invoke as $demo-studio input/<PDF filename>. Select the source, create a fresh output folder, and complete analysis, drafting, independent proofreading, and checks.
 ---
 
-# Studio documentation demo
+# One-command documentation demo
 
-Work from the repository root. This is a thin demo entry point. Use `.agents/skills/generate-docs/SKILL.md` for the actual documentation workflow; do not duplicate or change its rules.
+Work from the repository root. The words after `$demo-studio` identify the input PDF; accept a path such as `input/Technical Writer - Case Study.pdf`, a filename in `input/`, or a uniquely matching filename stem. Quoted paths and spaces are valid. Do not require the user to specify an output directory or repeat the workflow prompt.
 
-## Inputs and boundaries
+1. Read `AGENTS.md` and `.agents/skills/generate-docs/SKILL.md`. Check Git status without changing branches, stashing, resetting, committing, or pushing. Keep all existing system files, inputs, outputs, and backups unchanged.
+2. Resolve the supplied PDF within `input/`. If the path is missing, find a unique matching PDF in `input/`; if ambiguous or absent, ask only for the correct filename. Do not select a PDF in `.demo-backups/`, an old output, or another example as product evidence. Verify readable text, page count, and all pages; render pages where extraction misses visual content. Stop and explain if unreadable.
+3. Derive a short descriptive lowercase hyphenated slug from the PDF's product or feature title, removing generic words such as PRD, dummy, case study, and PDF. Create a fresh `output/<slug>/` set. If that directory exists or is already tracked, choose `output/<slug>-2/`, then the next unused number. Never overwrite, move, delete, or use a prior output as evidence. Report the chosen path.
+4. Run the entire `generate-docs` workflow on this PDF: source-first Analyzer and structured handover, clarification register and content plan; Drafter using repository standards and templates; claim coverage; independent source-first Proofreader and evidence-backed corrections. Inspect every page before drafting. Preserve both sides of contradictions and mark unknowns. Propose CREATE, UPDATE, and DEFER scope based on an inventory of any supplied existing docs. Add Mermaid flows only where the source supports them.
+5. Run `python3 scripts/check_outputs.py output/<chosen-slug>`. Fix structural errors, rerun, and report the result separately from source-fidelity review. Never claim publication readiness while material contradictions or unknowns remain.
+6. Summarize source page count, exact new file paths, scope, proofreading and structural QA, unresolved questions, and readiness. Leave all files uncommitted and unpushed.
 
-- Source: `input/Neo-Studio-Approval-Checkpoints-Dummy-PRD.pdf`.
-- Output: `output/studio-approval-checkpoints/`.
-- Treat the PDF as the authority for this fictional feature. Do not use the existing Tracks or Quiet Hours outputs as product evidence.
-- Do not commit, push, delete, overwrite another output set, or modify the PDF.
-
-## Run
-
-1. Read `AGENTS.md` and check Git status and the current branch. The desired branch is `demo-studio-approval-checkpoints`, based on `main`. If already on it, stay there. If on `main` and it is safe to switch, use an existing local/remote branch or create the branch from `main` if neither exists. If switching would disturb work, stop and report the state; never reset, stash, or discard changes automatically.
-2. Verify that the PDF exists and text can be extracted; report its page count. Inspect every page, including tables, figures, notes, and layout. If extraction omits important content, render and inspect it. If unreadable, stop before drafting and report the limitation.
-3. Check whether `output/studio-approval-checkpoints/` already contains files. If so, report that this demo has already run and ask for a fresh output slug before generating again. Never overwrite a previous run.
-4. Read `.agents/skills/generate-docs/SKILL.md` and run its entire Analyzer → structured handover → Drafter → independent source-first Proofreader sequence. Follow the repository templates and `standards/documentation.md`. Create a fresh output set in the specified output directory. Preserve both sides of source contradictions and all material unknowns; do not choose a side or invent UI behavior.
-5. Run `python3 scripts/check_outputs.py output/studio-approval-checkpoints`. Fix structural defects supported by source evidence and rerun the check. A structural PASS alone does not prove source fidelity.
-6. Report the created file paths, source page count, CREATE/UPDATE/DEFER scope, QA and checker results, material unanswered questions, and assignment versus publication readiness. Leave all changes uncommitted and unpushed.
+Invocation example: `$demo-studio input/Technical Writer - Case Study.pdf`. The same skill must work for the next PDF uploaded into `input/`, without editing this skill or asking for a long prompt.
