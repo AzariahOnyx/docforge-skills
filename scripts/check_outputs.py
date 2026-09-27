@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Check the structure of one generated documentation set.
 
-This gate checks files, headings, links, and placeholders. A source-first
+This gate checks files, headings, links, placeholders, and Markdown source
+line locators. A source-first
 Proofreader must still check the accuracy and completeness of product claims.
 """
 
@@ -27,6 +28,28 @@ CLAIM = re.compile(r"\bC\d+[A-Z]?\b")
 QUESTION = re.compile(r"\bQ\d+\b")
 REGISTER_ROW = re.compile(r"^\|\s*(C\d+[A-Z]?)\s*\|", re.M)
 ALLOWED_DISPOSITIONS = {"INCLUDED", "CONTEXT", "DEFERRED", "BLOCKED"}
+SOURCE_LINE = re.compile(
+    r"(?P<path>(?:demo|input)/[^\s`|,;()]+\.md)"
+    r"(?:\s*,?\s*(?:at\s+)?lines?\s+|:L?)"
+    r"(?P<first>\d+)(?:\s*[-–]\s*L?(?P<last>\d+))?",
+    re.I,
+)
+
+
+def check_source_lines(relative: str, body: str, errors: list[str]) -> None:
+    repo = Path(__file__).resolve().parents[1]
+    for match in SOURCE_LINE.finditer(body):
+        source = repo / match["path"]
+        first = int(match["first"])
+        last = int(match["last"] or first)
+        if not source.is_file():
+            errors.append(f"{relative}: source line citation file missing: {match['path']}")
+            continue
+        lines = source.read_text(encoding="utf-8").splitlines()
+        if first < 1 or last < first or last > len(lines):
+            errors.append(f"{relative}: invalid source lines {match.group(0)}")
+        elif not any(lines[index - 1].strip() for index in range(first, last + 1)):
+            errors.append(f"{relative}: source citation points only to blank lines: {match.group(0)}")
 
 
 def main() -> int:
@@ -128,13 +151,19 @@ def main() -> int:
             # proofreader reviews those references rather than rejecting them.
             warnings.append(f"analysis/CHANGE-IMPACT.md: check prior-source reference {claim}")
 
+    for relative, body in texts.items():
+        if relative.startswith(("analysis/", "qa/")):
+            check_source_lines(relative, body, errors)
+    if impact_path.is_file():
+        check_source_lines("analysis/CHANGE-IMPACT.md", impact, errors)
+
     for issue in errors:
         print(f"FAIL: {issue}")
     for issue in warnings:
         print(f"WARNING: {issue}")
     print(f"{'FAIL' if errors else 'PASS'}: {len(texts)}/{len(REQUIRED)} files checked; "
           f"{len(errors)} error(s), {len(warnings)} warning(s)")
-    print("Structural checks only; source fidelity requires the Proofreader.")
+    print("Structural and line-target checks only; source fidelity requires the Proofreader.")
     return 1 if errors else 0
 
 
