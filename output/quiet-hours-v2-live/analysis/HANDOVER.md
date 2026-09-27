@@ -20,15 +20,15 @@ FACT means explicitly stated in the revised PRD, not independently verified prod
 
 | ID | Classification | Current claim | Revised evidence | Change / limit |
 | --- | --- | --- | --- | --- |
-| C01 | FACT | Pulseboard is a team dashboard; members receive in-app alerts for items assigned to them. | Product context, line 6 | Wording update from prior source. |
-| C02 | FACT | Quiet Hours pauses a member's own in-app alerts for a selected period; it does not affect email alerts or other members' settings. | Feature, line 10 | Scope retained. |
-| C03 | FACT | From Settings > Notifications > Quiet Hours, select Pause alerts, choose 2 hours or Until tomorrow, then Confirm. | UI and workflow, line 14 | Fixed option changed from 1 to 2 hours. |
-| C04 | FACT | Screen displays the selected end time and Resume now. | UI and workflow, line 14 | Display format unspecified. |
-| C05 | FACT | Resume now restarts in-app alerts immediately and requires an online connection. | UI and workflow, line 16 | New explicit prerequisite; do not apply to automatic resumption. |
-| C06 | FACT | In-app alerts resume automatically when the selected period ends. | UI and workflow, line 16 | No online condition specified for this automatic transition. |
-| C07 | FACT | Pausing is available only while online. | UI and workflow, line 16 | Separate from manual resume requirement C05. |
+| C01 | FACT | Pulseboard is a team dashboard; members receive in-app alerts for items assigned to them. | Product context, line 7 | Wording update from prior source. |
+| C02 | FACT | Quiet Hours pauses a member's own in-app alerts for a selected period; it does not affect email alerts or other members' settings. | Feature, line 11 | Scope retained. |
+| C03 | FACT | From Settings > Notifications > Quiet Hours, select Pause alerts, choose 2 hours or Until tomorrow, then Confirm. | UI and workflow, line 15 | Fixed option changed from 1 to 2 hours. |
+| C04 | FACT | Screen displays the selected end time and Resume now. | UI and workflow, line 15 | Display format unspecified. |
+| C05 | FACT | Resume now restarts in-app alerts immediately and requires an online connection. | UI and workflow, line 15 | New explicit prerequisite; do not apply to automatic resumption. |
+| C06 | FACT | In-app alerts resume automatically when the selected period ends. | UI and workflow, line 15 | No online condition specified for this automatic transition. |
+| C07 | FACT | Pausing is available only while online. | UI and workflow, line 15 | Separate from manual resume requirement C05. |
 | C08 | FACT | Any signed-in member can change their own setting; admins cannot change another member's setting. | Permissions, line 19 | Retained. |
-| C09 | UNKNOWN | Until tomorrow's time of day and time zone are not specified. | Known gap, line 22; option in line 14 | Q01; explicitly do not guess. |
+| C09 | UNKNOWN | Until tomorrow's time of day and time zone are not specified. | Known gap, line 23; option in line 15 | Q01; explicitly do not guess. |
 | C10 | UNKNOWN | Whether alerts created during a pause are delivered later is unspecified. | Known gap, line 23 | Q02. |
 | C11 | UNKNOWN | Whether the selected period can be changed during an active pause is unspecified. | Known gap, line 23 | Q03; newly explicit unknown. |
 | C12 | UNKNOWN | Release date, platform list, and rollout plan are absent. | Release, line 27 | Q04; retained. |
@@ -51,7 +51,7 @@ See [clarifications-and-assumptions.md](clarifications-and-assumptions.md). Comp
 
 | ID | Topic | Evidence | Question |
 | --- | --- | --- | --- |
-| Q01 | Until tomorrow boundary | C09; revised Known gap, line 22 | What exact time and time zone define the option? |
+| Q01 | Until tomorrow boundary | C09; revised Known gap, line 23 | What exact time and time zone define the option? |
 | Q02 | Alerts generated during pause | C10; revised Known gap, line 23 | Are they delivered later, discarded, or handled another way? |
 | Q03 | Changing an active period | C11; revised Known gap, line 23 | Can a member change the selected period mid-pause; if so, how? |
 | Q04 | Release metadata | C12; revised Release, line 27 | What date, platforms, and rollout may be announced? |
