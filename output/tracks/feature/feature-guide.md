@@ -35,8 +35,6 @@ Deleting a track permanently removes its assignments and statuses from tasks, in
 
 > **Warning:** Track deletion is irreversible. There is no undo or recovery window.
 
-The source requirements contain conflicting behavior for what happens to track data when Tracks is disabled. That behavior must be clarified before this guide is published.
-
 ## Understand task lifecycle effects
 
 Closing a task keeps its track memberships and statuses but removes the task from the Tracks board. Reopening it restores the task to its track columns with the retained statuses.
