@@ -11,7 +11,7 @@ This repository contains the three Tasket Tracks case-study deliverables and a r
 | 3. Reusable skill | [Generate docs](.agents/skills/generate-docs/SKILL.md), [live-round guide](demo/README.md) |
 | Review status | [QA report](output/tracks/qa/QA-REPORT.md) |
 
-The Tracks PDF is [the authoritative source](input/Technical%20Writer%20-%20Case%20Study.pdf). In particular, page 3 says disabling Tracks hides data and restores it later, while page 5 says disabling clears assignments and statuses. [Q01](output/tracks/analysis/clarifications-and-assumptions.md) keeps both statements unresolved. The three reader-facing drafts omit the disputed outcome.
+The Tracks PDF is [the authoritative source](input/Technical%20Writer%20-%20Case%20Study.pdf). In particular, page 3 says disabling Tracks hides data and restores it later, while page 5 says disabling clears assignments and statuses. [Q01](output/tracks/analysis/clarifications-and-assumptions.md) keeps both statements unresolved. The reader-facing drafts do not choose either disputed outcome. The feature guide flags the conflict at the point where disabling is mentioned and directs the reader to confirm the behavior before disabling Tracks.
 
 ## How the workflow works
 
@@ -26,7 +26,7 @@ flowchart TD
     F --> G["QA report and corrections"]
 ```
 
-The Analyzer establishes a documentation contract. The Drafter uses that contract to serve three different reader goals. The Proofreader checks both the contract and the drafts against the original source. `AGENTS.md` holds repository-wide evidence rules; the four skills under `.agents/skills/` hold stage-specific instructions.
+The Analyzer establishes a documentation contract and prioritizes supported material by reader relevance. The Drafter uses that contract to serve three different reader goals and performs a senior editorial pass before handoff. The Proofreader independently checks source fidelity and editorial quality against the original source. `AGENTS.md` holds repository-wide evidence rules; the stage-specific skills under `.agents/skills/` hold workflow instructions.
 
 ## Output structure
 
@@ -58,6 +58,6 @@ For a new PRD, place it under `input/` with a distinct name and replace the two 
 python3 scripts/check_outputs.py output/tracks
 ```
 
-The checker catches missing files/headings, broken local links, placeholders, unmatched claim/question IDs, and missing, duplicated, or invalid coverage dispositions. GitHub Actions runs it on each generated set for pushes and pull requests. It does not establish whether a product claim is true or whether a cited section truly supports it. The Proofreader compares the source, handover, scope, coverage, and drafts, records PASS/WARNING/FAIL findings, and separates assignment review from publication readiness. The [revised Quiet Hours example](output/quiet-hours-v2/analysis/CHANGE-IMPACT.md) shows a changed duration and a newly confirmed online rule, with the earlier output preserved. No product build or existing Tasket documentation was supplied; proposed updates to existing help content remain candidates until that content is inventoried.
+The checker catches missing files/headings, broken local links, placeholders, unmatched claim/question IDs, and missing, duplicated, or invalid coverage dispositions. GitHub Actions runs it on each generated set for pushes and pull requests. It does not establish whether a product claim is true or whether a cited section truly supports it. The Proofreader compares the source, handover, scope, coverage, and drafts, records PASS/WARNING/FAIL findings, and separates technical fidelity, editorial quality, assignment review, and publication readiness. The latest Tracks drafts were regenerated during submission review after the previous checker run; `output/tracks/qa/QA-REPORT.md` records that the structural checker still needs to be rerun for this revision. The [revised Quiet Hours example](output/quiet-hours-v2/analysis/CHANGE-IMPACT.md) shows a changed duration and a newly confirmed online rule, with the earlier output preserved. No product build or existing Tasket documentation was supplied; proposed updates to existing help content remain candidates until that content is inventoried.
 
 Download this branch as a ZIP from GitHub if a single folder is needed for submission. The [live-round guide](demo/README.md) gives a prompt and verification sequence for a different PRD.
