@@ -17,7 +17,7 @@ REQUIRED = {
     "analysis/clarifications-and-assumptions.md": (),
     "analysis/CONTENT-PLAN.md": ("## Scope decisions", "## Delivery boundary"),
     "analysis/COVERAGE.md": ("## Claim coverage",),
-    "analysis/EDITORIAL-BLUEPRINT.md": ("## Document contracts", "## Feature-guide blueprint", "## How-to selection", "## Release-note blueprint", "## Cross-document separation", "## Pre-draft challenge", "## Draft challenge result"),
+    "analysis/EDITORIAL-BLUEPRINT.md": ("## Document contracts", "## Feature-guide blueprint", "## How-to selection", "## Release-note blueprint", "## Cross-document separation", "## Claim-admission gate", "## Pre-draft challenge", "## Draft challenge result"),
     "feature/feature-guide.md": (),
     "how-to/how-to.md": ("## Steps", "## Expected result"),
     "release-note/release-note.md": (),
