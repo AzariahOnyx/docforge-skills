@@ -18,6 +18,7 @@
 - Assumptions, unknowns, and contradictions: [status, reason]
 - Procedures, permissions, and states: [status, reason]
 - Terminology, audience fit, clarity, and duplication: [status, reason]
+- Editorial blueprint and Draft challenge: [PASS/WARNING/FAIL; reader jobs, separation, task choice, release-note focus]
 - Structural checker: [PASS/WARNING/FAIL; command and limits]
 
 ## Open questions and publication readiness
