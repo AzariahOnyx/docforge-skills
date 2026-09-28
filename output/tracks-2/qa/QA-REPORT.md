@@ -35,6 +35,10 @@ All source evidence below refers to `input/Technical Writer - Case Study.pdf`.
 - **Revised-source impact: not applicable.** No second source version was supplied; earlier generated output was not used as a baseline.
 - **Structural checker: PASS.** `python3 scripts/check_outputs.py output/tracks-2` checked 9/9 files with 0 errors and 0 warnings after final corrections. The initial run flagged unresolved question references because the handover used a range; explicit IDs resolved those structural errors. This checks structure and links, not product truth.
 
+## Claim-admission audit
+
+PASS after V2.1 backfill. Rechecked uncertainty-adjacent reader-facing claims against the source and Q01–Q12. The supported but low-value statement that the Tracks pill is absent while Tracks is disabled was deferred because it is adjacent to the unresolved disable lifecycle contradiction and is unnecessary for the guide's reader job. Irreversible deletion, cross-project clearing, and offline deletion loss remain visible because editorial restraint must not hide material consequences. Permission, recovery, counter, and release-metadata gaps remain bounded rather than implied as settled.
+
 ## Open questions and publication readiness
 
 All Q01–Q12 remain open. Q01 is material because either competing disable rule could imply a different data-loss outcome; omitting it from the feature guide prevents publication of complete lifecycle guidance. Q10 blocks an unqualified release announcement. Q03–Q08 and Q11 constrain administration, removal and recovery instructions; Q02, Q09 and Q12 constrain reference detail and navigation claims. The selected open-task Mark Done procedure does not depend on resolving those deferred workflows.
