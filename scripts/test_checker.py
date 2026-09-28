@@ -76,7 +76,38 @@ def main() -> int:
 
     expect_rejected("duplicate claim coverage", duplicate_first_coverage_row)
 
-    print("PASS: V2 checker regression suite")
+    def partial_v22_artifacts(root: Path) -> None:
+        (root / "analysis" / "TERMINOLOGY.md").write_text(
+            "# Terminology\n\n## Canonical terms\n\nA deliberately partial V2.2 artifact.\n"
+            "\n## Final terminology audit\n\nPASS\n",
+            encoding="utf-8",
+        )
+
+    expect_rejected("partial V2.2 artifact set", partial_v22_artifacts)
+
+    def invalid_traceability(root: Path) -> None:
+        analysis = root / "analysis"
+        (analysis / "TERMINOLOGY.md").write_text(
+            "# Terminology\n\n## Canonical terms\n\nCanonical source-backed terminology for regression testing.\n"
+            "\n## Final terminology audit\n\nPASS\n",
+            encoding="utf-8",
+        )
+        (analysis / "RISK-REVIEW.md").write_text(
+            "# Risk review\n\n## High-impact claims\n\nRegression fixture content.\n"
+            "\n## Example safety\n\nRegression fixture content.\n"
+            "\n## Cross-document ownership\n\nRegression fixture content.\n"
+            "\n## Final risk audit\n\nPASS\n",
+            encoding="utf-8",
+        )
+        (analysis / "TRACEABILITY.json").write_text(
+            '{"schema_version":"1.0","claims":[],"readiness":"PUBLICATION-READY",'
+            '"publication_blockers":["Q01"]}',
+            encoding="utf-8",
+        )
+
+    expect_rejected("invalid V2.2 traceability/readiness", invalid_traceability)
+
+    print("PASS: V2.2 checker regression suite")
     return 0
 
 
