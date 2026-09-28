@@ -114,3 +114,14 @@ For each neighboring FACT, mark whether the gap is:
 - **NONE:** the gap does not materially change how the FACT should be documented.
 
 Feed DIRECT and ADJACENT relationships into the editorial blueprint's claim-admission gate. This map is for editorial risk control; it must not turn proximity into a contradiction or suppress unrelated facts.
+
+
+## V2.2 evidence engineering artifacts
+
+For new runs, also create these analysis artifacts before drafting:
+
+1. **TERMINOLOGY.md** from `templates/terminology-ledger.md`. Extract canonical product terms and exact UI labels, their source locations, aliases, and conflicts. A label conflict remains unresolved; do not normalize it by preference.
+2. **TRACEABILITY.json** from `templates/traceability-manifest.json`. Represent the same HANDOVER claim register in machine-readable form: claim ID, classification, source locator, risk, uncertainty proximity, admission decision, destinations, blocker IDs, source set, and readiness. HANDOVER remains the human-readable authority; the JSON is an audit projection and must not introduce claims.
+3. **RISK-REVIEW.md** from `templates/risk-review.md`. Seed high-impact claims and risk types for independent review.
+
+Assign review intensity by consequence, not by model confidence. Mark destructive, irreversible, data-loss/retention, access/permission, security/privacy, migration, billing, offline/conflict, and release-expectation claims for mandatory source recheck. Do not convert risk severity into truth confidence.
