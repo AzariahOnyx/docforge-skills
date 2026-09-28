@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "source_set": [],
+  "claims": [
+    {
+      "id": "C01",
+      "classification": "FACT",
+      "source_locator": "",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [],
+      "blockers": []
+    }
+  ],
+  "readiness": "DRAFTABLE",
+  "publication_blockers": []
+}
