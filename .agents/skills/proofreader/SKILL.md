@@ -65,3 +65,22 @@ Also perform a prose-pressure test on each reader-facing document:
 - Does cross-document repetition serve local comprehension, or is it accidental duplication?
 
 Record corrections and the final claim-admission audit result in QA.
+
+
+## V2.2 adversarial audits
+
+Run these independently against the original source and final drafts:
+
+1. **Risk-weighted audit:** recheck every high-impact claim at its source. Verify consequence, scope, reversibility, permissions, offline/conflict behavior, and warning placement. A structural PASS cannot override a failed high-impact claim.
+2. **Terminology/UI audit:** compare reader-facing terms and bold UI labels with TERMINOLOGY.md and the source. Flag inconsistent synonyms and invented labels.
+3. **Example audit:** verify every PRODUCT-BEHAVIOR example as a normal claim. Remove unsupported examples.
+4. **Information-architecture audit:** inspect the cross-document ownership matrix. Flag accidental substantial duplication and essential concepts with no owner.
+5. **Traceability audit:** compare TRACEABILITY.json with HANDOVER, COVERAGE, drafts, questions, and blockers. The machine-readable manifest must agree with the human artifacts.
+
+Set one readiness state in TRACEABILITY.json and QA:
+- **DRAFTABLE:** evidence is sufficient to produce bounded drafts.
+- **ASSIGNMENT-READY:** requested deliverables are coherent and evidence-safe for evaluation.
+- **REVIEW-READY:** suitable for stakeholder/SME review with blockers clearly exposed.
+- **PUBLICATION-READY:** no unresolved material blocker remains and required release/product facts are confirmed.
+
+A lower readiness state is not a quality failure when the source itself is incomplete.
