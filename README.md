@@ -26,7 +26,7 @@ flowchart TD
     F --> G["QA report and corrections"]
 ```
 
-The Analyzer establishes a documentation contract and prioritizes supported material by reader relevance. The Drafter uses that contract to serve three different reader goals and performs a senior editorial pass before handoff. The Proofreader independently checks source fidelity and editorial quality against the original source. `AGENTS.md` holds repository-wide evidence rules; the stage-specific skills under `.agents/skills/` hold workflow instructions.
+The Analyzer establishes a documentation contract and prioritizes supported material by reader relevance. Before prose is written, the Drafter records an editorial blueprint that defines reader jobs, inclusion boundaries, section logic, task selection, release-note priorities, and cross-document separation. The Drafter uses that contract to serve three different reader goals and performs a senior editorial pass before handoff. The Proofreader independently checks source fidelity and editorial quality against the original source. `AGENTS.md` holds repository-wide evidence rules; the stage-specific skills under `.agents/skills/` hold workflow instructions.
 
 ## Output structure
 
