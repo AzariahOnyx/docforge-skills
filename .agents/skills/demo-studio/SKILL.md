@@ -20,3 +20,8 @@ Invocation example: `$demo-studio input/Technical Writer - Case Study.pdf`. The 
 ## V2 quality override
 
 The V2 editorial workflow is mandatory for every invocation. The Drafter must create `analysis/EDITORIAL-BLUEPRINT.md` before reader-facing prose and complete its Draft challenge after drafting. The Proofreader must review the blueprint against the original source and apply the correction loop in `generate-docs`. A run is complete only after the final structural checker and the master skill's solid-doc-set acceptance decision.
+
+
+## V2.2 run requirements
+
+Every fresh demo run must use the master V2.2 contract, including TERMINOLOGY.md, TRACEABILITY.json, RISK-REVIEW.md, claim admission, uncertainty neighborhoods, risk-weighted review, example safety, cross-document ownership, and explicit readiness state. Preserve clean-room behavior: do not use earlier output sets as drafting input.
