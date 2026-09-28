@@ -20,5 +20,12 @@
 - Diagram decision: [none, or a source-backed flow/relationship/state diagram and its evidence]
 - Dependencies and publication blockers: [Q IDs and affected topics]
 
+## Editorial inputs
+- Essential newcomer concepts (3–7): [claim IDs and why essential]
+- Material consequences that must remain visible: [claim/Q IDs]
+- How-to candidates ranked by complete start/action/result evidence: [candidates and decision]
+- Release-note priorities (maximum three unless assigned otherwise): [claim IDs]
+- Deliberate exclusions by deliverable: [what stays out and why]
+
 ## Delivery boundary
 [Which requested drafts can proceed now; what must wait for clarification or an existing-doc inventory. Do not claim implementation verification from a PRD.]
