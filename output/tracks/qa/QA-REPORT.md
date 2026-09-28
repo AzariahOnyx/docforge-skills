@@ -24,7 +24,7 @@ The editorial pass was intentionally adversarial: technical support and editoria
 
 | Status | Document | Finding |
 | --- | --- | --- |
-| PASS | Feature guide | Revised around the newcomer mental model: purpose, task-vs-track state, working views, management consequences, lifecycle, offline behavior and access. Low-value action matrices and edge cases were removed or deferred. |
+| PASS | Feature guide | Revised around the newcomer mental model: purpose, task-vs-track state, working views, management consequences, lifecycle, offline behavior and access. Low-value action matrices and edge cases were removed or deferred. The unsupported illustrative example was removed; the guide now explicitly flags unknown Delete authorization and the unresolved disable-data consequence at the point of action. |
 | WARNING | Feature guide | The guide remains intentionally detailed around irreversible deletion, project moves and offline sync because those consequences are material even though they add density. |
 | WARNING | How-to | The procedure is clear, task-oriented and fully supported, but it is inherently narrow. It is the strongest fully evidenced state-changing procedure in the source. Broader Start/Stop, bulk-start and deletion procedures would require inventing controls, outcomes, permissions or safeguards. |
 | PASS | Release note | Revised as change → user impact → three distinguishing capabilities → learn more. It no longer reads as a compressed feature-guide outline and contains no unsupported launch language. |
