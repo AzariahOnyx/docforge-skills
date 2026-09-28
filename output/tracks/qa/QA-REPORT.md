@@ -6,6 +6,10 @@ This report records the submission-time regeneration after strengthening the edi
 
 The editorial pass was intentionally adversarial: technical support and editorial quality were evaluated separately. A technically supported statement was not automatically treated as necessary reader-facing content.
 
+## Findings
+
+The tables below record technical-fidelity and editorial findings separately.
+
 ## Technical fidelity
 
 | Status | Area | Finding |
