@@ -3,7 +3,7 @@ name: Documentation structure
 on:
   pull_request:
   push:
-    branches: [main, build-reusable-doc-workflow]
+    branches: [main, build-reusable-doc-workflow, system-v2-hardening]
 
 jobs:
   check:
