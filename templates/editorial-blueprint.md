@@ -54,6 +54,22 @@ Selected task: [one task]
 | --- | --- | --- | --- | --- |
 | [topic] | PRIMARY / BRIEF / OMIT | PRIMARY / BRIEF / OMIT | PRIMARY / BRIEF / OMIT | [reader need] |
 
+## Claim-admission gate
+
+Evaluate every candidate reader-facing claim that is essential, consequential, or near an unresolved gap.
+
+| Claim / claim ID | Evidence | Reader value | Uncertainty proximity | Harm if misunderstood | Decision | Treatment |
+| --- | --- | --- | --- | --- | --- | --- |
+| [claim] | FACT / other | Essential / Useful / Low | None / Adjacent / Direct | Low / Medium / High | INCLUDE / QUALIFY / DEFER / BLOCK | [where/how or why omitted] |
+
+Decision rules:
+- INCLUDE only when evidence is FACT, reader value justifies space, and nearby uncertainty does not make the wording misleading.
+- QUALIFY when the supported core is useful but scope, permission, lifecycle, availability, or an adjacent condition remains unresolved. State only the supported boundary; do not expose internal uncertainty language to readers.
+- DEFER supported facts that are low-value, reference-heavy, or adjacent to unresolved behavior when omission is safe.
+- BLOCK when omission or qualification would hide a material destructive, irreversible, security, privacy, data-loss, or task-success risk.
+- A FACT is eligible evidence, not an automatic instruction to publish it.
+- Never use reader value to promote ASSUMPTION, INFERENCE, UNKNOWN, or CONTRADICTION to product fact.
+
 ## Pre-draft challenge
 
 Before drafting, answer all of these:
