@@ -81,3 +81,16 @@ After the first draft, run a sentence-level restraint pass:
 7. Preserve high-impact consequences even when they make the article less smooth.
 
 Record material INCLUDE/QUALIFY/DEFER/BLOCK decisions in the blueprint and summarize restraint changes in the Draft challenge result.
+
+
+## V2.2 advanced drafting gates
+
+Read `analysis/TERMINOLOGY.md`, `analysis/TRACEABILITY.json`, and `analysis/RISK-REVIEW.md` before drafting.
+
+- Use the terminology ledger to preserve canonical terms and exact UI labels. Do not silently resolve conflicting labels.
+- Apply the example-safety gate to every example: **SOURCE**, **BEHAVIOR-NEUTRAL**, or **PRODUCT-BEHAVIOR**. PRODUCT-BEHAVIOR examples require claim evidence exactly like ordinary prose. Remove an example whose behavior cannot be supported.
+- Build a cross-document ownership matrix in RISK-REVIEW before finalizing. Give each substantial concept or procedure one primary owner. Repeat only the minimum context needed for local comprehension.
+- For HIGH-impact claims, preserve the supported consequence even when removing it would make the prose shorter or smoother.
+- Update TRACEABILITY.json after drafting so admitted claims point to actual destinations and deferred/blocked claims have no reader-facing destination.
+
+Do not optimize for exact benchmark wording. Optimize for source fidelity, distinct reader jobs, safe compression, and useful information architecture.
