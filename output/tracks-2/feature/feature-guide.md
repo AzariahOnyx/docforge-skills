@@ -18,7 +18,7 @@ Each task belongs to one project. Tracks belong to that project, and a task can 
 
 When Tracks is enabled, the project's **Tracks** tab shows a column for each track, split into In Progress and Done. Columns show only open tasks. A task started on several tracks appears in each of those columns.
 
-For one task's full picture, open the **Tracks** pill in its details. It lists every track in the project with that task's status. The pill counts Done tracks out of all available tracks for the task, including tracks it has not started. The pill is absent when Tracks is disabled.
+For one task's full picture, open the **Tracks** pill in its details. It lists every track in the project with that task's status. The pill counts Done tracks out of all available tracks for the task, including tracks it has not started.
 
 You can start an open task on one or more tracks. A closed task must be reopened before it can be started on a new track.
 
