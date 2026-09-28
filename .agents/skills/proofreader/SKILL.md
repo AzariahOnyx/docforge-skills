@@ -19,3 +19,20 @@ description: Independently verify PRD-derived feature documentation, how-to step
 Preserve source files. Keep findings and evidence labels in the QA report, not in user-facing articles.
 
 Run `python3 scripts/check_outputs.py <output-directory>` after the source review. Resolve structural errors and report warnings. This checker cannot validate the truth of product claims. If a separate reviewer is unavailable, explicitly label the work a fresh source-first second pass rather than claiming independence.
+## Adversarial editorial gate
+
+Run this separately from source-fidelity review. Do not give an editorial PASS merely because every statement is supported.
+
+Review every reader-facing sentence and section as a senior software technical writer:
+
+- **Need:** Does the target reader need this information in this document?
+- **Placement:** Is it in the right document and section, or is supported reference/edge-case detail crowding the primary goal?
+- **Naturalness:** Does it read as polished documentation rather than paraphrased PRD, handover, or product-team language?
+- **Information design:** Would a table, procedure, note/warning, or state representation communicate the relationship better than prose?
+- **Task quality:** If the assignment asks for a substantial how-to, does the selected procedure actually meet that bar? A technically valid but trivial procedure is a WARNING or FAIL for assignment fit unless no substantial supported task exists and that limitation is explicit.
+- **Release-note quality:** Does the note communicate a supported change and practical impact for an existing user rather than merely summarize the feature guide?
+- **Feature-guide quality:** Does it establish a newcomer mental model and prioritize core behavior before reference details and edge cases?
+- **Duplication and density:** Remove repeated explanation and low-value detail that does not serve the document's reader goal.
+- **Polish:** Check every sentence for concise, active, natural English and every file for clean Markdown, including leading/trailing blank lines.
+
+Use severity deliberately: source errors and unsafe claims are FAIL; audience/assignment failures can also be FAIL even when technically accurate; lesser editorial weaknesses are WARNING. Record the editorial verdict separately from the technical-fidelity verdict, and require both to pass for an unqualified assignment-ready result.
