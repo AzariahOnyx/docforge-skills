@@ -36,3 +36,12 @@ Review every reader-facing sentence and section as a senior software technical w
 - **Polish:** Check every sentence for concise, active, natural English and every file for clean Markdown, including leading/trailing blank lines.
 
 Use severity deliberately: source errors and unsafe claims are FAIL; audience/assignment failures can also be FAIL even when technically accurate; lesser editorial weaknesses are WARNING. Record the editorial verdict separately from the technical-fidelity verdict, and require both to pass for an unqualified assignment-ready result.
+
+
+## Editorial blueprint review
+
+Require `analysis/EDITORIAL-BLUEPRINT.md` and check its decisions against the original source.
+
+Review the declared reader job and success test for each document. Confirm that the feature guide has a coherent newcomer mental model, the selected how-to has supported start/action/result evidence, and the release note is a focused scan of distinct changes rather than a shortened feature guide. Check the PRIMARY/BRIEF/OMIT separation across documents and confirm that editorial compression has not hidden a material consequence.
+
+The blueprint must contain a completed Draft challenge result. If a supported editorial issue can be corrected from existing evidence, revise and run source-fidelity and editorial review again. Use no more than two correction cycles; record any remaining material issue in QA.
