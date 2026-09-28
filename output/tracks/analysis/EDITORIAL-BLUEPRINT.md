@@ -61,6 +61,10 @@ Selected task: Mark a task Done on one track.
 | Management/lifecycle/offline consequences | PRIMARY | OMIT | OMIT | Important understanding, not scanning/task detail |
 | Three headline capabilities | BRIEF | OMIT | PRIMARY | Existing-user scan goal |
 
+## Claim-admission gate
+
+This benchmark predates V2.1. For compatibility with the current gate, essential supported model claims are INCLUDE; material deletion, move, and offline-loss consequences are INCLUDE/QUALIFY at their supported boundary; the contradictory disable outcome is BLOCK; low-value details adjacent to unresolved behavior are DEFER. No contradiction is resolved and no material consequence is suppressed.
+
 ## Pre-draft challenge
 
 - All must-include product behavior traces to FACT evidence.
