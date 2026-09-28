@@ -91,3 +91,14 @@ Before handing off to the Drafter, evaluate supported material for reader value,
 - For each how-to candidate, assess **user value, task substance, consequence, evidence completeness, audience fit, and assignment fit**. A short procedure is acceptable only when the requested task is genuinely narrow. If the assignment requires a substantial task and no substantial task is fully supported, record that limitation instead of presenting a trivial task as fully satisfying the requirement.
 - For release notes, identify the supported change and user impact separately from feature-description facts. Do not invent a previous-state baseline.
 - Classify destructive or consequential behavior as informational, state-changing, destructive, irreversible, or data-loss risk so the Drafter can give it appropriate prominence.
+
+
+## Decision-ready editorial handoff
+
+Before handoff, make the content plan executable by the Drafter:
+
+- Rank how-to candidates. A complete candidate needs a supported starting state, user action or control, and observable result.
+- Identify 3–7 essential newcomer concepts for the feature guide separately from secondary or reference material. Do not preserve PRD order by default.
+- Identify material permission, lifecycle, offline, cross-scope, irreversible, and data-retention consequences that must survive editorial compression.
+- Rank release-note candidates by practical user impact and distinctiveness. Select no more than three unless the assignment requires more.
+- State what each deliverable should deliberately exclude so the three outputs retain distinct reader purposes.
