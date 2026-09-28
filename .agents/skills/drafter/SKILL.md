@@ -24,3 +24,17 @@ description: Draft audience-specific feature documentation, a task-focused how-t
 7. Report which passages or deliverables remain blocked by questions. Do not claim publication readiness before independent proofreading.
 
 Do not modify the source artifacts or silently answer clarification questions.
+## Senior editorial pass
+
+After producing a source-faithful draft, revise it once as a senior software technical writer before handing it to the Proofreader.
+
+- Do not paraphrase the PRD or handover sentence by sentence. Reconstruct the explanation from verified facts around the reader's goal and mental model. Remove wording that sounds like requirements language, internal product-team language, or a claim register.
+- Apply this test to every paragraph: **Why does this reader need this here?** Keep essential and useful information; move or omit edge cases and reference detail unless they materially affect task success, safety, data loss, permissions, or irreversible behavior.
+- Prefer natural, direct software-documentation English. Use the Microsoft Writing Style Guide for presentation, but preserve verified product terminology and exact UI labels.
+- Choose structure by information type: comparison or condition/outcome → table; sequence → numbered steps; state model → concise table or source-backed diagram; destructive/irreversible consequence → prominent note or warning when the output format supports it; definition or concept → concise prose.
+- Avoid invented behavioral examples. A neutral illustrative scenario is allowed only when it adds no new product behavior, UI, role, permission, limit, state, or outcome; otherwise omit it.
+- Feature guide rhetorical flow: **user purpose → mental model → core behavior → important consequences/limits → supported next task**. Do not turn the guide into a requirements inventory or permissions/reference dump.
+- How-to rhetorical flow: **goal → prerequisites → actions → observable result → supported recovery/next step**. Reassess whether the selected task is substantial enough for the assignment. If it is not, return to the content plan and choose a better fully supported candidate; if none exists, state the limitation in review artifacts.
+- Release-note rhetorical flow: **change → practical user impact → two or three distinguishing capabilities/effects → learn more**. It must not read like a shortened feature guide.
+- Remove duplication across the three deliverables unless repetition is necessary for the reader to complete the document's goal.
+- Normalize final Markdown: no unexplained leading blank lines, placeholders, empty sections, or formatting artifacts.
