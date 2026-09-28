@@ -102,3 +102,15 @@ Before handoff, make the content plan executable by the Drafter:
 - Identify material permission, lifecycle, offline, cross-scope, irreversible, and data-retention consequences that must survive editorial compression.
 - Rank release-note candidates by practical user impact and distinctiveness. Select no more than three unless the assignment requires more.
 - State what each deliverable should deliberately exclude so the three outputs retain distinct reader purposes.
+
+
+## Uncertainty-neighborhood map
+
+Do not treat gaps as isolated rows. Before handoff, map each CONTRADICTION, UNKNOWN, and material INFERENCE to the supported FACT claims in the same behavioral neighborhood: the same action, object, state, permission, lifecycle, destructive outcome, offline flow, or release assertion.
+
+For each neighboring FACT, mark whether the gap is:
+- **DIRECT:** the FACT itself cannot be stated safely without resolving the gap.
+- **ADJACENT:** the FACT is independently supported, but wording could imply the unresolved surrounding behavior is settled.
+- **NONE:** the gap does not materially change how the FACT should be documented.
+
+Feed DIRECT and ADJACENT relationships into the editorial blueprint's claim-admission gate. This map is for editorial risk control; it must not turn proximity into a contradiction or suppress unrelated facts.
