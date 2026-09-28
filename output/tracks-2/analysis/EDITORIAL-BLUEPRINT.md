@@ -56,6 +56,22 @@ Exclude setup, inferred Start destination, Stop outcome, reopening controls and 
 | Offline actions and deletion exception | PRIMARY | OMIT | OMIT | Keep promise and caveat together |
 | Unresolved source disputes | OMIT | OMIT | OMIT | Preserve in analysis/QA and block publication |
 
+## Claim-admission gate
+
+| Claim / claim ID | Evidence | Reader value | Uncertainty proximity | Harm if misunderstood | Decision | Treatment |
+| --- | --- | --- | --- | --- | --- | --- |
+| Independent per-track progress / C04, C20 | FACT | Essential | None | Medium | INCLUDE | Core mental model in guide; bounded context in release/how-to. |
+| Tracks pill visibility and statuses / C10–C11 | FACT | Essential | Adjacent to Q12 | Low | QUALIFY | State literal project-track/status behavior; omit granular visibility/count interpretation. |
+| Pill absent when Tracks is disabled / C19 | FACT | Low | Adjacent to C16/Q01 | Medium | DEFER | True in source but unnecessary for the reader goal and too close to disputed disable lifecycle behavior. |
+| Track deletion consequence / C14 | FACT | Essential | Adjacent to Q03 | High | QUALIFY | State irreversible consequence; do not state who can delete or invent confirmation. |
+| Cross-project move clearing / C17 | FACT | Useful | Adjacent to Q11 | High | QUALIFY | State proven loss and same-name limitation only; omit transfer/recovery procedure. |
+| Offline named actions / C21 | FACT | Useful | Adjacent to Q06 | Medium | QUALIFY | Name only explicitly supported offline actions and management boundary. |
+| Offline deletion loss / C22 | FACT | Essential consequence | Adjacent to Q06 | High | INCLUDE | Preserve explicit loss behavior; do not add recovery claims. |
+| Disable persistence / C16 | CONTRADICTION | Material | Direct | High | BLOCK | Omit both outcomes from reader copy; keep publication blocker. |
+| Release metadata / C24 | UNKNOWN | Required for publication, not draft copy | Direct | High | BLOCK | No date/version/rollout/platform/baseline claim. |
+
+A FACT is not automatically published. This gate admits only the supported boundary needed by the reader and preserves material consequences.
+
 ## Pre-draft challenge
 
 - Must-include product statements trace to FACT evidence; C23 is excluded from procedural assertions.
@@ -70,6 +86,6 @@ Blueprint status: PASS for bounded drafting. Publication remains blocked by Q01 
 
 ## Draft challenge result
 
-PASS for the bounded document set. The senior editorial pass kept the guide organized around progress, views and consequences; used a status table instead of a speculative state diagram; kept the how-to to the verified Mark Done action with Mark Pending recovery; and limited the release note to two distinct capabilities. Removed setup navigation, inferred Start outcome, exhaustive action inventory and extra offline release detail. Essential deletion, cross-project and offline-loss consequences remain visible in the guide. The three articles serve different reader jobs. C16/Q01 is still unresolved, and this drafting PASS is not publication approval.
+PASS for the bounded document set. Claim-admission audit defers the low-value disabled-pill fact adjacent to Q01 while retaining material deletion, move, and offline-loss consequences. The senior editorial pass kept the guide organized around progress, views and consequences; used a status table instead of a speculative state diagram; kept the how-to to the verified Mark Done action with Mark Pending recovery; and limited the release note to two distinct capabilities. Removed setup navigation, inferred Start outcome, exhaustive action inventory and extra offline release detail. Essential deletion, cross-project and offline-loss consequences remain visible in the guide. The three articles serve different reader jobs. C16/Q01 is still unresolved, and this drafting PASS is not publication approval.
 
 Presentation follows repository standards and the current [Microsoft style and voice guidance](https://learn.microsoft.com/en-us/style-guide/top-10-tips-style-voice), inspected during this run: direct language, sentence-case headings and concise reader-focused sections. It supplies style guidance only, never product evidence.
