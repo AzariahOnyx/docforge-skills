@@ -36,7 +36,7 @@ Each material claim in `HANDOVER.md` is accounted for once. Reader-facing inclus
 | C28 | INCLUDED | feature/feature-guide.md | Existing placement is preserved for multi-select start. | — |
 | C29 | INCLUDED | feature/feature-guide.md; how-to/how-to.md; release-note/release-note.md | Verified Done/Pending transition is central to all three reader goals. | — |
 | C30 | INCLUDED | how-to/how-to.md | Verified empty-section/counter update is used as observable result; Stop restriction is omitted as unrelated. | — |
-| C31 | CONTEXT | feature/feature-guide.md | Closed-task retained status is covered through lifecycle behavior; disabled-pill detail is omitted because disable behavior is disputed elsewhere. | Q01/Q06 |
+| C31 | CONTEXT | — | Closed-task retained status is covered through lifecycle behavior; disabled-pill detail is omitted because disable behavior is disputed elsewhere. | Q01/Q06 |
 | C32 | INCLUDED | feature/feature-guide.md | Explicit offline actions and queued reconciliation are important operating limits. | Q08 |
 | C33 | INCLUDED | feature/feature-guide.md | Online-only management constraint is important operating context. | — |
 | C34 | INCLUDED | feature/feature-guide.md | Deleted-track queued-write loss is included; the more specific close-offline variant remains analysis detail. | Q12 |
