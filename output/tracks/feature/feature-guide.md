@@ -1,74 +1,59 @@
 # Coordinate parallel work with Tracks
 
-With Tracks, you can work on the same task across several workstreams at once and track progress separately in each. For example, a sign-in redesign can be in spec and design at the same time.
+Tracks lets you organize work on the same task across multiple workstreams and track progress in each one independently. For example, a task can move through specification and design work at the same time without one track's progress changing the other.
 
 ## Understand tasks and tracks
 
-Tasket teams contain projects, and each task belongs to one project. Tracks belong to a project too. A task can participate in any number of that project's tracks.
+Each task belongs to one project, and tracks are scoped to that project. A task can be part of multiple tracks in its project.
 
-A task has its own status: Open, Completed, or Discarded. Completed and Discarded tasks are closed; reopening returns them to Open. Track progress is separate from task status:
+Task status and track progress are separate:
 
-| Status on a track | Meaning |
+| Type | Statuses |
 | --- | --- |
-| Not started | The task has not been started on this track. |
-| In Progress | The task participates in this track and is not marked Done on it. |
-| Done | The task is marked Done on this track. |
+| Task | Open, Completed, Discarded |
+| Track progress | Not started, In Progress, Done |
 
-Marking a task **Done** on one track does not affect its other tracks or complete the task. Use **Mark Pending** to return it to **In Progress** on that track.
+Completed and Discarded tasks are closed. Reopening a closed task returns it to Open.
 
-## Find your work on the board
+When you mark a task **Done** on one track, its progress on other tracks does not change, and the task itself is not completed. To resume work on that track, use **Mark Pending** to return it to **In Progress**.
 
-When Tracks is enabled for a project, its **Tracks** tab shows one column per track. Each column has **In Progress** and **Done** sections. Only open tasks appear on the board. A task started on three tracks appears in three columns.
+## Work with tracks
 
-For a task in **In Progress**, the board offers **Mark Done**, **Stop**, and **Select**. For a task in **Done**, it offers **Mark Pending** and **Select**. A task marked Done cannot be stopped.
+When Tracks is enabled, the project's **Tracks** tab shows one column for each track. Each column separates **In Progress** and **Done** work. Only open tasks appear on the board. If a task belongs to several tracks, it appears in each corresponding column.
 
-Use **Select** to select multiple tasks and start them across other tracks in one action. If a task is already on the target track, a multi-select start leaves it where it is. Starting an individual task on a track it already participates in highlights its existing placement.
+From the board, you can update a task's progress or use **Select** to start selected tasks across other tracks. If a selected task is already on a target track, its existing placement is preserved.
 
-Only open tasks can be started on new tracks. Reopen a closed task before starting it on a new track.
+Open a task to view its **Tracks** pill. The pill shows every track in the project and the task's status on each one, giving you one place to review its progress across workstreams. It also shows how many of the available tracks are Done for that task.
 
-## See a task's full track status
+## Manage tracks
 
-Open a task from a track to see its assignees, watchers, comments, and attached documents or chats. Wherever you open the task, its detail view includes a **Tracks** pill when Tracks is enabled.
+Team members can enable Tracks and create, rename, or move tracks. Only admins can disable Tracks.
 
-Open the pill to see every track in the project and the task's status beside each one. It shows how many tracks are Done out of all available tracks for the task. This is the single view of the task's full track picture, including retained statuses for closed tasks.
+Track names must be unique within a project. Renaming a track changes its name without changing task assignments or statuses. Moving a track changes only its position on the board.
 
-For an open task, the pill offers **Start** for Not started tracks, **Mark Done** and **Stop** for In Progress tracks, and **Mark Pending** for Done tracks. When Tracks is switched off, the pill is absent.
+Deleting a track permanently removes its assignments and statuses from tasks, including closed tasks.
 
-## Manage the project's tracks
+> **Warning:** Track deletion is irreversible. There is no undo or recovery window.
 
-**Add track** appears between tracks and at the end of the track panels. You can add and name a track and start tasks with it. Each track must have a unique name within its project.
+The source requirements contain conflicting behavior for what happens to track data when Tracks is disabled. That behavior must be clarified before this guide is published.
 
-| Action | Effect |
-| --- | --- |
-| **Rename** | Changes the name on the column and in the pill. Assignments and statuses stay the same. |
-| **Move track** | Changes the column's position on the board without affecting tasks. |
-| **Delete** | Removes the track's statuses and assignments everywhere, including on closed tasks. |
+## Understand task lifecycle effects
 
-**Track deletion is irreversible.** There is no undo or recovery window.
+Closing a task keeps its track memberships and statuses but removes the task from the Tracks board. Reopening it restores the task to its track columns with the retained statuses.
 
-## Know who can act
-
-| Action | Required access or role |
-| --- | --- |
-| Enable Tracks; create, rename, or move a track | Any team member |
-| Disable Tracks | Admin only |
-| View the Tracks board | Member with access to the project |
-| **Start**, **Mark Done**, **Stop**, or **Mark Pending** | Member with access to the task |
-| **Select** and start tasks across tracks | Member with access to the selected tasks |
-
-Guests have the same track permissions as members on projects they can access.
-
-## Understand what happens when tasks change
-
-**Closing and reopening a task:** Completing or discarding a task retains its track memberships and statuses. It disappears from all board columns, but the Tracks pill still shows its statuses. Reopening returns it to its columns with those statuses. Deleting a track removes its assignments even from closed tasks.
-
-**Moving a task to another project:** The move clears all track assignments. The task arrives with no track started, even if the destination has a track with the same name.
+Moving a task to another project clears all of its track assignments. The task arrives in the destination project with no track started, even when a track there has the same name.
 
 ## Work offline
 
-**Start**, **Mark Done**, and **Mark Pending** are available offline. Changes queue locally and reconcile when you reconnect. Enabling or disabling Tracks and creating, renaming, moving, or deleting tracks require an online connection.
+You can use **Start**, **Mark Done**, and **Mark Pending** while offline. Tasket queues these changes locally and reconciles them when you reconnect.
 
-If a queued membership change syncs after its track was deleted online, the change is silently dropped. It does not recreate the track. If you close a task offline while its track is deleted online, that assignment is dropped on sync and does not return when you reopen the task.
+Managing Tracks requires an online connection. This includes enabling or disabling Tracks and creating, renaming, moving, or deleting tracks.
+
+If an offline queued change refers to a track that was deleted online, Tasket drops that change during synchronization and does not recreate the track.
+
+## Access
+
+You need access to a project to view its Tracks board and access to a task to update its track progress. Guests have the same track permissions as members on projects they can access.
 
 ## Related task
 
