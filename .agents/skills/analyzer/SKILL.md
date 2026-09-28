@@ -81,3 +81,13 @@ Before handing off, verify source coverage, every cited location against the act
 
 Inventory supplied existing documentation, if any. For each topic, record its reader goal, proposed action (CREATE, UPDATE, or DEFER), destination, supporting claim IDs, open question IDs, and reason. If existing documentation was not supplied, mark its existence UNKNOWN and label update candidates as proposed, not confirmed edits. Link each of the three required drafts to a supported reader goal. Recommend a diagram only when relationships, flow, or state changes are clearer visually; use source-backed nodes and transitions, and flag unverified edges. Distinguish a content plan from an instruction to invent new product behavior.
 For the how-to, compare supported task candidates and select a consequential action with a verifiable outcome when possible; record why a view-only task was selected if one is used. For the release note, identify the two or three most consequential supported changes for an existing user, without inventing a previous-state comparison or release metadata.
+## Editorial planning gate
+
+Before handing off to the Drafter, evaluate supported material for reader value, not only evidence coverage.
+
+- For each proposed reader-facing topic, classify its relevance as **ESSENTIAL**, **USEFUL**, **EDGE CASE**, or **REFERENCE CANDIDATE** for that document's audience. Evidence support determines what may be said; audience relevance determines what should be said.
+- Do not force every supported fact into a reader-facing draft. Keep low-value edge cases in analysis unless they materially affect success, safety, data loss, permissions, or irreversible behavior.
+- Reconstruct the reader's mental model from verified facts instead of preserving the PRD's order or wording.
+- For each how-to candidate, assess **user value, task substance, consequence, evidence completeness, audience fit, and assignment fit**. A short procedure is acceptable only when the requested task is genuinely narrow. If the assignment requires a substantial task and no substantial task is fully supported, record that limitation instead of presenting a trivial task as fully satisfying the requirement.
+- For release notes, identify the supported change and user impact separately from feature-description facts. Do not invent a previous-state baseline.
+- Classify destructive or consequential behavior as informational, state-changing, destructive, irreversible, or data-loss risk so the Drafter can give it appropriate prominence.
