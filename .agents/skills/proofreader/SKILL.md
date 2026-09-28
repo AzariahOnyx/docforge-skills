@@ -45,3 +45,23 @@ Require `analysis/EDITORIAL-BLUEPRINT.md` and check its decisions against the or
 Review the declared reader job and success test for each document. Confirm that the feature guide has a coherent newcomer mental model, the selected how-to has supported start/action/result evidence, and the release note is a focused scan of distinct changes rather than a shortened feature guide. Check the PRIMARY/BRIEF/OMIT separation across documents and confirm that editorial compression has not hidden a material consequence.
 
 The blueprint must contain a completed Draft challenge result. If a supported editorial issue can be corrected from existing evidence, revise and run source-fidelity and editorial review again. Use no more than two correction cycles; record any remaining material issue in QA.
+
+
+## Claim-admission audit
+
+Independently audit the blueprint's Claim-admission decisions against the original source and final drafts.
+
+Challenge both directions:
+- **Over-admission:** a supported statement is unnecessary, overly specific, promotional, reference-heavy, or creates false completeness because nearby behavior is unresolved.
+- **Over-restraint:** a material consequence, prerequisite, limitation, permission boundary, destructive effect, or data-loss risk was deferred merely to simplify prose.
+
+For every material uncertainty-adjacent statement, ask whether a reasonable reader could infer more certainty than the source provides. Revise to the narrow supported boundary, defer it when safe, or block publication when neither is safe.
+
+Also perform a prose-pressure test on each reader-facing document:
+- Can a paragraph or sentence be removed without reducing task success, mental-model accuracy, material risk awareness, or the document's stated reader promise?
+- Does a heading answer a reader question or identify a useful concept rather than mirror an internal requirement category?
+- Does the introduction explain a concrete purpose without marketing inflation?
+- Does the document contain internal-review residue, evidence language, or caveats that belong only in analysis?
+- Does cross-document repetition serve local comprehension, or is it accidental duplication?
+
+Record corrections and the final claim-admission audit result in QA.
