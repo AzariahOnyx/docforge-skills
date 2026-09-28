@@ -28,3 +28,18 @@ For assignment or review-ready output, do not stop after a source-fidelity PASS.
 3. If editorial review finds PRD-shaped prose, excessive reference detail, a trivial how-to, a feature-summary-style release note, duplication, or unnatural wording, revise the reader-facing draft without weakening evidence controls, then re-run both gates.
 4. Prefer a concise, reader-shaped document over maximum inclusion. Supported facts may remain in analysis/coverage rather than reader-facing prose when they are not needed by that audience, except material risks and consequential behavior.
 5. Before final status, reread the three rendered drafts as a set and verify that each has a distinct purpose and does not merely repeat the others.
+
+
+## V2 acceptance loop
+
+For every fresh run:
+
+1. Analyzer produces evidence and a decision-ready content plan.
+2. Drafter creates `analysis/EDITORIAL-BLUEPRINT.md` before reader-facing prose, drafts from it, and completes the Draft challenge.
+3. Proofreader checks source fidelity and blueprint compliance against the original source.
+4. If review finds a supported, fixable editorial issue, revise from existing evidence and review again. Stop after two correction cycles and record unresolved material issues.
+5. Run the structural checker after the final review cycle.
+
+A run receives **solid-doc-set PASS** only when source fidelity, editorial/assignment fit, blueprint challenge, and structural checker all pass; reader-facing claims remain source-supported; contradictions remain unresolved; and publication blockers are separated from assignment readiness.
+
+For regression testing, generate without using previously approved reader-facing articles as input. Compare the completed set with a benchmark only after generation, using reader goal, essential concept coverage, task completeness, release-note focus, unsupported claims, and material-risk handling. Exact wording is not required.
