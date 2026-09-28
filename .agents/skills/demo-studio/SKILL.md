@@ -15,3 +15,8 @@ Work from the repository root. The words after `$demo-studio` identify the input
 6. Summarize source page count, exact new file paths, scope, proofreading and structural QA, unresolved questions, and readiness. Leave all files uncommitted and unpushed.
 
 Invocation example: `$demo-studio input/Technical Writer - Case Study.pdf`. The same skill must work for the next PDF uploaded into `input/`, without editing this skill or asking for a long prompt.
+
+
+## V2 quality override
+
+The V2 editorial workflow is mandatory for every invocation. The Drafter must create `analysis/EDITORIAL-BLUEPRINT.md` before reader-facing prose and complete its Draft challenge after drafting. The Proofreader must review the blueprint against the original source and apply the correction loop in `generate-docs`. A run is complete only after the final structural checker and the master skill's solid-doc-set acceptance decision.
