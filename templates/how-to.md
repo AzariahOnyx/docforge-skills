@@ -1,4 +1,4 @@
-# [Verb + specific user goal]
+# [Verb + consequential, specific user goal]
 
 [One sentence describing when to use this procedure.]
 
@@ -15,4 +15,4 @@
 
 [Add a short note only for a relevant, verified caution or limitation.]
 
-<!-- Choose exactly one user goal. If the source does not support a complete procedure, mark it blocked for review instead of inventing actions. Remove this comment and placeholders. -->
+<!-- Prefer a substantial state-changing task when fully supported; justify a view-only task in the content plan. Choose one goal. If the source does not support its starting point, action, and result, choose another or mark it blocked. Never invent actions. Remove this comment and placeholders. -->

@@ -1,4 +1,4 @@
-# [Feature name]
+# [Feature name + supported user purpose]
 
 [One short paragraph: what the feature does and who benefits. Use confirmed facts.]
 
@@ -12,7 +12,7 @@
 [Only verified availability, permissions, or prerequisites. Omit unsupported details.]
 
 ## Important behavior
-[Source-supported lifecycle, visibility, persistence, limits, or cautions. Do not choose between conflicting source statements.]
+[Source-supported lifecycle, visibility, persistence, limits, or cautions. Move internal contradictions to analysis and QA. Block publication if omitting an unresolved data-loss outcome would make this article unsafe.]
 
 ## Related tasks
 [Link to the how-to only if it exists and its procedure is supported.]

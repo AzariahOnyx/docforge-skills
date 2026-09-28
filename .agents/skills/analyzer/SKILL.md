@@ -52,7 +52,7 @@ For every material gap, record:
 | Evidence | Source locations and relevant claims; both sides of contradictions. |
 | Question | Specific clarification needed. |
 | Why it matters | Consequence for users, product understanding, or the assignment. |
-| Working assumption | Labeled ASSUMPTION and rationale only if needed; otherwise none. Never select a side of a contradiction. |
+| Working assumption | State the editorial assumption or safe documentation decision taken to complete the drafts, its rationale and limits. Label an unverified product premise ASSUMPTION only if necessary. Never select a side of a contradiction; explain what was omitted, qualified, or blocked rather than writing only "None." |
 | Documentation impact | Affected topics or claims; whether to qualify, omit, or block them pending clarification. |
 
 ## Outputs
@@ -80,3 +80,4 @@ Before handing off, verify source coverage, every cited location against the act
 ### CONTENT-PLAN.md
 
 Inventory supplied existing documentation, if any. For each topic, record its reader goal, proposed action (CREATE, UPDATE, or DEFER), destination, supporting claim IDs, open question IDs, and reason. If existing documentation was not supplied, mark its existence UNKNOWN and label update candidates as proposed, not confirmed edits. Link each of the three required drafts to a supported reader goal. Recommend a diagram only when relationships, flow, or state changes are clearer visually; use source-backed nodes and transitions, and flag unverified edges. Distinguish a content plan from an instruction to invent new product behavior.
+For the how-to, compare supported task candidates and select a consequential action with a verifiable outcome when possible; record why a view-only task was selected if one is used. For the release note, identify the two or three most consequential supported changes for an existing user, without inventing a previous-state comparison or release metadata.

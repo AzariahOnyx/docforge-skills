@@ -157,6 +157,19 @@ def main() -> int:
     if impact_path.is_file():
         check_source_lines("analysis/CHANGE-IMPACT.md", impact, errors)
 
+    # Editorial prompts are warnings: source fidelity and audience fit require
+    # human/source-first review, so a title heuristic must not become a gate.
+    feature = texts.get("feature/feature-guide.md", "")
+    release = texts.get("release-note/release-note.md", "")
+    feature_title = re.search(r"^#\s+(.+)$", feature, re.M)
+    release_title = re.search(r"^#\s+(.+)$", release, re.M)
+    if feature_title and release_title and feature_title[1].strip().casefold() == release_title[1].strip().casefold():
+        warnings.append("Feature guide and release note use the same title; review distinct reader goals")
+    for relative in ("feature/feature-guide.md", "how-to/how-to.md", "release-note/release-note.md"):
+        body = texts.get(relative, "")
+        if re.search(r"\b(?:requirements conflict|unresolved in this proposal|internal note)\b", body, re.I):
+            warnings.append(f"{relative}: internal review language in reader-facing draft")
+
     for issue in errors:
         print(f"FAIL: {issue}")
     for issue in warnings:
