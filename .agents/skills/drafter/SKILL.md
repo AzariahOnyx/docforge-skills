@@ -38,3 +38,14 @@ After producing a source-faithful draft, revise it once as a senior software tec
 - Release-note rhetorical flow: **change → practical user impact → two or three distinguishing capabilities/effects → learn more**. It must not read like a shortened feature guide.
 - Remove duplication across the three deliverables unless repetition is necessary for the reader to complete the document's goal.
 - Normalize final Markdown: no unexplained leading blank lines, placeholders, empty sections, or formatting artifacts.
+
+
+## Editorial blueprint gate
+
+Before reader-facing drafting, read `templates/editorial-blueprint.md` and create `analysis/EDITORIAL-BLUEPRINT.md`. Complete its document contracts, feature-guide plan, how-to candidate comparison, release-note priorities, cross-document separation, and pre-draft challenge from the Analyzer evidence.
+
+Draft only after the blueprint records PASS. Build the feature guide around the reader's mental model rather than PRD order. Select the how-to with the strongest complete evidence for starting state, action, and observable result. Select no more than three distinct release-note priorities unless the assignment asks for more.
+
+After drafting, compare every section with its document contract. Rewrite requirements-shaped prose into natural user documentation without changing product meaning. Remove low-value repetition and reference detail that does not serve the reader job, while retaining material permissions, lifecycle effects, irreversible consequences, and data-retention risks.
+
+Append `## Draft challenge result` to the blueprint with PASS or BLOCKED and a concise record of revisions. Keep this review material out of reader-facing files.
