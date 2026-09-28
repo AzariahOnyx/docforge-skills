@@ -19,3 +19,12 @@ Keep the stages visible in the file outputs and in a brief completion summary. F
 ## Update mode
 
 When the user supplies a revised PRD plus a prior source and output, keep the prior output intact and choose a fresh output slug or branch. Read `templates/change-impact.md`. Compare the two sources first and write `analysis/CHANGE-IMPACT.md` with added, changed, removed, resolved, and newly conflicting claims and their affected sections. Then run the full Analyzer → Drafter → Proofreader sequence on the revised source, using the old output only as a comparison baseline, never as current product evidence. Explicitly remove stale claims from the new drafts, keep still-supported content, and mark proposed retirement of an existing article for review rather than deleting it. If the prior source is unavailable, report that the change comparison is blocked; a fresh-source run may still proceed if requested. Do not infer a source change merely because two generated drafts differ.
+## Submission-quality editorial loop
+
+For assignment or review-ready output, do not stop after a source-fidelity PASS.
+
+1. After drafting, run the Drafter's senior editorial pass before proofreading.
+2. During proofreading, record separate **Technical fidelity** and **Editorial quality / assignment fit** verdicts. Both must pass for an unqualified assignment-ready result.
+3. If editorial review finds PRD-shaped prose, excessive reference detail, a trivial how-to, a feature-summary-style release note, duplication, or unnatural wording, revise the reader-facing draft without weakening evidence controls, then re-run both gates.
+4. Prefer a concise, reader-shaped document over maximum inclusion. Supported facts may remain in analysis/coverage rather than reader-facing prose when they are not needed by that audience, except material risks and consequential behavior.
+5. Before final status, reread the three rendered drafts as a set and verify that each has a distinct purpose and does not merely repeat the others.
