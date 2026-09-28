@@ -1,6 +1,6 @@
 # Coordinate parallel work with Tracks
 
-Tracks lets you organize work on the same task across multiple workstreams and track progress in each one independently. For example, a task can move through specification and design work at the same time without one track's progress changing the other.
+Tracks lets you organize work on the same task across multiple workstreams and track progress in each one independently.
 
 ## Understand tasks and tracks
 
@@ -27,7 +27,7 @@ Open a task to view its **Tracks** pill. The pill shows every track in the proje
 
 ## Manage tracks
 
-Team members can enable Tracks and create, rename, or move tracks. Only admins can disable Tracks.
+Team members can enable Tracks and create, rename, or move tracks. Only admins can disable Tracks. The requirements do not specify who can delete a track.
 
 Track names must be unique within a project. Renaming a track changes its name without changing task assignments or statuses. Moving a track changes only its position on the board.
 
@@ -45,7 +45,7 @@ Moving a task to another project clears all of its track assignments. The task a
 
 You can use **Start**, **Mark Done**, and **Mark Pending** while offline. Tasket queues these changes locally and reconciles them when you reconnect.
 
-Managing Tracks requires an online connection. This includes enabling or disabling Tracks and creating, renaming, moving, or deleting tracks.
+Managing Tracks requires an online connection. This includes enabling or disabling Tracks and creating, renaming, moving, or deleting tracks. Because the supplied requirements conflict on what happens to track data when Tracks is disabled, confirm that behavior before disabling the feature.
 
 If an offline queued change refers to a track that was deleted online, Tasket drops that change during synchronization and does not recreate the track.
 
