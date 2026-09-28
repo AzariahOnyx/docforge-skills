@@ -43,3 +43,15 @@ For every fresh run:
 A run receives **solid-doc-set PASS** only when source fidelity, editorial/assignment fit, blueprint challenge, and structural checker all pass; reader-facing claims remain source-supported; contradictions remain unresolved; and publication blockers are separated from assignment readiness.
 
 For regression testing, generate without using previously approved reader-facing articles as input. Compare the completed set with a benchmark only after generation, using reader goal, essential concept coverage, task completeness, release-note focus, unsupported claims, and material-risk handling. Exact wording is not required.
+
+
+## V2.1 quality gates
+
+A solid-doc-set PASS additionally requires:
+- claim-admission audit PASS;
+- no DIRECT uncertainty is presented as settled product behavior;
+- ADJACENT uncertainty has an explicit INCLUDE/QUALIFY/DEFER/BLOCK decision;
+- editorial restraint did not remove a material risk or prerequisite;
+- no promotional wording introduces an unsupported benefit or guarantee.
+
+When comparing regression runs, prefer evidence-safe improvement over similarity to the benchmark. A new run may legitimately choose a different title, structure, task route, or release-note priority when its source evidence and reader-job rationale are stronger.
