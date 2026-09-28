@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise coverage gate against meaningful broken output cases."""
+"""Regression tests for structural, coverage, and V2 editorial-artifact gates."""
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 REPO = Path(__file__).resolve().parents[1]
-EXAMPLE = REPO / "output" / "quiet-hours"
+EXAMPLE = REPO / "output" / "tracks"
 CHECKER = REPO / "scripts" / "check_outputs.py"
 
 
@@ -21,65 +21,62 @@ def run(directory: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-def main() -> int:
-    assert run(EXAMPLE).returncode == 0, "baseline example must pass"
-    cases = {
-        "missing claim": lambda s: s.replace(
-            "| C08 | BLOCKED | — | Until tomorrow time and zone are undefined; no clock-time claim. | Q01 |\n", ""
-        ),
-        "duplicate claim": lambda s: s + "\n| C01 | CONTEXT | — | Duplicate. | None |\n",
-        "invalid disposition": lambda s: s.replace("| C08 | BLOCKED |", "| C08 | VERIFIED |"),
-        "missing destination": lambda s: s.replace(
-            "| C01 | INCLUDED | feature/feature-guide.md |",
-            "| C01 | INCLUDED | — |",
-        ),
-    }
+def copy_example(temporary: str) -> Path:
+    root = Path(temporary) / "tracks"
+    shutil.copytree(EXAMPLE, root)
+    return root
+
+
+def expect_rejected(name: str, mutate) -> None:
     with TemporaryDirectory() as temporary:
-        root = Path(temporary) / "quiet-hours"
-        for name, mutate in cases.items():
-            shutil.copytree(EXAMPLE, root)
-            path = root / "analysis" / "COVERAGE.md"
-            path.write_text(mutate(path.read_text(encoding="utf-8")), encoding="utf-8")
-            result = run(root)
-            if result.returncode == 0:
-                print(f"FAIL: {name} passed unexpectedly")
-                return 1
-            shutil.rmtree(root)
-            print(f"PASS: {name} rejected")
-        shutil.copytree(EXAMPLE, root)
-        impact = root / "analysis" / "CHANGE-IMPACT.md"
-        impact.write_text(
-            "# Change impact\n\n## Baseline\n\nBoth sources inspected.\n\n"
-            "## Source changes\n\nFixed option changed.\n\n"
-            "## Document actions\n\nUpdate the how-to.\n",
-            encoding="utf-8",
-        )
-        if run(root).returncode != 0:
-            print("FAIL: valid optional change impact rejected")
-            return 1
-        impact.write_text(impact.read_text(encoding="utf-8").replace("## Document actions", "## Actions"), encoding="utf-8")
-        if run(root).returncode == 0:
-            print("FAIL: incomplete change impact passed unexpectedly")
-            return 1
-        print("PASS: optional change-impact structure checked")
-        impact.write_text(
-            "# Change impact\n\n## Baseline\n\n"
-            "## Source changes\n\n"
-            "demo/mock-prd-v2.md, line 15 supports the changed option.\n\n"
-            "## Document actions\n\nUpdate.\n",
-            encoding="utf-8",
-        )
-        if run(root).returncode != 0:
-            print("FAIL: valid source line citation rejected")
-            return 1
-        impact.write_text(
-            impact.read_text(encoding="utf-8").replace("line 15", "line 14"),
-            encoding="utf-8",
-        )
-        if run(root).returncode == 0:
-            print("FAIL: blank source line citation passed unexpectedly")
-            return 1
-        print("PASS: blank source line citation rejected")
+        root = copy_example(temporary)
+        mutate(root)
+        result = run(root)
+        if result.returncode == 0:
+            raise AssertionError(f"{name} passed unexpectedly\n{result.stdout}")
+        print(f"PASS: {name} rejected")
+
+
+def main() -> int:
+    baseline = run(EXAMPLE)
+    if baseline.returncode != 0:
+        print("FAIL: baseline Tracks output must pass")
+        print(baseline.stdout)
+        return 1
+    print("PASS: baseline Tracks output accepted")
+
+    expect_rejected(
+        "missing editorial blueprint",
+        lambda root: (root / "analysis" / "EDITORIAL-BLUEPRINT.md").unlink(),
+    )
+
+    expect_rejected(
+        "incomplete editorial blueprint",
+        lambda root: (root / "analysis" / "EDITORIAL-BLUEPRINT.md").write_text(
+            "# Blueprint\n\n## Document contracts\n\nIncomplete.\n", encoding="utf-8"
+        ),
+    )
+
+    def remove_first_coverage_row(root: Path) -> None:
+        path = root / "analysis" / "COVERAGE.md"
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
+            if line.startswith("| C") and "Disposition" not in line:
+                del lines[index]
+                break
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    expect_rejected("missing claim coverage", remove_first_coverage_row)
+
+    def duplicate_first_coverage_row(root: Path) -> None:
+        path = root / "analysis" / "COVERAGE.md"
+        lines = path.read_text(encoding="utf-8").splitlines()
+        row = next(line for line in lines if line.startswith("| C") and "Disposition" not in line)
+        path.write_text(path.read_text(encoding="utf-8") + "\n" + row + "\n", encoding="utf-8")
+
+    expect_rejected("duplicate claim coverage", duplicate_first_coverage_row)
+
+    print("PASS: V2 checker regression suite")
     return 0
 
 
