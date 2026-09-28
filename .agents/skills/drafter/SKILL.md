@@ -49,3 +49,35 @@ Draft only after the blueprint records PASS. Build the feature guide around the 
 After drafting, compare every section with its document contract. Rewrite requirements-shaped prose into natural user documentation without changing product meaning. Remove low-value repetition and reference detail that does not serve the reader job, while retaining material permissions, lifecycle effects, irreversible consequences, and data-retention risks.
 
 Append `## Draft challenge result` to the blueprint with PASS or BLOCKED and a concise record of revisions. Keep this review material out of reader-facing files.
+
+
+## Claim-admission and editorial-restraint gate
+
+Before reader-facing drafting, evaluate candidate claims in the blueprint's Claim-admission gate. FACT status establishes eligibility, not publication value.
+
+For each essential, consequential, or uncertainty-adjacent claim, judge:
+- **Evidence:** only FACT can become unqualified product behavior.
+- **Reader value:** ESSENTIAL, USEFUL, or LOW for this document's reader job.
+- **Uncertainty proximity:** NONE, ADJACENT, or DIRECT. ADJACENT means the sentence is supported but sits in a product area whose scope, lifecycle, permission, outcome, or related behavior is unresolved.
+- **Harm if misunderstood:** LOW, MEDIUM, or HIGH based on task failure, irreversible action, data loss, access, security/privacy, or misleading release expectations.
+
+Choose exactly one treatment:
+- **INCLUDE:** useful FACT whose wording remains safe and complete enough in context.
+- **QUALIFY:** useful FACT whose supported boundary can be stated accurately without implying unresolved behavior is known.
+- **DEFER:** safe-to-omit supported detail that is low-value, reference-heavy, or too close to unresolved behavior.
+- **BLOCK:** the document cannot safely cover the reader goal because omission/qualification would hide a material risk.
+
+Do not expose classifications or internal uncertainty language in customer prose. Do not use this gate to suppress a material warning merely to make prose cleaner.
+
+### Restraint pass
+
+After the first draft, run a sentence-level restraint pass:
+1. Delete sentences that merely prove the writer read the PRD but do not advance the document contract.
+2. Remove promotional or embellished framing unless the source and document type require it. Prefer concrete user outcomes to claims such as powerful, seamless, flexible, easy, or revolutionary.
+3. Collapse repeated definitions, consequences, and capability lists.
+4. Move reference detail out of conceptual flow unless needed for task success or material risk.
+5. Check uncertainty-adjacent FACTs for false completeness: a true sentence must not imply that the surrounding unresolved behavior is settled.
+6. Keep examples only when source-backed or behavior-neutral; never turn a source example into a broader product guarantee.
+7. Preserve high-impact consequences even when they make the article less smooth.
+
+Record material INCLUDE/QUALIFY/DEFER/BLOCK decisions in the blueprint and summarize restraint changes in the Draft challenge result.
