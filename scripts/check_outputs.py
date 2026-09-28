@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import sys
 from urllib.parse import unquote
+import json
 
 
 REQUIRED = {
@@ -138,6 +139,45 @@ def main() -> int:
                 errors.append(f"{relative}: {question} missing from handover")
         for question in sorted(known_questions - set(QUESTION.findall(clarifications))):
             warnings.append(f"Clarification register does not mention {question}")
+
+    # V2.2 artifacts are mandatory for fresh V2.2 runs but optional for legacy
+    # benchmark sets. If any one is present, require and validate the complete set.
+    advanced = {
+        "analysis/TERMINOLOGY.md": ("## Canonical terms", "## Final terminology audit"),
+        "analysis/RISK-REVIEW.md": ("## High-impact claims", "## Example safety", "## Cross-document ownership", "## Final risk audit"),
+        "analysis/TRACEABILITY.json": (),
+    }
+    advanced_present = any((root / relative).is_file() for relative in advanced)
+    if advanced_present:
+        for relative, headings in advanced.items():
+            path = root / relative
+            if not path.is_file():
+                errors.append(f"Missing V2.2 artifact {relative}")
+                continue
+            body = path.read_text(encoding="utf-8")
+            if len(body.strip()) < 100:
+                errors.append(f"{relative}: appears incomplete (<100 characters)")
+            for heading in headings:
+                if not re.search(rf"^{re.escape(heading)}\s*$", body, re.M):
+                    errors.append(f"{relative}: missing {heading}")
+        manifest_path = root / "analysis/TRACEABILITY.json"
+        if manifest_path.is_file():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest_ids = [item.get("id") for item in manifest.get("claims", [])]
+                if len(manifest_ids) != len(set(manifest_ids)):
+                    errors.append("analysis/TRACEABILITY.json: duplicate claim IDs")
+                register_ids_set = set(register_ids) if handover else set()
+                if set(manifest_ids) != register_ids_set:
+                    errors.append("analysis/TRACEABILITY.json: claim IDs must exactly match HANDOVER claim register")
+                readiness = manifest.get("readiness")
+                if readiness not in {"DRAFTABLE", "ASSIGNMENT-READY", "REVIEW-READY", "PUBLICATION-READY"}:
+                    errors.append("analysis/TRACEABILITY.json: invalid readiness state")
+                blockers = manifest.get("publication_blockers", [])
+                if readiness == "PUBLICATION-READY" and blockers:
+                    errors.append("analysis/TRACEABILITY.json: PUBLICATION-READY cannot have publication blockers")
+            except json.JSONDecodeError as exc:
+                errors.append(f"analysis/TRACEABILITY.json: invalid JSON ({exc})")
 
     impact_path = root / "analysis/CHANGE-IMPACT.md"
     if impact_path.is_file():
