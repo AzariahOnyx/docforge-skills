@@ -1,4 +1,5 @@
 name: Documentation structure
+# V2 branch validates structural and editorial artifacts.
 
 on:
   pull_request:
