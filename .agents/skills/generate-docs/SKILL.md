@@ -55,3 +55,25 @@ A solid-doc-set PASS additionally requires:
 - no promotional wording introduces an unsupported benefit or guarantee.
 
 When comparing regression runs, prefer evidence-safe improvement over similarity to the benchmark. A new run may legitimately choose a different title, structure, task route, or release-note priority when its source evidence and reader-job rationale are stronger.
+
+
+## V2.2 advanced run contract
+
+For every new full run, require these additional analysis artifacts:
+- `analysis/TERMINOLOGY.md`
+- `analysis/TRACEABILITY.json`
+- `analysis/RISK-REVIEW.md`
+
+The Analyzer creates their evidence/risk baseline. The Drafter updates admission destinations, examples, and topic ownership. The Proofreader independently audits all three against the original source.
+
+A solid-doc-set PASS now requires:
+- terminology/UI-label audit PASS;
+- risk-weighted audit PASS for all material high-impact claims;
+- example-safety audit PASS;
+- cross-document ownership audit PASS;
+- traceability manifest consistency PASS;
+- an explicit readiness state, with PUBLICATION-READY forbidden while any material blocker remains.
+
+### Regression rule
+
+For a clean-room regression run, never read prior reader-facing outputs, prior blueprints, or prior QA before the new run is complete. Use a new output slug. After completion, comparison with earlier runs is allowed for evaluation only. Exact prose similarity is not a success criterion.
