@@ -1,0 +1,1331 @@
+{
+  "schema_version": "1.0",
+  "source_set": [
+    "input/Technical Writer - Case Study.pdf"
+  ],
+  "claims": [
+    {
+      "id": "C01",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, What Tasket is",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "General team/project hierarchy is background; project scope is enough here.",
+      "coverage_disposition": "CONTEXT",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C02",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Tasks",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#how-tracks-relate-to-tasks"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "One project per task supplies scope.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C03",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Tasks",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q10"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Task attachments are unrelated background.",
+      "coverage_disposition": "CONTEXT",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C04",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Tasks",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q10"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Participant counts are unrelated background.",
+      "coverage_disposition": "CONTEXT",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C05",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Task status",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [
+        "Q14"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Explain Completed and Discarded as closed; omit ambiguous terminal.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C06",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Task status",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [
+        "Q14"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Reopening returns to Open; no irreversible closure implication.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C07",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Where things appear",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#find-your-track-status",
+        "how-to/how-to.md#before-you-begin"
+      ],
+      "blockers": [
+        "Q01",
+        "Q06"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Already enabled project only; no settings route or toggle result.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C08",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, What are tracks",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#follow-parallel-work-with-tracks",
+        "release-note/release-note.md#track-parallel-progress-on-a-single-task"
+      ],
+      "blockers": [
+        "Q09"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Parallel workstreams; undated PRD-based capability draft, not launch assertion.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C09",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, What are tracks",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#how-tracks-relate-to-tasks",
+        "how-to/how-to.md#expected-result"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Keep whole-task closure distinct from per-track Done.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C10",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Scope",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#how-tracks-relate-to-tasks"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Tracks belong to their project.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C11",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Scope",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#how-tracks-relate-to-tasks"
+      ],
+      "blockers": [
+        "Q13"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Any number of tracks per task only; no other capacity promise.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C12",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Scope",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#how-tracks-relate-to-tasks"
+      ],
+      "blockers": [
+        "Q12"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Exactly one of In Progress or Done per participating track; no Start outcome.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C13",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Scope",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#how-tracks-relate-to-tasks"
+      ],
+      "blockers": [
+        "Q08"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Not started defined without inferred Stop result.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C14",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, The Tracks board / Layout",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#find-your-track-status"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Board columns and two sections explain the project view.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C15",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, The Tracks board / Layout",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#find-your-track-status",
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Only open tasks in columns; closure removes board visibility.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C16",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, The Tracks board / Layout",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q02"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Board-counter meaning unresolved Q02; omit its display rather than invite interpretation.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C17",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, The Tracks board / Layout",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#find-your-track-status"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Source example of three tracks and three columns; scoped to open tasks.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C18",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Managing tracks from the board",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q07"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Create-track flow lacks complete controls Q07; no management tutorial.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C19",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Managing tracks from the board",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q03"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Management control inventory adds reference detail; deletion consequence retained separately.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C20",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Managing tracks from the board; Lifecycle rules",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Column reordering is low-value for these reader jobs.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C21",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Actions on a task in a column",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q08"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Board action inventory omitted; task-detail route owns selected procedure.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C22",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Actions on a task in a column",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Alternate board route omitted to keep one procedure.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C23",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Actions on a task in a column",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q04",
+        "Q07"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Bulk start is a separate incomplete procedure Q07.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C24",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Actions on a task in a column",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Alternate route and attached detail inventory unnecessary because task details are the verified starting point.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C25",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, The Tracks pill",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#find-your-track-status",
+        "how-to/how-to.md#steps"
+      ],
+      "blockers": [
+        "Q01",
+        "Q10"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Task detail pill, scoped to enabled project; no disputed entry-point label.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C26",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, The Tracks pill",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#find-your-track-status",
+        "how-to/how-to.md#steps",
+        "release-note/release-note.md#track-parallel-progress-on-a-single-task"
+      ],
+      "blockers": [
+        "Q09",
+        "Q13"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Every project track and inline status; no claim broadening task visibility.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C27",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, The Tracks pill",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q11",
+        "Q12"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Start route deferred with initial-state inference Q12; no unsupported starting outcome.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C28",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, The Tracks pill",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "how-to/how-to.md#steps"
+      ],
+      "blockers": [
+        "Q04",
+        "Q08",
+        "Q11"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Admit Mark Done for an In Progress task only; omit Stop control and outcome.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C29",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, The Tracks pill",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "how-to/how-to.md#resume-work-on-the-track"
+      ],
+      "blockers": [
+        "Q11"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Mark Pending on Done, within selected open-task scope.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C30",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, The Tracks pill",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#find-your-track-status"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Count semantics explicitly pill-only.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C31",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Lifecycle rules / Close and reopen",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [
+        "Q01",
+        "Q11",
+        "Q14"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Closing itself retains status; reopening uses retained status, with deletion and move limits adjacent. No toggle promise.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C32",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Lifecycle rules; p6, US-4",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [
+        "Q01",
+        "Q11"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Closed-task pill visibility within enabled-project scope; no closed-task mutation promise.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C33",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Lifecycle rules / Delete a track; p5, US-1",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [
+        "Q03"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Prominent irreversible deletion warning, open and closed tasks, no undo/recovery; no authority claim.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C34",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Lifecycle rules / Rename a track",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Rename invariants are low-value management reference.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C35",
+      "classification": "CONTRADICTION",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Capabilities / Switching off; p5, Lifecycle rules / Switch the capability off",
+      "risk": "HIGH",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "BLOCK",
+      "destinations": [],
+      "blockers": [
+        "Q01"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Unresolved Q01; no reader-facing assertion. Material publication blocker.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C36",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Lifecycle rules / Cross-project move",
+      "risk": "HIGH",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [],
+      "risk_weight": 3,
+      "editorial_reason": "Cross-project move clears all assignments even same-name destination tracks.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C37",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Lifecycle rules / Cross-project move",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Future-release intent is not a dated roadmap promise; omit.",
+      "coverage_disposition": "CONTEXT",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C38",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Capabilities; p5, Permissions table",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#access-to-tracks"
+      ],
+      "blockers": [
+        "Q01",
+        "Q06"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Member enable permission only, no setup route or outcome.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C39",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Capabilities; p5, Permissions table",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#access-to-tracks"
+      ],
+      "blockers": [
+        "Q01",
+        "Q06"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Admin-only disable permission, no retention/restoration claim; publication remains blocked Q01.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C40",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Permissions table",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q03",
+        "Q13"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Create/rename/reorder permission reference is outside selected tasks; no management procedure suggests broader access.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C41",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Permissions table",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#access-to-tracks",
+        "how-to/how-to.md#before-you-begin"
+      ],
+      "blockers": [
+        "Q13"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Task access required for status changes; selected how-to omits Start/Stop procedures.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C42",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Permissions table",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q07",
+        "Q13"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Bulk permission deferred with bulk procedure; no multi-select instructions.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C43",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Permissions table",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#access-to-tracks"
+      ],
+      "blockers": [
+        "Q13"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Project access required to view board, not universal task visibility.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C44",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Permissions",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#access-to-tracks",
+        "how-to/how-to.md#before-you-begin"
+      ],
+      "blockers": [
+        "Q03",
+        "Q13"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Guest equivalence only on accessible projects, preserving task-access requirement.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C45",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, US-1",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q13"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Name uniqueness belongs to deferred create-track reference.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C46",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-2",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q12"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Starting task procedure deferred with Q12 initial-state gap.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C47",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-2",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q07"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Duplicate-start edge case is outside selected goal.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C48",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-2",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#when-a-task-closes-or-moves"
+      ],
+      "blockers": [
+        "Q11"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Closed tasks must be reopened before a new track can be started; no existing-status edit promise.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C49",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "how-to/how-to.md#steps",
+        "how-to/how-to.md#expected-result"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Verified In Progress to Done transition.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C50",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Capabilities; p6, US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "NONE",
+      "admission": "INCLUDE",
+      "destinations": [
+        "how-to/how-to.md#resume-work-on-the-track"
+      ],
+      "blockers": [],
+      "risk_weight": 1,
+      "editorial_reason": "Verified Done to In Progress transition.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C51",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q08"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Stop not taught or advertised; Done restriction deferred with Stop procedure Q08.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C52",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#how-tracks-relate-to-tasks",
+        "how-to/how-to.md#expected-result",
+        "release-note/release-note.md#track-parallel-progress-on-a-single-task"
+      ],
+      "blockers": [
+        "Q09"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Changing one track to Done leaves other tracks unchanged.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C53",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q02"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Counter update edge case deferred with Q02.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C54",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, US-4",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q01",
+        "Q06"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Off-state visibility reference deferred; drafts explicitly scoped to enabled projects and do not guide disabling.",
+      "coverage_disposition": "DEFERRED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C55",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, Offline behaviour",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#working-offline",
+        "how-to/how-to.md#working-offline"
+      ],
+      "blockers": [
+        "Q04",
+        "Q05",
+        "Q09"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Only Start, Mark Done and Mark Pending; queue/reconcile accompanied by silent deletion-drop caveat.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C56",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, Offline behaviour",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#working-offline"
+      ],
+      "blockers": [
+        "Q01",
+        "Q03",
+        "Q06"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Online-only management and capability changes, with no settings path or toggle/deletion outcome.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C57",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, Offline behaviour",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#working-offline",
+        "how-to/how-to.md#working-offline"
+      ],
+      "blockers": [
+        "Q05"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Queued membership writes dropped silently if track deleted; no recreation.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C58",
+      "classification": "FACT",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, Offline behaviour",
+      "risk": "HIGH",
+      "uncertainty_proximity": "ADJACENT",
+      "admission": "QUALIFY",
+      "destinations": [
+        "feature/feature-guide.md#working-offline"
+      ],
+      "blockers": [
+        "Q05"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Offline closure plus online deletion loses assignment at sync; reopening does not restore deleted track.",
+      "coverage_disposition": "INCLUDED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C59",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Layout; p6, US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q02"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Unresolved Q02; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C60",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p5, Permissions table and US-1",
+      "risk": "HIGH",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q03"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Unresolved Q03; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C61",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, Offline behaviour; p4, Actions on a task in a column",
+      "risk": "HIGH",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q04"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Unresolved Q04; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C62",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p6, Offline behaviour",
+      "risk": "HIGH",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q05"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Unresolved Q05; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C63",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Capabilities; p3, Capabilities; p5, Lifecycle rules",
+      "risk": "LOW",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q06"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Unresolved Q06; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C64",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, Managing tracks; Actions on a task in a column",
+      "risk": "LOW",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q07"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Unresolved Q07; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C65",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Capabilities; p4, The Tracks pill; p6, US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q08"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Unresolved Q08; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C66",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, PRD heading; p3, Capabilities; p6, Offline behaviour",
+      "risk": "HIGH",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "BLOCK",
+      "destinations": [],
+      "blockers": [
+        "Q09"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Unresolved Q09; no reader-facing assertion. Material publication blocker.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C67",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Tasks and Where things appear; p4, The Tracks pill",
+      "risk": "LOW",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q10"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Unresolved Q10; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C68",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p4, The Tracks pill and Lifecycle rules; p6, US-2",
+      "risk": "HIGH",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q11"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Unresolved Q11; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C69",
+      "classification": "INFERENCE",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Scope; p4, The Tracks pill; p6, US-2 and US-3",
+      "risk": "LOW",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q12"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Unresolved Q12; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    },
+    {
+      "id": "C70",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p3, Scope; p5, Permissions and US-1",
+      "risk": "HIGH",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q13"
+      ],
+      "risk_weight": 3,
+      "editorial_reason": "Unresolved Q13; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true,
+      "risk_audit": "PASS \u2014 supported boundary or safe deferral verified; unresolved questions remain open"
+    },
+    {
+      "id": "C71",
+      "classification": "UNKNOWN",
+      "source_locator": "input/Technical Writer - Case Study.pdf, p2, Task status",
+      "risk": "LOW",
+      "uncertainty_proximity": "DIRECT",
+      "admission": "DEFER",
+      "destinations": [],
+      "blockers": [
+        "Q14"
+      ],
+      "risk_weight": 1,
+      "editorial_reason": "Unresolved Q14; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed.",
+      "coverage_disposition": "BLOCKED",
+      "independent_audit": "PASS",
+      "source_rechecked": true
+    }
+  ],
+  "readiness": "REVIEW-READY",
+  "publication_blockers": [
+    "Q01",
+    "Q09"
+  ],
+  "draft_status": "COMPLETE_INDEPENDENT_REVIEW_PASSED",
+  "audits": {
+    "technical_fidelity": "PASS",
+    "editorial_assignment_fit": "PASS",
+    "blueprint_challenge": "PASS",
+    "claim_admission": "PASS",
+    "terminology_ui": "PASS",
+    "risk_weighted": "PASS",
+    "example_safety": "PASS",
+    "cross_document_ownership": "PASS",
+    "traceability_consistency": "PASS",
+    "structural_checker": "PASS"
+  },
+  "reviewer": "Independent Proofreader, source-first review of original PDF pp1\u20136 and page renders",
+  "solid_doc_set": "PASS"
+}

@@ -1,0 +1,62 @@
+# Risk-weighted review
+
+Independent Proofreader rechecked all 24 HIGH rows directly against the original source, including the rendered permission table. PASS means the admission or deferral is safe for review, not that an unresolved product question is settled. Source throughout is `input/Technical Writer - Case Study.pdf`. Severity reflects consequences, not certainty.
+
+## High-impact claims
+
+| Claim ID | Risk type | Severity | Source rechecked | Reader treatment | Warning placement | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| C31 | data retention | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p4, Lifecycle rules / Close and reopen | QUALIFY — Closing itself retains status; reopening uses retained status, with deletion and move limits adjacent. No toggle promise. | feature/feature-guide.md#when-a-task-closes-or-moves | PASS — bounded treatment verified |
+| C32 | data retention | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p4, Lifecycle rules; p6, US-4 | QUALIFY — Closed-task pill visibility within enabled-project scope; no closed-task mutation promise. | feature/feature-guide.md#when-a-task-closes-or-moves | PASS — bounded treatment verified |
+| C33 | destructive / irreversible / data loss | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p4, Lifecycle rules / Delete a track; p5, US-1 | QUALIFY — Prominent irreversible deletion warning, open and closed tasks, no undo/recovery; no authority claim. | feature/feature-guide.md#when-a-task-closes-or-moves | PASS — bounded treatment verified |
+| C35 | destructive / data retention contradiction | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p3, Capabilities / Switching off; p5, Lifecycle rules / Switch the capability off | BLOCK — Unresolved Q01; no reader-facing assertion. Material publication blocker. | Review-only publication blocker Q01 | PASS — bounded treatment verified |
+| C36 | cross-project data loss | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p5, Lifecycle rules / Cross-project move | INCLUDE — Cross-project move clears all assignments even same-name destination tracks. | feature/feature-guide.md#when-a-task-closes-or-moves | PASS — bounded treatment verified |
+| C38 | access / permission | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p2, Capabilities; p5, Permissions table | QUALIFY — Member enable permission only, no setup route or outcome. | feature/feature-guide.md#access-to-tracks | PASS — bounded treatment verified |
+| C39 | access / permission | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p2, Capabilities; p5, Permissions table | QUALIFY — Admin-only disable permission, no retention/restoration claim; publication remains blocked Q01. | feature/feature-guide.md#access-to-tracks | PASS — bounded treatment verified |
+| C40 | access / permission | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p5, Permissions table | DEFER — Create/rename/reorder permission reference is outside selected tasks; no management procedure suggests broader access. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+| C41 | access / permission | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p5, Permissions table | QUALIFY — Task access required for status changes; selected how-to omits Start/Stop procedures. | feature/feature-guide.md#access-to-tracks; how-to/how-to.md#before-you-begin | PASS — bounded treatment verified |
+| C42 | access / permission | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p5, Permissions table | DEFER — Bulk permission deferred with bulk procedure; no multi-select instructions. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+| C43 | access / permission | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p5, Permissions table | QUALIFY — Project access required to view board, not universal task visibility. | feature/feature-guide.md#access-to-tracks | PASS — bounded treatment verified |
+| C44 | access / permission | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p5, Permissions | QUALIFY — Guest equivalence only on accessible projects, preserving task-access requirement. | feature/feature-guide.md#access-to-tracks; how-to/how-to.md#before-you-begin | PASS — bounded treatment verified |
+| C48 | access / lifecycle | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, US-2 | QUALIFY — Closed tasks must be reopened before a new track can be started; no existing-status edit promise. | feature/feature-guide.md#when-a-task-closes-or-moves | PASS — bounded treatment verified |
+| C54 | access / capability visibility | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, US-4 | DEFER — Off-state visibility reference deferred; drafts explicitly scoped to enabled projects and do not guide disabling. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+| C55 | offline / conflict | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, Offline behaviour | QUALIFY — Only Start, Mark Done and Mark Pending; queue/reconcile accompanied by silent deletion-drop caveat. | feature/feature-guide.md#working-offline; how-to/how-to.md#working-offline | PASS — bounded treatment verified |
+| C56 | offline restrictions | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, Offline behaviour | QUALIFY — Online-only management and capability changes, with no settings path or toggle/deletion outcome. | feature/feature-guide.md#working-offline | PASS — bounded treatment verified |
+| C57 | offline / silent data loss | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, Offline behaviour | QUALIFY — Queued membership writes dropped silently if track deleted; no recreation. | feature/feature-guide.md#working-offline; how-to/how-to.md#working-offline | PASS — bounded treatment verified |
+| C58 | offline / retention | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, Offline behaviour | QUALIFY — Offline closure plus online deletion loses assignment at sync; reopening does not restore deleted track. | feature/feature-guide.md#working-offline | PASS — bounded treatment verified |
+| C60 | destructive authorization gap | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p5, Permissions table and US-1 | DEFER — Unresolved Q03; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+| C61 | offline gap | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, Offline behaviour; p4, Actions on a task in a column | DEFER — Unresolved Q04; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+| C62 | conflict / recovery gap | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p6, Offline behaviour | DEFER — Unresolved Q05; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+| C66 | release expectation | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p2, PRD heading; p3, Capabilities; p6, Offline behaviour | BLOCK — Unresolved Q09; no reader-facing assertion. Material publication blocker. | Review-only publication blocker Q09 | PASS — bounded treatment verified |
+| C68 | closed-task access gap | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p4, The Tracks pill and Lifecycle rules; p6, US-2 | DEFER — Unresolved Q11; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+| C70 | access / privacy gap | HIGH | Independent Proofreader: yes, input/Technical Writer - Case Study.pdf, p3, Scope; p5, Permissions and US-1 | DEFER — Unresolved Q13; no reader-facing assertion. Affected behavior withheld; independent bounded claims may proceed. | No reader-facing claim; omitted with associated procedure or unresolved assertion | PASS — bounded treatment verified |
+
+## Example safety
+
+| Document / example | Classification | Evidence | Decision |
+| --- | --- | --- | --- |
+| Feature overview: task on spec and design at the same time | SOURCE | input/Technical Writer - Case Study.pdf, p3, What are tracks; C08 | INCLUDE; original simultaneous example only, no invented status or outcome. |
+| Feature / Find your track status: open task on three tracks appears in three columns | SOURCE | input/Technical Writer - Case Study.pdf, p3, Layout; C15/C17 | INCLUDE; open-task boundary explicitly retained. |
+| How-to: accessible Open task already In Progress, Mark Done, optional Mark Pending | PRODUCT-BEHAVIOR | input/Technical Writer - Case Study.pdf, p4, The Tracks pill; p5, Permissions; p6, US-3; C25–C29/C41/C44/C49/C50/C52 | INCLUDE with evidence for each state/action/outcome; no inferred Start status. |
+| Feature / lifecycle: same-name destination track | SOURCE | input/Technical Writer - Case Study.pdf, p5, Cross-project move; C36 | INCLUDE; essential loss boundary, not recovery promise. |
+| Release note | No additional example | Capability claims C08/C26/C52 | No scenario or invented before-state. |
+
+Drafter example-safety self-audit: PASS. No BEHAVIOR-NEUTRAL decoration was needed. Independent Proofreader audit: PASS against original source and final drafts.
+
+## Cross-document ownership
+
+| Topic | Primary owner | Secondary mention allowed? | Duplication finding |
+| --- | --- | --- | --- |
+| Independent task/track progress | Feature / How tracks relate to tasks | How-to goal/result; release independent-progress bullet | Minimum local context; no repeated definition table. |
+| Board versus pill and pill count | Feature / Find your track status | How-to pill route; release complete-view bullet | Count/board detail appears only in feature. |
+| Mark Done / Mark Pending procedure | How-to / Steps, Expected result, Resume work on the track | Feature related-task link only | One procedural owner; no repeated action inventory. |
+| Access and capability permissions | Feature / Access to Tracks | How-to prerequisites repeat only member/guest task access and enabled state | Necessary local task-success constraints. |
+| Closure, deletion and cross-project move | Feature / When a task closes or moves | None | All material loss consequences retained in primary owner. |
+| Offline named actions and deleted-track loss | Feature / Working offline | How-to local Mark Done/Mark Pending caveat | Warning repeated beside offline actions; release omits offline capability. |
+| Change announcement | Release note | None | Two high-value distinctions and guide link. |
+| Release expectations | Analysis / Q09 and QA readiness | Run summary | Internal blocker outside customer prose; no live-availability assertion. |
+
+Drafter ownership self-audit: PASS; shared context and offline warning are intentionally minimal. Independent Proofreader audit: PASS against original source and final drafts.
+
+## Final risk audit
+Independent risk-weighted, example-safety and cross-document ownership audits: PASS. All 24 HIGH claims were rechecked for scope, consequence, reversibility, permission boundaries, offline loss and warning placement. No material risk was removed for brevity. Final readiness: REVIEW-READY. Q01 and Q09 remain publication blockers. No implementation, billing, security architecture or migration behavior verified. Editorial compression must preserve irreversible deletion, cross-project clearing, bounded retention, permission limits and silent offline loss.
