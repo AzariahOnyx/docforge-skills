@@ -77,3 +77,19 @@ A solid-doc-set PASS now requires:
 ### Regression rule
 
 For a clean-room regression run, never read prior reader-facing outputs, prior blueprints, or prior QA before the new run is complete. Use a new output slug. After completion, comparison with earlier runs is allowed for evaluation only. Exact prose similarity is not a success criterion.
+
+
+## Input-agnostic source package contract
+
+The workflow accepts a single artifact or a mixed source package; PRD is only one possible source type. Require `analysis/SOURCE-INTAKE.md` for fresh runs.
+
+Before claim analysis:
+1. inventory every supplied artifact and its detected type/role;
+2. record readability and review coverage;
+3. distinguish current product evidence, prior documentation, contextual/support evidence, and unknown authority;
+4. preserve per-claim provenance when combining sources;
+5. detect UPDATE mode only from explicit version/current-prior relationships or the user's instruction, never from filename guessing.
+
+The requested deliverable set is a target, not permission to invent. A required deliverable may be marked BLOCKED when the source package cannot establish the minimum evidence needed for an evidence-safe draft. The completion summary must distinguish a blocked deliverable from a workflow failure.
+
+For visual-only evidence, visible state may support descriptive documentation, but interaction outcomes require additional evidence. For mixed-source contradictions, preserve both sides unless an explicit authority rule resolves precedence.
