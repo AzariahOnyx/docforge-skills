@@ -179,6 +179,15 @@ def main() -> int:
             except json.JSONDecodeError as exc:
                 errors.append(f"analysis/TRACEABILITY.json: invalid JSON ({exc})")
 
+    intake_path = root / "analysis/SOURCE-INTAKE.md"
+    if intake_path.is_file():
+        intake = intake_path.read_text(encoding="utf-8")
+        for heading in ("## Intake summary", "## Artifact inventory", "## Source relationships", "## Intake decision"):
+            if not re.search(rf"^{re.escape(heading)}\s*$", intake, re.M):
+                errors.append(f"analysis/SOURCE-INTAKE.md: missing {heading}")
+        if len(intake.strip()) < 250:
+            errors.append("analysis/SOURCE-INTAKE.md: appears incomplete (<250 characters)")
+
     impact_path = root / "analysis/CHANGE-IMPACT.md"
     if impact_path.is_file():
         impact = impact_path.read_text(encoding="utf-8")
