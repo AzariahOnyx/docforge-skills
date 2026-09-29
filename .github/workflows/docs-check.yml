@@ -1,5 +1,5 @@
 name: Documentation structure
-# V2.2 branch validates structural, editorial, traceability, and risk artifacts.
+# V2.3 validates structural, editorial, traceability, risk, and mixed-source intake artifacts.
 
 on:
   pull_request:
