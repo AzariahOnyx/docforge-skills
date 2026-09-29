@@ -24,3 +24,12 @@ specific supported need.
 After drafting, map every material handover claim in `analysis/COVERAGE.md`.
 For revised PRDs, compare two source versions before changing documentation;
 preserve the earlier output and record affected sections in `analysis/CHANGE-IMPACT.md`.
+
+
+## Input-agnostic studio
+- `$demo-studio <input>` may receive a file, folder, or mixed set of artifacts; never assume the input is a PRD from its extension or location.
+- Fresh runs create `analysis/SOURCE-INTAKE.md` and preserve per-claim provenance.
+- Screenshots prove visible state, not hidden behavior or interaction outcomes.
+- Existing docs prove what is documented, not necessarily what the product currently does.
+- Mixed-source conflicts remain contradictions unless an explicit source-authority rule resolves them.
+- If evidence cannot safely support a requested deliverable, mark it BLOCKED/DEFERRED and state the missing evidence instead of fabricating completeness.
