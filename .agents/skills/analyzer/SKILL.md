@@ -125,3 +125,22 @@ For new runs, also create these analysis artifacts before drafting:
 3. **RISK-REVIEW.md** from `templates/risk-review.md`. Seed high-impact claims and risk types for independent review.
 
 Assign review intensity by consequence, not by model confidence. Mark destructive, irreversible, data-loss/retention, access/permission, security/privacy, migration, billing, offline/conflict, and release-expectation claims for mandatory source recheck. Do not convert risk severity into truth confidence.
+
+
+## Input-agnostic source intake
+
+For every new run, read `analysis/SOURCE-INTAKE.md` and the original artifacts. Do not assume PRD semantics.
+
+Apply evidence rules by source type:
+- **Requirements/PRD:** explicit normative behavior can be FACT within the source's stated scope.
+- **Engineering/design spec:** implementation/design statements can support behavior only to the extent explicitly stated; internal mechanism is not automatically reader-facing.
+- **Support case/ticket:** treat observed case details and resolutions as case-scoped unless the source explicitly establishes general behavior.
+- **Release brief:** use explicit change/release statements; missing rollout/version/platform details remain UNKNOWN.
+- **Screenshot/image:** visible labels, values, layout and state can be FACT; click outcomes, hidden state, permissions and backend behavior remain UNKNOWN unless another source supports them.
+- **Existing documentation:** evidence of what current docs say and of update candidates; not automatically authoritative product truth.
+- **Meeting notes:** attribute statements and decisions to the notes; distinguish proposals/questions from confirmed decisions.
+- **API/code examples:** exact signatures/fields/examples can be evidence when supplied as authoritative reference, but example behavior does not automatically establish every edge case.
+
+For mixed sources, preserve provenance on every material claim. When two sources disagree, classify CONTRADICTION unless an explicit user/repository authority rule establishes precedence. Never resolve precedence from file extension, apparent recency, or confidence.
+
+If evidence cannot support one of the requested deliverables, record the deliverable as BLOCKED or DEFERRED with the exact missing evidence instead of manufacturing a complete-looking draft.
