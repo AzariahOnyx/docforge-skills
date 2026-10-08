@@ -33,3 +33,19 @@ Apply this to any PRD. The source and the Analyzer handover determine product tr
 - Use direct language, consistent source terminology, second person where useful, and bold for verified UI labels. Remove template placeholders and internal claim IDs from reader-facing articles.
 - Check links, headings, accessibility of diagrams, grammar, duplication, and that each article serves its audience.
 - The structural checker verifies files, headings, local links, ID references, unique claim dispositions, and recognizable Markdown line citations that point to existing nonblank lines. The source-first Proofreader verifies the cited text's meaning, coverage decisions, omissions, and publication risks. Record PASS, WARNING, or FAIL and distinguish an assignment-ready draft from publication-ready documentation.
+
+## Generalized documentation types
+
+The three document types above are the default profile, not a mandatory package. For an API reference, use a verified contract or implementation evidence to document paths, methods, authentication, parameters, request and response bodies, errors, and examples; omit unsupported fields. For troubleshooting, require a reproducible symptom, supported diagnostic steps, a confirmed or clearly qualified resolution, and a safe recovery boundary. For migration or upgrade instructions, require verified version prerequisites, compatibility, data-impact and rollback information before publishing actionable steps. For conceptual or architecture documentation, distinguish documented components and relationships from illustrative proposals. Each custom type must have a source-backed structure and acceptance criteria in the content plan.
+
+## Style, accessibility, and technical checks
+
+Apply the supplied house style first. In its absence, use the principles of the [Microsoft Writing Style Guide](https://learn.microsoft.com/en-us/style-guide/welcome/) and the [Google developer documentation style guide](https://developers.google.com/style), without claiming certification or exhaustive compliance.
+
+- Prefer short, direct sentences, parallel lists, descriptive headings, and task-oriented titles. Use consistent terminology and UI capitalization; do not invent a UI control to improve prose.
+- Use imperative verbs for procedure steps. Keep each step focused on one meaningful action, and state prerequisites, warnings, and expected results when source-supported. Do not assume a mouse, keyboard, touch screen, or visual-only interaction where a neutral verb such as **select** works.
+- Use meaningful link text rather than “click here.” Give informative images and diagrams text alternatives or adjacent explanations; label tables clearly and avoid using layout tables as substitutes for headings.
+- For code, commands, API payloads, and configuration, verify syntax and examples against authoritative source material or actual test results. Label pseudocode, illustrative values, and unexecuted examples explicitly.
+- Check localization readiness: avoid ambiguous dates, units, time zones, idioms, and culturally dependent examples. Never guess a missing time zone or unit.
+- Check for unsafe or irreversible actions, credential exposure, privacy risks, and unverified rollback steps. Do not imply an action is reversible unless supported.
+- Distinguish editorial quality, source fidelity, technical verification, accessibility review, and publication approval in the QA report; a pass in one category does not imply a pass in the others.
