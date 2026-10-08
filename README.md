@@ -2,7 +2,7 @@
 
 A reusable **Analyzer → evidence handover → Drafter → source-first Proofreader** workflow for creating reviewable technical documentation from specifications and supporting artifacts. The original three-document case study remains as a historical example; the toolkit is being generalized for other documentation types. It does **not** replace product SME validation or human publication approval.
 
-**Portfolio entry:** [Engineering case study](CASE-STUDY.md) · **Start with your own source:** [Generic intake contract](docs/INPUT-CONTRACT.md) · **Known limitations and roadmap:** [Engineering audit](docs/ENGINEERING-AUDIT.md) · **Public-safe demo:** [Fictional Quiet Hours example](demo/README.md)
+**Portfolio entry:** [Engineering case study](CASE-STUDY.md) · **Start with your own source:** [Quickstart](docs/QUICKSTART.md) and [intake contract](docs/INPUT-CONTRACT.md) · **Known limitations and roadmap:** [Engineering audit](docs/ENGINEERING-AUDIT.md) · **Public-safe demo:** [Fictional Quiet Hours example](demo/README.md)
 
 > **Reuse and rights:** This repository currently includes a historical interview assignment PDF and related outputs. Their public redistribution rights have not been verified. Use the fictional demo for public presentations; do not republish the assignment or treat it as a generic input example without authorization.
 
