@@ -62,3 +62,5 @@ Still requiring future work or human action:
 - Verify custom document generation end to end in a compatible agent. The current tests exercise the validator, not an LLM producing correct documentation.
 - Ensure private or sensitive material is not accessible through previous Git history. Deleting files from the current branch does not rewrite history. A clean-history migration or authorized history rewrite is a separate operation.
 - Improve package portability by eliminating remaining repository-relative assumptions.
+
+- Added `scripts/lint_docs.py` and `scripts/test_lint_docs.py` for basic Markdown accessibility and wording heuristics. These checks are not exhaustive and do not replace editorial review.

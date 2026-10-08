@@ -64,3 +64,9 @@ Start with [the intake contract](docs/INPUT-CONTRACT.md), then [the generate-doc
 **AI-Assisted Technical Documentation Workflow** : Designed a reusable, source-grounded documentation system using Agent Skills, structured evidence handovers, audience-specific drafting, independent source-first QA, Python validation, and GitHub Actions. Demonstrated traceable handling of ambiguous requirements and documentation updates across revised specifications.
 
 Repository: https://github.com/AzariahOnyx/technical-writing-case-study
+
+## Current toolkit extensions
+
+The generic version includes configurable document profiles, source SHA-256 manifests, exact-quotation evidence ledgers, conservative Markdown linting, review-status gates, and a fictional evaluation case set. The validator regression tests run in GitHub Actions. No independent study of generated-document accuracy has been completed, and the scripts do not certify product behavior or publication readiness.
+
+Start with the [README usage guide](README.md), [run format](docs/RUN-FORMAT.md), and [review checklist](docs/REVIEW-CHECKLIST.md).

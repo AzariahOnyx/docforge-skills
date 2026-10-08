@@ -98,6 +98,7 @@ Run the existing default-profile checks:
 python3 scripts/check_outputs.py output/quiet-hours
 python3 scripts/test_checker.py
 python3 scripts/test_validate_run.py
+python3 scripts/test_lint_docs.py
 ```
 
 The revised [fictional specification](demo/mock-prd-v2.md) and [change-impact report](output/quiet-hours-v2/analysis/CHANGE-IMPACT.md) demonstrate how the workflow handles changes while retaining the previous output.
@@ -107,6 +108,7 @@ The revised [fictional specification](demo/mock-prd-v2.md) and [change-impact re
 - The legacy checker validates required default-profile files, headings, links, claim dispositions, and certain Markdown source line citations.
 - The custom checker validates declared files, source hashes, exact evidence quotations, some source locators, and review statuses. It also reports basic style and structure warnings.
 - The regression suite tests deliberately invalid inputs such as fabricated quotations, missing documents, changed source hashes, unsupported citations, and premature approval.
+- An optional Markdown linter flags heading jumps, missing image alternatives, generic links, and selected writing issues. Run `python3 scripts/lint_docs.py path/to/document.md`. These heuristics do not establish accessibility compliance or adherence to every style rule.
 - The [fictional evaluation cases](benchmarks/README.md) define how to test documentation behavior with independent human judgments. No measured model accuracy or time savings are claimed.
 
 Neither checker proves that a cited passage supports a drafted claim. The Proofreader and a qualified human reviewer must check technical meaning, product behavior, and publication suitability.
