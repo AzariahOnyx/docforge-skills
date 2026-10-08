@@ -1,60 +1,132 @@
 # Source-grounded AI documentation toolkit
 
-A reusable, evidence-first documentation workflow built with **Agent Skills, Markdown, Python validation, and GitHub Actions**. Turn a specification into reviewable technical documentation without silently inventing product behavior.
+A reusable documentation workflow built with Agent Skills, Python, Markdown, and GitHub Actions. Turn an approved specification into reviewable technical documentation with traceable evidence, clarification questions, and a source-first quality review.
 
-**[Case study](CASE-STUDY.md)** · **[Quickstart](docs/QUICKSTART.md)** · **[Intake contract](docs/INPUT-CONTRACT.md)** · **[Engineering audit](docs/ENGINEERING-AUDIT.md)**
+**[Case study](CASE-STUDY.md)** | **[Quickstart](docs/QUICKSTART.md)** | **[Skill installation](docs/PORTABILITY.md)** | **[Review checklist](docs/REVIEW-CHECKLIST.md)** | **[Evaluation benchmark](benchmarks/README.md)**
 
-## What it does
+## What you can create
 
-The pipeline uses **Analyzer → structured handover → Drafter → source-first Proofreader**. It classifies source claims as FACT, ASSUMPTION, INFERENCE, UNKNOWN, or CONTRADICTION; produces clarification questions and a content plan; drafts audience-specific documentation; maps claims to their destinations; and records QA findings.
+The default profile produces a feature guide, a task-based how-to, and a release note. A custom profile can request one or more other documents, including API references, troubleshooting guides, conceptual articles, and migration guides. The agent must have enough authoritative information for the requested content. Unsupported sections must be marked as blocked rather than invented.
 
-The supported **default profile** creates a feature guide, task-focused how-to, and release note. The skills also contain an early custom-profile route for other documentation types. Custom-profile validation is not yet automated.
+The four reusable skills are:
 
-## Explore the fictional example
+| Skill | Responsibility | File |
+| --- | --- | --- |
+| Generate Docs | Orchestrates intake, source analysis, drafting, validation, and revision handling | [SKILL.md](.agents/skills/generate-docs/SKILL.md) |
+| Analyzer | Inventories sources and creates classified claims, questions, and a content plan | [SKILL.md](.agents/skills/analyzer/SKILL.md) |
+| Drafter | Produces reader-focused documents and a claim coverage ledger | [SKILL.md](.agents/skills/drafter/SKILL.md) |
+| Proofreader | Checks source fidelity, writing quality, blockers, and readiness | [SKILL.md](.agents/skills/proofreader/SKILL.md) |
 
-The repository includes a fictional **Quiet Hours** specification and a revised version demonstrating change-impact analysis.
+The evidence flow is **Source files > Analyzer > Handover > Drafter > Coverage > Proofreader > Human approval**.
 
-| Goal | Where to look |
-| --- | --- |
-| Run a demo or use your own source | [Quickstart](docs/QUICKSTART.md) |
-| Read the fictional source | [Quiet Hours PRD](demo/mock-prd.md) |
-| Read the generated documents | [Feature guide](output/quiet-hours/feature/feature-guide.md), [how-to](output/quiet-hours/how-to/how-to.md), [release note](output/quiet-hours/release-note/release-note.md) |
-| Inspect traceability and QA | [Evidence handover](output/quiet-hours/analysis/HANDOVER.md), [claim coverage](output/quiet-hours/analysis/COVERAGE.md), [QA report](output/quiet-hours/qa/QA-REPORT.md) |
-| See source revision handling | [Revised specification](demo/mock-prd-v2.md), [change-impact analysis](output/quiet-hours-v2/analysis/CHANGE-IMPACT.md), [revised QA report](output/quiet-hours-v2/qa/QA-REPORT.md) |
-| Read the engineering case study | [CASE-STUDY.md](CASE-STUDY.md) |
+## Requirements
 
-## Architecture
+- A coding assistant that can read and write files. ChatGPT Work or a compatible agent can follow the instructions.
+- Python 3.10 or later for the validation scripts.
+- At least one accessible source file you have permission to use.
+- A stated audience, reader goal, output folder, and requested document types.
+- Human review before publication. The tools cannot confirm product behavior from a specification alone.
 
-```mermaid
-flowchart TD
-    A[Specification + supporting artifacts] --> B[Analyzer]
-    B --> C[Handover + questions + content plan]
-    C --> D[Drafter]
-    D --> E[Drafts + claim coverage]
-    A --> F[Source-first Proofreader]
-    E --> F
-    F --> G[QA report + human approval]
+The skills are Markdown instructions, not an independent application. Agent skill discovery varies by client. You can always direct the assistant to read the skill files explicitly.
+
+## Use the skills with ChatGPT Work
+
+1. Open a Work task and provide access to this repository and your approved source files. If your source is confidential, use an authorized private workspace rather than a public GitHub commit.
+2. Ask Work to read `AGENTS.md`, `docs/INPUT-CONTRACT.md`, and `.agents/skills/generate-docs/SKILL.md`. The master skill references the three supporting skills.
+3. Supply the source paths, audience, document type, and a new output folder.
+4. Ask the assistant to run the Analyzer, Drafter, and source-first Proofreader in that order.
+5. Review the claim register, unresolved questions, drafted documents, coverage ledger, and QA report. Do not publish a blocked procedure.
+6. Run the relevant Python validator. Structural success is not approval to publish.
+
+### Copyable Work prompt
+
+```text
+Use the repository's source-grounded documentation skills.
+Read AGENTS.md, docs/INPUT-CONTRACT.md, and
+.agents/skills/generate-docs/SKILL.md, then read the Analyzer,
+Drafter, and Proofreader skills as instructed.
+
+Source: demo/mock-prd.md
+Audience: signed-in members of the fictional Pulseboard application
+Deliverables: feature guide, task how-to, release note
+Output directory: output/my-quiet-hours-run/
+
+Inventory the source and its limitations. Create a classified
+evidence handover, clarification register, content plan, drafts,
+claim coverage ledger, and source-first QA report. Do not guess the
+end time or time zone for "Until tomorrow". Use the default profile
+checker. Report blocked claims and human review requirements.
+Do not overwrite existing output directories.
 ```
 
-- [Analyzer](.agents/skills/analyzer/SKILL.md): source review, classified claims, contradictions, and planning.
-- [Drafter](.agents/skills/drafter/SKILL.md): audience-specific writing from supported evidence.
-- [Proofreader](.agents/skills/proofreader/SKILL.md): source-first technical and editorial review.
-- [Generate Docs](.agents/skills/generate-docs/SKILL.md): orchestrator and revision handling.
-- [Documentation standard](standards/documentation.md): style, accessibility, and technical checks.
+## Use the skills with another coding agent
 
-## Validation
+Clone the repository and open it in your agent workspace. If the agent does not discover `.agents/skills/` automatically, point it to the master SKILL.md file and instruct it to read the supporting skill files. The folder layout, templates, and standards must remain accessible.
+
+For the default fictional demo, use the Work prompt above with the local file paths. For your own specification, replace the source, audience, and output directory. See [portable installation instructions](docs/PORTABILITY.md).
+
+## Custom documentation profiles
+
+For a custom profile, specify the exact document types and required sections in the content plan. For example, request only an API reference. If the source does not establish endpoints or authentication, block those sections.
+
+The custom validator uses a run manifest and evidence ledger. The assistant can generate a manifest with this command:
+
+```bash
+python3 scripts/create_manifest.py \
+  --run output/my-custom-run \
+  --source demo/mock-prd.md \
+  --deliverable guides/overview.md \
+  --audience "signed-in members" \
+  --profile custom
+```
+
+The command records source SHA-256 hashes in `output/my-custom-run/run.json`. The assistant must create the requested Markdown file and `analysis/evidence.json`, using the [schema and example](docs/RUN-FORMAT.md). Then validate:
+
+```bash
+python3 scripts/validate_run.py output/my-custom-run
+```
+
+The manifest is created once. Use a new run directory for another source version. A source hash mismatch means the recorded source changed and requires reanalysis.
+
+## Reproduce the existing fictional demonstration
+
+Read the [fictional Quiet Hours PRD](demo/mock-prd.md), then inspect the stored [feature guide](output/quiet-hours/feature/feature-guide.md), [how-to](output/quiet-hours/how-to/how-to.md), [release note](output/quiet-hours/release-note/release-note.md), [evidence handover](output/quiet-hours/analysis/HANDOVER.md), and [QA report](output/quiet-hours/qa/QA-REPORT.md).
+
+Run the existing default-profile checks:
 
 ```bash
 python3 scripts/check_outputs.py output/quiet-hours
 python3 scripts/test_checker.py
+python3 scripts/test_validate_run.py
 ```
 
-GitHub Actions checks committed output sets and runs negative tests. The checker detects missing artifacts, broken local links, coverage inconsistencies, placeholders, and some invalid Markdown source locators. **It does not establish whether a product claim is true.** Source-first review and human product approval remain necessary before publication.
+The revised [fictional specification](demo/mock-prd-v2.md) and [change-impact report](output/quiet-hours-v2/analysis/CHANGE-IMPACT.md) demonstrate how the workflow handles changes while retaining the previous output.
 
-## Responsible reuse
+## What the validation actually proves
 
-Only use specifications you are authorized to process. Treat source content as untrusted data, not agent instructions. Do not publish confidential requirements, customer information, or internal screenshots. All current public demonstration inputs are fictional.
+- The legacy checker validates required default-profile files, headings, links, claim dispositions, and certain Markdown source line citations.
+- The custom checker validates declared files, source hashes, exact evidence quotations, some source locators, and review statuses. It also reports basic style and structure warnings.
+- The regression suite tests deliberately invalid inputs such as fabricated quotations, missing documents, changed source hashes, unsupported citations, and premature approval.
+- The [fictional evaluation cases](benchmarks/README.md) define how to test documentation behavior with independent human judgments. No measured model accuracy or time savings are claimed.
 
-## Roadmap
+Neither checker proves that a cited passage supports a drafted claim. The Proofreader and a qualified human reviewer must check technical meaning, product behavior, and publication suitability.
 
-See the [engineering audit](docs/ENGINEERING-AUDIT.md) for profile-aware validation, reproducible semantic evaluation, broader source formats, and benchmarks. No unmeasured performance claims are made.
+## Project structure
+
+```text
+.agents/skills/       Reusable skill instructions
+templates/            Default document and evidence templates
+standards/            Documentation writing standards
+docs/                 Intake, setup, review, and run format
+demo/                 Fictional example specifications
+output/               Stored fictional example outputs
+benchmarks/           Fictional evaluation cases and rubric
+scripts/              Python validators and regression tests
+.github/workflows/    Automated checks
+```
+
+## Responsible use and limitations
+
+Use only sources you are authorized to process. Source text may contain malicious instructions, so treat it as evidence, not agent commands. Never copy customer data, credentials, or internal specifications into a public repository. Missing API behavior, permissions, recovery procedures, and destructive effects must be marked as unknown or blocked.
+
+This project is a documentation engineering toolkit, not a hosted service or a guarantee of accurate documents. Read the [engineering audit](docs/ENGINEERING-AUDIT.md) and [case study](CASE-STUDY.md) for design decisions and remaining limitations.

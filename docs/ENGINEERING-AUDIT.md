@@ -43,3 +43,22 @@ Assessment date: 2026-10-09. Scope: repository skills, standards, Python checker
 - Google developer documentation style guide: https://developers.google.com/style
 
 These references guide structure and style; they do not validate product-specific claims.
+
+## Second implementation pass
+
+Implemented in this pass:
+
+- Custom profile manifest with SHA-256 source provenance and a safe-path validator. See `scripts/create_manifest.py`, `scripts/validate_run.py`, and `docs/RUN-FORMAT.md`.
+- Exact-quotation checks for claim evidence, source ID and line-locator checks, Markdown structure and link checks, and review status gates. An exact match does not prove that the source supports the interpretation.
+- Regression tests for tampered source hashes, fabricated quotations, missing deliverables, duplicate claims, unknown source IDs, invalid locators, unresolved placeholders, and premature approval.
+- A fictional benchmark corpus with explicit expected outcomes for contradictions, missing details, revisions, unsupported API claims, and malicious instructions embedded in source text. These are test specifications, not AI performance measurements.
+- A review checklist, portable installation guide, detailed README workflow, and a reviewer-judgment scoring utility.
+- Removal of legacy names and assignment-specific references from the active public examples.
+
+Still requiring future work or human action:
+
+- Validate extraction and semantic support for PDFs, screenshots, and arbitrary source formats. Page and section locators currently require manual review.
+- Execute a blinded comparison of direct prompting and the staged workflow, with actual independent reviewer judgments. The scoring script does not create judgments.
+- Verify custom document generation end to end in a compatible agent. The current tests exercise the validator, not an LLM producing correct documentation.
+- Ensure private or sensitive material is not accessible through previous Git history. Deleting files from the current branch does not rewrite history. A clean-history migration or authorized history rewrite is a separate operation.
+- Improve package portability by eliminating remaining repository-relative assumptions.

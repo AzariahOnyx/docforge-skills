@@ -2,7 +2,7 @@
 
 This workflow runs in a compatible coding-agent environment that can read local files and write Markdown. It is **not** a hosted upload service or a one-click application. Source inspection, QA, and publication approval remain necessary.
 
-## Option A — Reproduce the tested three-document demo
+## Option A : Reproduce the tested three-document demo
 
 1. Clone the repository in a compatible agent workspace.
 2. Read `AGENTS.md` and `.agents/skills/generate-docs/SKILL.md`.
@@ -23,7 +23,7 @@ Report blockers and distinguish structural PASS from publication readiness.
 
 5. Inspect `analysis/`, `feature/`, `how-to/`, `release-note/`, and `qa/`. Compare the claims with the original fictional source.
 
-## Option B — Request a different documentation type
+## Option B : Request a different documentation type
 
 Provide an accessible source file and a clear reader goal. For example:
 

@@ -33,6 +33,6 @@ The live rehearsal added a reusable Expected result heading requirement to the D
 
 ## Readiness
 
-**Assignment rehearsal: PASS with warnings.** The three draft types and analysis artifacts are present.
+**Documentation review: PASS with warnings.** The three draft types and analysis artifacts are present.
 
 **Publication: conditional.** Q01-Q04 and product implementation need confirmation before publishing affected timing, delivery, offline, or availability claims.

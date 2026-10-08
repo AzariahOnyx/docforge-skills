@@ -1,4 +1,4 @@
-# Revised PRD rehearsal — expected source impact
+# Revised PRD: expected source impact
 
 Use this as a review oracle, not as product evidence. Compare the two mock PRDs directly before reviewing a generated `output/quiet-hours-v2/` set.
 

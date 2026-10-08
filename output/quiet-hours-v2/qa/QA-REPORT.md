@@ -36,6 +36,6 @@ The revised pass updated the fixed option, procedure title, steps, result, featu
 
 ## Readiness
 
-**Assignment rehearsal: PASS with warnings.** The three draft types and analysis artifacts are present.
+**Documentation review: PASS with warnings.** The three draft types and analysis artifacts are present.
 
 **Publication: conditional.** Q01, Q02, the remaining mid-pause part of Q03, Q04, and product implementation need confirmation before publishing affected timing, delivery, editing, or availability claims.

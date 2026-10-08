@@ -1,6 +1,6 @@
 # Quiet Hours — documentation handover
 
-## Assignment scope
+## Documentation scope
 
 Update mode: compare `demo/mock-prd.md` with revised `demo/mock-prd-v2.md`, using the prior documentation set `output/quiet-hours/` as a comparison baseline. Create a complete fresh set in `output/quiet-hours-v2-live/`. The revised PRD is the current product source; the previous PRD and output are historical baseline only. Audiences: signed-in members understanding the feature, members pausing/resuming alerts, and readers scanning the change.
 

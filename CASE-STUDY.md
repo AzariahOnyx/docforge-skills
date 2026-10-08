@@ -17,9 +17,9 @@ The workflow uses Markdown templates, Python structural validation, and GitHub A
 
 ## Evidence-based demonstrations
 
-**Demo A — fictional Quiet Hours feature:** A sample PRD leaves the exact meaning of “Until tomorrow” undefined. The generated drafts avoid inventing a time or time zone; the clarification register preserves the gap. See [fictional PRD](demo/mock-prd.md) and [generated review](output/quiet-hours/qa/QA-REPORT.md).
+**Demo A : fictional Quiet Hours feature:** A sample PRD leaves the exact meaning of “Until tomorrow” undefined. The generated drafts avoid inventing a time or time zone; the clarification register preserves the gap. See [fictional PRD](demo/mock-prd.md) and [generated review](output/quiet-hours/qa/QA-REPORT.md).
 
-**Demo B — source revision:** A revised fictional PRD changes the fixed duration from one hour to two hours and clarifies that manual resumption requires an online connection. The workflow records changed and unresolved claims, updates the affected documents, and preserves the previous output. See [revised PRD](demo/mock-prd-v2.md), [change-impact analysis](output/quiet-hours-v2/analysis/CHANGE-IMPACT.md), and [acceptance expectations](demo/revision-acceptance.md).
+**Demo B : source revision:** A revised fictional PRD changes the fixed duration from one hour to two hours and clarifies that manual resumption requires an online connection. The workflow records changed and unresolved claims, updates the affected documents, and preserves the previous output. See [revised PRD](demo/mock-prd-v2.md), [change-impact analysis](output/quiet-hours-v2/analysis/CHANGE-IMPACT.md), and [acceptance expectations](demo/revision-acceptance.md).
 
 ## Architecture
 
@@ -61,6 +61,6 @@ Start with [the intake contract](docs/INPUT-CONTRACT.md), then [the generate-doc
 
 ## Portfolio summary
 
-**AI-Assisted Technical Documentation Workflow** — Designed a reusable, source-grounded documentation system using Agent Skills, structured evidence handovers, audience-specific drafting, independent source-first QA, Python validation, and GitHub Actions. Demonstrated traceable handling of ambiguous requirements and documentation updates across revised specifications.
+**AI-Assisted Technical Documentation Workflow** : Designed a reusable, source-grounded documentation system using Agent Skills, structured evidence handovers, audience-specific drafting, independent source-first QA, Python validation, and GitHub Actions. Demonstrated traceable handling of ambiguous requirements and documentation updates across revised specifications.
 
 Repository: https://github.com/AzariahOnyx/technical-writing-case-study

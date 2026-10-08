@@ -41,7 +41,7 @@ Q01–Q04 remain publication warnings: Until tomorrow cutoff/time zone; alert di
 
 ## Readiness
 
-**Assignment review: PASS with warnings.** The new drafts reflect the revised source, and no source-fidelity failures were found. **Publication: not ready** while Q01–Q04 remain unresolved.
+**Documentation review: PASS with warnings.** The new drafts reflect the revised source, and no source-fidelity failures were found. **Publication: not ready** while Q01–Q04 remain unresolved.
 
 ## Corrections made and recheck
 

@@ -17,3 +17,7 @@ description: Independently verify PRD-derived feature documentation, how-to step
 Preserve source files. Keep findings and evidence labels in the QA report, not in user-facing articles.
 
 For the default three-document profile, run `python3 scripts/check_outputs.py <output-directory>` after the source review. For custom profiles, use a documented type-specific manual structure check until a compatible automated validator exists; never claim that the legacy checker validates custom outputs. Resolve structural errors and report warnings. No structural checker can validate the truth of product claims. If a separate reviewer is unavailable, explicitly label the work a fresh source-first second pass rather than claiming independence.
+
+## Reviewer provenance and acceptance
+
+Record the review method as `independent_reviewer`, `human_reviewer`, `same_agent_second_pass`, or `not_reviewed`. Never claim independent verification if the same agent drafted and reviewed. Verify every included claim against the original source, including whether the cited quotation actually supports the drafted meaning. Use `docs/REVIEW-CHECKLIST.md`. For custom profiles, run `scripts/validate_run.py` and record separate source-fidelity, product-verification, and human-approval statuses. An automated PASS does not authorize publication.

@@ -24,3 +24,7 @@ description: Draft audience-specific feature documentation, a task-focused how-t
 7. Report which passages or deliverables remain blocked by questions. Do not claim publication readiness before source-first proofreading and authorized human approval.
 
 Do not modify the source artifacts or silently answer clarification questions.
+
+## Custom profile evidence ledger
+
+For a custom run, read `docs/RUN-FORMAT.md` and create `analysis/evidence.json`. Map included claims to existing deliverable paths and quote exact source evidence. The quote is for traceability, not proof of entailment. Cite source IDs and locators in drafts. Avoid generic API endpoints, fixes, or code examples when the source does not establish them. Use `docs/REVIEW-CHECKLIST.md` for accessibility and writing quality.

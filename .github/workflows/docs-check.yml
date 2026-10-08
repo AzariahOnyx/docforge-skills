@@ -19,3 +19,14 @@ jobs:
           done
       - name: Verify coverage gate rejects broken outputs
         run: python3 scripts/test_checker.py
+      - name: Test custom profile validation and source provenance
+        run: python3 scripts/test_validate_run.py
+      - name: Compile Python scripts
+        run: python3 -m compileall -q scripts
+      - name: Check README avoids em dashes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          text = Path('README.md').read_text(encoding='utf-8')
+          assert '\u2014' not in text, 'README must not contain em dashes'
+          PY

@@ -25,4 +25,4 @@
 
 ## Delivery boundary
 
-The three drafts are suitable for assignment review. The exact Until tomorrow end, alert backlog, offline resume, availability, and existing-document integration require clarification or inventory before publication.
+The three drafts are suitable for editorial review. The exact Until tomorrow end, alert backlog, offline resume, availability, and existing-document integration require clarification or inventory before publication.

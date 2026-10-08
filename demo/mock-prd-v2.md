@@ -1,4 +1,4 @@
-# Quiet Hours — revised fictional PRD
+# Quiet Hours: revised fictional PRD
 
 Revision of `demo/mock-prd.md`. Use both files in update mode; this file alone is the current product source.
 

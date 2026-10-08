@@ -2,7 +2,7 @@
 
 > Rehearsal artifact. `demo/mock-prd.md` is fictional and is the sole product evidence for this set.
 
-## Assignment scope
+## Documentation scope
 
 - Source: `demo/mock-prd.md`, all sections inspected. No supporting images, existing help pages, style guide, or product build.
 - Requested outputs: first-time-user feature guide, one-goal how-to, and scanning release note.
@@ -58,7 +58,7 @@ No source contradiction was found. See `clarifications-and-assumptions.md` for q
 
 ## Drafter guidance
 
-- Use only S1 as product evidence. Do not cross-contaminate with the Tracks PRD.
+- Use only S1 as product evidence. Do not mix evidence from unrelated specifications.
 - Keep the how-to to a single 1 hour goal and give a separate Expected result heading.
 - Do not infer exact Until tomorrow timing, alert backlog, offline resume, or release metadata.
 - Publication readiness requires answers to Q01-Q04 for affected topics; the selected 1 hour procedure is source-supported.

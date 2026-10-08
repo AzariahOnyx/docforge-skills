@@ -32,7 +32,7 @@ Apply this to any PRD. The source and the Analyzer handover determine product tr
 
 - Use direct language, consistent source terminology, second person where useful, and bold for verified UI labels. Remove template placeholders and internal claim IDs from reader-facing articles.
 - Check links, headings, accessibility of diagrams, grammar, duplication, and that each article serves its audience.
-- The structural checker verifies files, headings, local links, ID references, unique claim dispositions, and recognizable Markdown line citations that point to existing nonblank lines. The source-first Proofreader verifies the cited text's meaning, coverage decisions, omissions, and publication risks. Record PASS, WARNING, or FAIL and distinguish an assignment-ready draft from publication-ready documentation.
+- The structural checker verifies files, headings, local links, ID references, unique claim dispositions, and recognizable Markdown line citations that point to existing nonblank lines. The source-first Proofreader verifies the cited text's meaning, coverage decisions, omissions, and publication risks. Record PASS, WARNING, or FAIL and distinguish an review-ready draft from publication-ready documentation.
 
 ## Generalized documentation types
 

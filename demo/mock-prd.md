@@ -1,6 +1,6 @@
-# Practice PRD — Quiet Hours
+# Fictional PRD: Quiet Hours
 
-This fictional PRD is a rehearsal fixture. It is unrelated to Tasket and must never be used as evidence for Tracks.
+This is a fictional specification used to test source-grounded documentation workflows.
 
 ## Product context
 Pulseboard is a team dashboard. Members receive in-app alerts for assigned items.
