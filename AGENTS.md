@@ -1,4 +1,4 @@
-# Technical-writing case study
+# Source-grounded documentation toolkit
 
 ## Sources and evidence
 - `input/` contains the authoritative PRD and supporting artifacts.

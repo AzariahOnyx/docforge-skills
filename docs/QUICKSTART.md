@@ -49,4 +49,4 @@ The agent should produce explicit clarification questions, leave unsafe procedur
 
 ## Public demonstration and privacy
 
-Use the fictional `demo/` sources for portfolio demonstrations. Do not upload confidential or proprietary specifications to a public repository. The original historical interview PDF is not the recommended sample and its redistribution rights have not been verified.
+Use the fictional `demo/` sources for portfolio demonstrations. Do not upload confidential or proprietary specifications to a public repository. Keep any source material you are not authorized to redistribute outside the public repository.
