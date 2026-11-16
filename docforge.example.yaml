@@ -1,0 +1,36 @@
+# Example DocForge configuration. Copy to docforge.yaml and edit.
+# Replace the example org and repo names with your own.
+
+doc_collections:
+  example-org/docs:
+    docs_framework: docusaurus      # set once the migration target is chosen
+    default_branch: main
+    filter:
+      - docs/                       # the agent may only change files under docs/
+
+context_sources:
+  product-jira:
+    source_type: jira
+    project_keys: [EXAMPLE]
+
+triggers:
+  product-prs:
+    trigger_type: github_pr
+    match:
+      - repos: [example-org/product-web]
+        trigger_on: [opened, merge]
+        trigger_directories: [src/]
+
+policies:
+  default:
+    publishing:
+      auto_create_pr: false         # drafts wait for review in the app
+      auto_merge: false
+    archiving:
+      stale_after_days: 30
+  rules:
+    - if:
+        trigger: product-prs
+      then:
+        publishing:
+          auto_create_pr: true

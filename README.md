@@ -113,10 +113,27 @@ The revised [fictional specification](demo/mock-prd-v2.md) and [change-impact re
 
 Neither checker proves that a cited passage supports a drafted claim. The Proofreader and a qualified human reviewer must check technical meaning, product behavior, and publication suitability.
 
+## Engine (in progress)
+
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+
+The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
+
+```bash
+uv sync
+cp docforge.example.yaml docforge.yaml
+uv run docforge config validate docforge.yaml
+uv run pytest
+```
+
+`docforge.yaml` is ignored by Git. Keep real configuration out of this public repository.
+
 ## Project structure
 
 ```text
 .agents/skills/       Reusable skill instructions
+src/docforge/         Engine code (configuration and command line)
+tests/                Engine tests (pytest)
 templates/            Default document and evidence templates
 standards/            Documentation writing standards
 docs/                 Intake, setup, review, and run format

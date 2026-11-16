@@ -1,0 +1,14 @@
+# Python and uv
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+pytest-cache-files-*/
+dist/
+
+# Secrets and local configuration. This repository is public:
+# keep real docforge.yaml files and any .env files out of it.
+.env
+.env.*
+!.env.example
+docforge.yaml

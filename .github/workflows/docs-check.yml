@@ -32,3 +32,16 @@ jobs:
           text = Path('README.md').read_text(encoding='utf-8')
           assert '\u2014' not in text, 'README must not contain em dashes'
           PY
+
+  engine-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.8"
+      - name: Install the engine and its dependencies
+        run: uv sync --locked
+      - name: Run engine tests
+        run: uv run pytest
