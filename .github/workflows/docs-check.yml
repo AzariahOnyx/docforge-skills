@@ -24,7 +24,7 @@ jobs:
       - name: Test Markdown writing and accessibility lint rules
         run: python3 scripts/test_lint_docs.py
       - name: Compile Python scripts
-        run: python3 -m compileall -q scripts
+        run: python3 -m compileall -q scripts src/docforge/evidence
       - name: Check README avoids em dashes
         run: |
           python3 - <<'PY'

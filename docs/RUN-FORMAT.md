@@ -47,6 +47,37 @@ Review methods: `not_reviewed`, `same_agent_second_pass`, `independent_reviewer`
 
 Evidence status values: `included`, `blocked`, `deferred`, `context`. Only included claims may list document destinations. Exact quotation matching checks that the quoted words occur in the referenced source file, not that a generated claim logically follows from those words. A reviewer must check entailment and contradictions.
 
+### Claim class (optional)
+
+An evidence row may carry `claim_class`: one of `FACT`, `ASSUMPTION`, `INFERENCE`, `UNKNOWN`, or `CONTRADICTION`. When present it must be one of these values, and an `UNKNOWN` or `CONTRADICTION` claim cannot have status `included`. Rows without `claim_class` are still valid.
+
+### Code evidence
+
+A row without `kind`, or with `"kind": "quote"`, is quote evidence as shown above. A row with `"kind": "code"` cites lines of a file at a specific commit of a code repository instead of a source listed in `run.json`:
+
+```json
+{
+  "claim_id": "C02",
+  "kind": "code",
+  "repo": "example-org/product-web",
+  "commit": "<full 40-character lowercase commit SHA>",
+  "path": "src/quiet_hours.py",
+  "lines": "L3-L5",
+  "excerpt_sha256": "<SHA-256 of the cited lines>",
+  "status": "included",
+  "destinations": ["guides/overview.md"]
+}
+```
+
+`excerpt_sha256` is the SHA-256 of the cited lines joined with a newline, without a trailing newline. The validator always checks the repository name, the full commit SHA, a relative path that stays inside the repository, and the line range. To verify the code itself, pass a local Git checkout of that repository:
+
+```bash
+python3 scripts/validate_run.py output/my-custom-run \
+  --code-root example-org/product-web=../product-web
+```
+
+With a checkout, the validator confirms the commit exists, reads the file at that commit, checks that the cited lines exist and are not blank, and recomputes the excerpt hash. It runs `git` locally and never fetches, checks out, or changes anything. Without a checkout, code evidence is reported as not verified. Matching code proves only that the cited lines existed at that commit, not that they support the claim.
+
 ## Source citations
 
 Use `[S1#L9]` or `[S1#L9-L11]` for a source with stable line numbers. Page and section references such as `[S1#p2]` or `[S1#section:Authentication]` are recorded but require manual verification. The checker cannot inspect a PDF image or infer section boundaries from these references. A citation can exist and still fail to support the claim.
