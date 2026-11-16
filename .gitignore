@@ -12,3 +12,6 @@ dist/
 .env.*
 !.env.example
 docforge.yaml
+
+# Local DocForge state (decision logs)
+.docforge/

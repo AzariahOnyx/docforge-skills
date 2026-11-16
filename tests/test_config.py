@@ -140,3 +140,47 @@ def test_cli_validate(capsys, tmp_path):
     bad = write(tmp_path, "triggers: [oops]\n")
     assert main(["config", "validate", str(bad)]) == 1
     assert "is invalid" in capsys.readouterr().err
+
+
+def test_own_pr_defaults_to_docforge_branch_prefix(tmp_path):
+    text = (
+        "triggers:\n"
+        "  prs:\n"
+        "    trigger_type: github_pr\n"
+        "    match: [{repos: all, trigger_on: [merge]}]\n"
+    )
+    trigger = load_config(write(tmp_path, text)).triggers["prs"]
+    assert trigger.own_pr.branch_prefix == "docforge/"
+    assert trigger.own_pr.bot_logins == []
+
+
+def test_own_pr_accepts_bot_logins(tmp_path):
+    text = (
+        "triggers:\n"
+        "  prs:\n"
+        "    trigger_type: github_pr\n"
+        "    own_pr: {branch_prefix: docs-bot/, bot_logins: ['example-docs[bot]', example-user]}\n"
+        "    match: [{repos: all, trigger_on: [merge]}]\n"
+    )
+    own = load_config(write(tmp_path, text)).triggers["prs"].own_pr
+    assert (own.branch_prefix, own.bot_logins) == ("docs-bot/", ["example-docs[bot]", "example-user"])
+
+
+@pytest.mark.parametrize(
+    "own_pr, message",
+    [
+        ("{bot_logins: ['not a login']}", "not a GitHub login"),
+        ("{branch_prefix: ''}", "at least 1 character"),
+        ("{prefix: docforge/}", "Extra inputs are not permitted"),
+    ],
+)
+def test_own_pr_is_strict(tmp_path, own_pr, message):
+    text = (
+        "triggers:\n"
+        "  prs:\n"
+        "    trigger_type: github_pr\n"
+        f"    own_pr: {own_pr}\n"
+        "    match: [{repos: all, trigger_on: [merge]}]\n"
+    )
+    with pytest.raises(ConfigError, match=message):
+        load_config(write(tmp_path, text))

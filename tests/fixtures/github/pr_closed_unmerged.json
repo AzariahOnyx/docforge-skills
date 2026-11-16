@@ -1,0 +1,44 @@
+{
+  "action": "closed",
+  "number": 42,
+  "pull_request": {
+    "number": 42,
+    "state": "closed",
+    "title": "Add Quiet Hours to notification settings",
+    "draft": false,
+    "merged": false,
+    "user": {
+      "login": "example-dev",
+      "type": "User"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "1111111111111111111111111111111111111111"
+    },
+    "head": {
+      "ref": "feature/quiet-hours",
+      "sha": "2222222222222222222222222222222222222222"
+    },
+    "additions": 48,
+    "deletions": 3,
+    "changed_files": 3
+  },
+  "repository": {
+    "id": 1001,
+    "name": "product-web",
+    "full_name": "example-org/product-web",
+    "private": false,
+    "owner": {
+      "login": "example-org",
+      "type": "Organization"
+    },
+    "topics": [
+      "docs-sync",
+      "web"
+    ],
+    "default_branch": "main"
+  },
+  "sender": {
+    "login": "example-dev"
+  }
+}

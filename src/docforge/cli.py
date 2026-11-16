@@ -147,6 +147,53 @@ def _run_check(args: argparse.Namespace) -> int:
     return 0 if structural["passed"] else 1
 
 
+def _checkout_arg(value: str) -> tuple[str, Path]:
+    name, sep, path = value.partition("=")
+    if not sep or "/" not in name or not path:
+        raise argparse.ArgumentTypeError("use owner/repo=PATH")
+    return name.casefold(), Path(path)
+
+
+def _trigger_check(args: argparse.Namespace) -> int:
+    from docforge.agent import append_decision, decide
+    from docforge.sources import DiffError, EventError, changes_for_event, parse_event
+
+    try:
+        config = load_config(args.config)
+        payload = json.loads(args.payload.read_text(encoding="utf-8"))
+        event = parse_event(args.event, payload, prior_approvals=args.prior_approvals)
+        changed, source = changes_for_event(event.base_sha, event.head_sha, diff_file=args.diff,
+                                            checkout=args.checkout)
+    except (ConfigError, EventError, DiffError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    decision = decide(config, event, changed, diff_source=source)
+    if not args.no_log:
+        append_decision(args.log, decision)
+        print(f"Logged decision {decision.decision_id} to {args.log}", file=sys.stderr)
+    print(decision.model_dump_json(indent=2))
+    return 0
+
+
+def _serve(args: argparse.Namespace) -> int:
+    import os
+
+    from docforge.webhook import SECRET_ENV, Receiver, serve
+
+    secret = os.environ.get(SECRET_ENV, "")
+    if not secret:
+        print(f"set {SECRET_ENV} to the webhook secret; unsigned deliveries are never accepted", file=sys.stderr)
+        return 1
+    try:
+        config = load_config(args.config)
+    except ConfigError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    receiver = Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout))
+    serve(receiver, host=args.host, port=args.port)
+    return 0
+
+
 def _add_collection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--collection", help="limit to a doc_collections entry's filter (owner/repo)")
     parser.add_argument("--config", default="docforge.yaml", help="config used with --collection")
@@ -178,6 +225,32 @@ def main(argv: list[str] | None = None) -> int:
     search.add_argument("--json", action="store_true", help="print results as JSON")
     _add_collection_args(search)
     search.set_defaults(func=_search)
+
+    from docforge.agent import DEFAULT_LOG
+
+    trigger = sub.add_parser("trigger", help="check pull request events against triggers")
+    trigger_sub = trigger.add_subparsers(dest="trigger_command", required=True)
+    tcheck = trigger_sub.add_parser("check", help="decide whether a saved webhook payload needs docs work")
+    tcheck.add_argument("payload", type=Path, help="webhook payload JSON file")
+    tcheck.add_argument("--event", required=True, choices=("pull_request", "pull_request_review"),
+                        help="the X-GitHub-Event of the payload")
+    source = tcheck.add_mutually_exclusive_group()
+    source.add_argument("--diff", type=Path, help="unified diff of the pull request")
+    source.add_argument("--checkout", type=Path, help="local checkout to diff base...head in (read-only)")
+    tcheck.add_argument("--prior-approvals", type=int, help="approvals before this review (for first_approval)")
+    tcheck.add_argument("--config", default="docforge.yaml")
+    tcheck.add_argument("--log", type=Path, default=DEFAULT_LOG, help="decision log (JSON lines, appended)")
+    tcheck.add_argument("--no-log", action="store_true", help="print the decision without logging it")
+    tcheck.set_defaults(func=_trigger_check)
+
+    serve_cmd = sub.add_parser("serve", help="receive GitHub webhooks and log decisions (records only)")
+    serve_cmd.add_argument("--host", default="127.0.0.1")
+    serve_cmd.add_argument("--port", type=int, default=8787)
+    serve_cmd.add_argument("--config", default="docforge.yaml")
+    serve_cmd.add_argument("--log", type=Path, default=DEFAULT_LOG)
+    serve_cmd.add_argument("--checkout", type=_checkout_arg, action="append", default=[],
+                           metavar="OWNER/REPO=PATH", help="local checkout used to diff that repo's PRs")
+    serve_cmd.set_defaults(func=_serve)
 
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)

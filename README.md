@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, and a read-only index and search for existing docs. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, and GitHub pull request triggers. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -148,6 +148,15 @@ uv run docforge run check output/my-run
 ```
 
 `run start` never reuses an existing folder. `run check` runs the structural checker for the run's profile and the Markdown lint, and saves the result to `qa/checks.json`. Neither replaces source review or human approval.
+
+Check a GitHub pull request event against the `github_pr` triggers in `docforge.yaml`. Each check records a "docs needed?" decision with its reasons and research trail, including when the answer is no.
+
+```bash
+uv run docforge trigger check tests/fixtures/github/pr_merged.json --event pull_request \
+  --diff tests/fixtures/github/product_change.diff --config tests/fixtures/github/triggers.yaml
+```
+
+Draft pull requests, pull requests that only change dot-files, and pull requests DocForge opened itself are skipped. Decisions are appended to `.docforge/decisions.jsonl`, which Git ignores. `docforge serve` receives signed GitHub webhooks on `127.0.0.1` and only records decisions. It reads the secret from `DOCFORGE_WEBHOOK_SECRET` and refuses unsigned deliveries. Nothing is posted to GitHub.
 
 ## Project structure
 

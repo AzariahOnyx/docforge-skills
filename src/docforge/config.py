@@ -127,8 +127,27 @@ class GithubPrMatch(Strict):
         return self
 
 
+GITHUB_LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})(?:\[bot\])?$")
+
+
+class OwnPr(Strict):
+    """How to recognise pull requests DocForge opened itself, so they never trigger work."""
+
+    branch_prefix: str = Field(default="docforge/", min_length=1)
+    bot_logins: list[str] = Field(default_factory=list)
+
+    @field_validator("bot_logins")
+    @classmethod
+    def _logins(cls, value: list[str]) -> list[str]:
+        for login in value:
+            if not GITHUB_LOGIN_RE.match(login):
+                raise ValueError(f"not a GitHub login: {login!r}")
+        return value
+
+
 class GithubPrTrigger(Strict):
     trigger_type: Literal["github_pr"]
+    own_pr: OwnPr = Field(default_factory=OwnPr)
     match: list[GithubPrMatch] = Field(min_length=1)
 
 

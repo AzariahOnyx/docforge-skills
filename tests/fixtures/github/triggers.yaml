@@ -1,0 +1,19 @@
+# Trigger configuration used by the M4 tests. Fictional names only.
+triggers:
+  product-prs:
+    trigger_type: github_pr
+    own_pr:
+      bot_logins: ['example-docs[bot]']
+    match:
+      - repos: [example-org/product-web]
+        trigger_on: [opened, merge, first_approval]
+        branches: [main, 'release/*']
+        trigger_directories: [src/]
+  topic-prs:
+    trigger_type: github_pr
+    match:
+      - repos: all
+        trigger_on: [merge]
+        repo_owners: [example-org]
+        repo_topics: [docs-sync]
+        excluded_repos: [example-org/product-web]

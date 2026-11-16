@@ -1,0 +1,35 @@
+diff --git a/src/settings/quiet_hours.py b/src/settings/quiet_hours.py
+new file mode 100644
+index 0000000..3b18e51
+--- /dev/null
++++ b/src/settings/quiet_hours.py
+@@ -0,0 +1,4 @@
++def pause_alerts(member, until):
++    """Pause a member's own in-app alerts until the given time."""
++    member.alerts_paused_until = until
++    return member
+diff --git a/src/settings/panel.py b/src/settings/panel.py
+index 4c2a1f0..9d0b7e2 100644
+--- a/src/settings/panel.py
++++ b/src/settings/panel.py
+@@ -10,7 +10,8 @@ class NotificationPanel:
+     def options(self):
+         return [
+             "Email alerts",
+-            "In-app alerts",
++            "In-app alerts",
++            "Quiet Hours",
+         ]
+ 
+     def save(self):
+@@ -40,3 +41,2 @@ class NotificationPanel:
+-        legacy = True
+-        return legacy
++        return False
+diff --git a/tests/test_quiet_hours.py b/tests/test_quiet_hours.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_quiet_hours.py
+@@ -0,0 +1,2 @@
++def test_pause():
++    assert True

@@ -16,6 +16,9 @@ context_sources:
 triggers:
   product-prs:
     trigger_type: github_pr
+    own_pr:                         # PRs DocForge opened itself never trigger work
+      branch_prefix: docforge/
+      bot_logins: []
     match:
       - repos: [example-org/product-web]
         trigger_on: [opened, merge]
