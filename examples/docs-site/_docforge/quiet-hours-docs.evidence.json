@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "run": "quiet-hours-docs",
+  "rules": {
+    "known": [
+      "C01",
+      "C02",
+      "C03",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "C09",
+      "C10",
+      "C11"
+    ],
+    "allowed": {
+      "examples/docs-site/quiet-hours/index.md": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06",
+        "C07"
+      ],
+      "examples/docs-site/quiet-hours/pause-for-1-hour.md": [
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06",
+        "C07"
+      ],
+      "examples/docs-site/release-notes/quiet-hours.md": [
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06"
+      ]
+    },
+    "blocked": {}
+  }
+}
