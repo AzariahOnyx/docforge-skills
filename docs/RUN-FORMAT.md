@@ -113,6 +113,21 @@ A run started with `docforge run start --code owner/repo --base <sha> --head <sh
 
 `conflicting`, `needs_engineering`, and `code_only` claims raise questions `X1`, `X2`, and so on. The check writes `analysis/CROSS-SOURCE.md` and `analysis/cross-source.json`, and adds the questions to a generated block at the end of `analysis/clarifications-and-assumptions.md`. Rerunning replaces only that block. Nothing is written when any quote or citation fails. A status compares what two sources say; it is not product verification, and a conflict is never resolved by the check.
 
+## Evidence markers and the claim gate
+
+Pages that will be published (runs started with `--publish-to owner/repo`) mark every statement. A statement is a paragraph, a list item, a block quote, or a table data row; headings, table header rows, code blocks and front matter are not statements. Each one ends with an invisible marker:
+
+```markdown
+Pausing requires an online connection. <!-- evidence: C06 -->
+
+See [Pause in-app alerts for 1 hour](../how-to/how-to.md).
+<!-- evidence: none (navigation link) -->
+```
+
+`docforge gate <run>` fails when a statement has no marker, a marker is malformed, a cited claim is unknown, a cited claim is not INCLUDED for that page in `analysis/COVERAGE.md` (or `included` for it in `analysis/evidence.json` for a custom profile), or a cited claim's cross-source status is `conflicting`, `unknown`, or `needs_engineering`. Exemptions pass but are listed for reviewers. The result is saved to `qa/gate.json`.
+
+`docforge publish prepare` runs the gate, then commits the pages to a new local branch `docforge/<run>` in a docs checkout, together with an evidence manifest (`<docs folder>/_docforge/<run>.evidence.json`). It rewrites links between the placed pages, never changes the checkout's working tree or current branch, and never pushes. It writes `publish/pr.json` and `publish/pr-body.md` and prints the `git push` and `gh pr create` commands for a person to run after review. The pull request is a draft unless the run's `--source-pr` is recorded as merged; `docforge publish ready <run> --source-state merged` records the merge and prints `gh pr ready`. A docs repository can run the gate in CI with `templates/ci/docforge-gate.yml`.
+
 ## Source citations
 
 Use `[S1#L9]` or `[S1#L9-L11]` for a source with stable line numbers. Page and section references such as `[S1#p2]` or `[S1#section:Authentication]` are recorded but require manual verification. The checker cannot inspect a PDF image or infer section boundaries from these references. A citation can exist and still fail to support the claim.

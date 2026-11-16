@@ -20,6 +20,7 @@ from .stages import DEFAULT_DELIVERABLES, Stage, stage_outputs, stages_for
 BACKEND = "claude-code-session"
 REPO_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
+SOURCE_PR_RE = re.compile(r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([1-9][0-9]*)")
 MAX_QUERIES = 10
 HITS_PER_QUERY = 5
 
@@ -116,6 +117,14 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool) ->
         "- Write only inside the run folder. Never change source files or earlier runs.",
         "- Do not invent product behavior. Keep unknowns, assumptions and contradictions visible.",
     ]
+    if stage.key == "drafter" and manifest.get("publish"):
+        lines += [
+            "- These pages will be published to "
+            f"`{manifest['publish']['collection']}` and must pass the claim gate (`uv run docforge gate {out_label}`).",
+            "- End every paragraph, list item and table row with an invisible marker: "
+            "`<!-- evidence: C03, C07 -->` naming the claims it rests on, each INCLUDED for that page in "
+            "`analysis/COVERAGE.md`. Text that states no product fact gets `<!-- evidence: none (reason) -->`.",
+        ]
     if stage.key == "proofreader":
         lines.append("- The same session drafted and reviewed: record the review method as `same_agent_second_pass`.")
     lines += ["", f"When finished, run `uv run docforge run status {out_label}`.", ""]
@@ -135,6 +144,9 @@ def start_run(
     code_repo: str | None = None,
     base: str | None = None,
     head: str | None = None,
+    publish_to: str | None = None,
+    source_pr: str | None = None,
+    source_state: str | None = None,
 ) -> Path:
     """Create a new run folder. Never overwrites: fails if `out` exists."""
     repo = repo.resolve()
@@ -171,6 +183,19 @@ def start_run(
                 raise RunError(f"{name} must be a full 40-character lowercase commit SHA")
         code = {"repo": code_repo, "base": base, "head": head}
 
+    if publish_to is not None and not REPO_NAME_RE.match(publish_to):
+        raise RunError(f"--publish-to must be owner/repo: {publish_to!r}")
+    source = None
+    if source_pr is not None:
+        match = SOURCE_PR_RE.fullmatch(source_pr)
+        if not match:
+            raise RunError(f"--source-pr must look like owner/repo#123: {source_pr!r}")
+        if source_state not in (None, "open", "merged"):
+            raise RunError("--source-state must be open or merged")
+        source = {"repo": match.group(1), "number": int(match.group(2)), "state": source_state or "open"}
+    elif source_state is not None:
+        raise RunError("--source-state needs --source-pr")
+
     sources = []
     for i, prd in enumerate(prds, start=1):
         rel = _repo_relative(repo, prd)
@@ -195,6 +220,10 @@ def start_run(
     }
     if code:
         manifest["code"] = code
+    if publish_to:
+        manifest["publish"] = {"collection": publish_to}
+    if source:
+        manifest["source_pr"] = source
     existing = _existing_docs(repo, docs, sources, include)
 
     try:

@@ -1,0 +1,45 @@
+# DocForge claim gate for a docs repository.
+#
+# Copy to .github/workflows/docforge-gate.yml in the docs repo. On every pull
+# request that carries a DocForge evidence manifest (_docforge/*.evidence.json),
+# it reruns the claim gate on the pages the manifest lists and fails the check
+# if any statement lacks usable evidence. It only reads the repository.
+#
+# Set DOCFORGE_SOURCE to where DocForge can be installed from, pinned to a
+# commit or tag you trust.
+
+name: DocForge claim gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  DOCFORGE_SOURCE: git+https://github.com/AzariahOnyx/docforge-skills@main
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.8"
+      - name: Run the claim gate for each evidence manifest
+        run: |
+          shopt -s globstar nullglob
+          manifests=(**/_docforge/*.evidence.json)
+          if [ ${#manifests[@]} -eq 0 ]; then
+            echo "No DocForge evidence manifest in this pull request; nothing to gate."
+            exit 0
+          fi
+          status=0
+          for manifest in "${manifests[@]}"; do
+            echo "::group::$manifest"
+            uvx --from "$DOCFORGE_SOURCE" docforge gate --manifest "$manifest" --docs-root . || status=1
+            echo "::endgroup::"
+          done
+          exit $status

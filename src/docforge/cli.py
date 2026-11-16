@@ -96,6 +96,7 @@ def _run_start(args: argparse.Namespace) -> int:
             repo=args.repo, prds=args.prd, out=args.out, audience=args.audience, docs=args.docs,
             profile=args.profile, deliverables=args.deliverable, docs_include=args.docs_include,
             code_repo=args.code, base=args.base, head=args.head,
+            publish_to=args.publish_to, source_pr=args.source_pr, source_state=args.source_state,
         )
     except (RunError, OSError) as exc:
         print(exc, file=sys.stderr)
@@ -262,6 +263,80 @@ def _evidence_code_ref(args: argparse.Namespace) -> int:
     return 0
 
 
+def _place_arg(value: str) -> tuple[str, str]:
+    src, sep, dest = value.partition("=")
+    if not sep or not src or not dest:
+        raise argparse.ArgumentTypeError("use run-file=docs-path")
+    return src, dest
+
+
+def _print_gate(result) -> None:
+    for issue in result.errors:
+        print(f"FAIL: {issue.path}:{issue.line}: {issue.message}")
+    for exemption in result.exemptions:
+        print(f"EXEMPT: {exemption.path}:{exemption.line} ({exemption.reason}): {exemption.text}")
+    verdict = "PASS" if result.passed else "FAIL"
+    print(f"{verdict}: {result.statements} statement(s) in {len(result.pages)} page(s); {result.cited} backed by "
+          f"claims, {len(result.exemptions)} exempt, {len(result.errors)} error(s).")
+
+
+def _gate(args: argparse.Namespace) -> int:
+    from docforge.publish import GateError, gate_manifest, gate_run
+
+    try:
+        if args.manifest:
+            result = gate_manifest(args.manifest, args.docs_root)
+        elif args.run:
+            result = gate_run(args.run)
+        else:
+            print("give a run folder, or --manifest with --docs-root", file=sys.stderr)
+            return 2
+    except (GateError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    _print_gate(result)
+    return 0 if result.passed else 1
+
+
+def _publish_prepare(args: argparse.Namespace) -> int:
+    from docforge.publish import PublishError, prepare_publish
+
+    try:
+        config = load_config(args.config)
+        manifest = json.loads((args.run / "run.json").read_text(encoding="utf-8"))
+        collection = args.collection or (manifest.get("publish") or {}).get("collection")
+        if not collection:
+            raise PublishError("no docs repo: start the run with --publish-to or pass --collection")
+        plan = prepare_publish(run=args.run, checkout=args.docs_checkout, config=config, collection=collection,
+                               placements=args.place, base=args.base, title=args.title)
+    except (ConfigError, PublishError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Created local branch {plan.branch} at {plan.commit[:12]} (not pushed).")
+    for f in plan.files:
+        print(f"  {f['change']:<9}{f['path']}")
+    print(f"Pull request: {'draft' if plan.draft else 'ready for review'}; policy action: {plan.action}.")
+    print(f"Wrote {args.run / 'publish' / 'pr.json'} and {args.run / 'publish' / 'pr-body.md'}.")
+    print("After review, a person runs:")
+    for command in plan.commands:
+        print("  " + command)
+    return 0
+
+
+def _publish_ready(args: argparse.Namespace) -> int:
+    from docforge.publish import PublishError, mark_ready
+
+    try:
+        plan = mark_ready(args.run, args.source_state)
+    except PublishError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Recorded that the source change is merged; {plan.branch} may leave draft. A person runs:")
+    for command in plan.commands:
+        print("  " + command)
+    return 0
+
+
 def _add_collection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--collection", help="limit to a doc_collections entry's filter (owner/repo)")
     parser.add_argument("--config", default="docforge.yaml", help="config used with --collection")
@@ -344,6 +419,29 @@ def main(argv: list[str] | None = None) -> int:
     ref.add_argument("--lines", required=True, help="L10 or L10-L24")
     ref.set_defaults(func=_evidence_code_ref)
 
+    gate = sub.add_parser("gate", help="fail if any published statement lacks usable evidence")
+    gate.add_argument("run", type=Path, nargs="?", help="run folder (writes qa/gate.json)")
+    gate.add_argument("--manifest", type=Path, help="evidence manifest from a docs pull request")
+    gate.add_argument("--docs-root", type=Path, default=Path("."), help="docs repo root for --manifest")
+    gate.set_defaults(func=_gate)
+
+    publish = sub.add_parser("publish", help="prepare a docs pull request (local only; never pushes)")
+    publish_sub = publish.add_subparsers(dest="publish_command", required=True)
+    prepare = publish_sub.add_parser("prepare", help="gate the run, commit pages to a local branch, write the PR")
+    prepare.add_argument("run", type=Path)
+    prepare.add_argument("--docs-checkout", type=Path, required=True, help="local clone of the docs repo")
+    prepare.add_argument("--place", type=_place_arg, action="append", default=[], required=True,
+                         metavar="RUN-FILE=DOCS-PATH", help="where a run page goes in the docs repo (repeatable)")
+    prepare.add_argument("--collection", metavar="OWNER/REPO", help="docs repo (default: the run's --publish-to)")
+    prepare.add_argument("--base", default="main", help="branch the pull request targets (default main)")
+    prepare.add_argument("--title")
+    prepare.add_argument("--config", default="docforge.yaml")
+    prepare.set_defaults(func=_publish_prepare)
+    ready = publish_sub.add_parser("ready", help="record that the source change merged; print the ready command")
+    ready.add_argument("run", type=Path)
+    ready.add_argument("--source-state", required=True, choices=("open", "merged"))
+    ready.set_defaults(func=_publish_ready)
+
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)
     start = run_sub.add_parser("start", help="create a new run folder with a manifest and stage work orders")
@@ -359,6 +457,9 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--code", metavar="OWNER/REPO", help="product code repo; adds a Research stage")
     start.add_argument("--base", help="base commit SHA of the product change (with --code)")
     start.add_argument("--head", help="head commit SHA of the product change (with --code)")
+    start.add_argument("--publish-to", metavar="OWNER/REPO", help="docs repo the pages will be proposed to")
+    start.add_argument("--source-pr", metavar="OWNER/REPO#N", help="the product pull request this run documents")
+    start.add_argument("--source-state", choices=("open", "merged"), help="state of --source-pr (default open)")
     start.set_defaults(func=_run_start)
     status = run_sub.add_parser("status", help="show which stages have their files and what comes next")
     status.add_argument("out", type=Path)

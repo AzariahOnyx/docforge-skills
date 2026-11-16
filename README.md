@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, and a PRD-vs-code check. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, and a claim gate with draft docs pull requests. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -166,6 +166,16 @@ uv run docforge research check output/my-run --code-root example-org/product-web
 ```
 
 Each claim gets one status: confirmed, PRD only, code only, conflicting, unknown, or needs engineering. Conflicts and open questions are added to the clarification register. See the [run format](docs/RUN-FORMAT.md) for `claims.json`.
+
+Propose a run's pages as a docs pull request. Every published statement needs an evidence marker, and the claim gate checks them:
+
+```bash
+uv run docforge gate output/my-run
+uv run docforge publish prepare output/my-run --docs-checkout ../docs-site \
+  --place feature/feature-guide.md=docs/quiet-hours.md
+```
+
+`publish prepare` commits to a new local branch only. It prints the `git push` and `gh pr create --draft` commands for a person to run after review; nothing is pushed or opened automatically. Copy `templates/ci/docforge-gate.yml` into a docs repository to run the gate on its pull requests.
 
 ## Project structure
 

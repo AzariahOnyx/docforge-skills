@@ -1,0 +1,6 @@
+# Config used by the M6 tests (named .txt because real docforge.yaml files are gitignored).
+doc_collections:
+  example-org/docs-site:
+    default_branch: main
+    filter:
+      - site/
