@@ -58,6 +58,8 @@ One milestone at a time. Each one ends with passing tests and a short report bef
 | M6 | Docs pull request with claim gate | Suggestion branch, commits, and a docs PR whose body lists the PRD, evidence, coverage, QA results and open questions. The PR stays draft while its source PR is open. A CI check fails if any included statement lacks evidence. | An end-to-end run against a test GitHub repo opens a correct draft PR |
 | M7 | Review loop | Minimal web UI with three views (diff, analysis, history); request changes; close with a reason (6 fixed reasons). Reasons are stored as structured feedback. | A reviewer can revise or close a suggestion; feedback is recorded |
 
+**M3 note (2026-11-16):** for now the stages run in a Claude Code session instead of through an LLM API. `docforge run start` prepares the run folder, manifest, docs matches and one work order per stage; the session carries out each work order; `docforge run status` and `docforge run check` track and check the result. An API backend can be added later behind the same commands.
+
 ## After M7, in order
 
 1. Vale linting and auto-fix on changed prose.

@@ -138,6 +138,17 @@ uv run docforge search output steps --in heading
 
 The index lists pages, front matter, sections with anchors and line ranges, links with their status, and backlinks. Add `--collection owner/repo` to apply that collection's `filter` from `docforge.yaml`.
 
+Start a documentation run, track it, and check it. For now each stage (Analyzer, Drafter, Proofreader) is carried out in a Claude Code session that follows the work orders in the run's `prompts/` folder.
+
+```bash
+uv run docforge run start --prd demo/mock-prd.md --out output/my-run \
+  --audience "signed-in members" --docs output/quiet-hours --docs-include feature/
+uv run docforge run status output/my-run
+uv run docforge run check output/my-run
+```
+
+`run start` never reuses an existing folder. `run check` runs the structural checker for the run's profile and the Markdown lint, and saves the result to `qa/checks.json`. Neither replaces source review or human approval.
+
 ## Project structure
 
 ```text

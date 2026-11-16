@@ -106,3 +106,26 @@ def test_cli_search_no_matches(capsys):
 def test_cli_search_missing_path(capsys):
     assert main(["search", str(FIXTURE / "nope"), "x"]) == 1
     assert "not a directory" in capsys.readouterr().err
+
+
+def test_any_mode_ranks_by_matched_words():
+    hits = search(FIXTURE, "install draft", match="any")
+    # "draft": notes.md title (3) + H1 heading (2). "install": setup.md heading (2) + text (1).
+    assert [(h.path, h.score) for h in hits] == [("drafts/notes.md", 5), ("docs/guides/setup.md", 3)]
+    assert search(FIXTURE, "install draft") == []
+
+
+def test_any_mode_ignores_common_words():
+    assert paths(search(FIXTURE, "the install", match="any")) == ["docs/guides/setup.md"]
+    assert search(FIXTURE, "the of and", match="any") == []
+
+
+def test_any_mode_title_and_heading():
+    assert paths(search(FIXTURE, "guides zebra", field="title", match="any")) == ["docs/guides/index.mdx"]
+    hits = search(FIXTURE, "configure zebra", field="heading", match="any")
+    assert [(h.path, h.anchor) for h in hits] == [("docs/guides/setup.md", "config")]
+
+
+def test_cli_search_match_any(capsys):
+    assert main(["search", str(FIXTURE), "install draft", "--match", "any", "--json"]) == 0
+    assert [d["path"] for d in json.loads(capsys.readouterr().out)] == ["drafts/notes.md", "docs/guides/setup.md"]

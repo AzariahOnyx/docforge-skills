@@ -1,6 +1,7 @@
 """Keyword search over a docs folder.
 
-Every query word must match (case-insensitive, whole words). Scoring per word:
+By default every query word must match (case-insensitive, whole words);
+`match="any"` needs only one. Scoring per word:
 title 3, heading 2, section text 1, plus 2 when the whole query appears as a
 phrase in the title, heading or text. A page's score is its title score plus
 its best section's score. Reads the folder fresh; never uses the network.
@@ -27,6 +28,9 @@ from .build import (
 from .models import SearchHit
 
 SearchField = Literal["all", "title", "heading"]
+MatchMode = Literal["all", "any"]
+# Ignored in "any" mode, where they would match nearly every page.
+STOPWORDS = frozenset("a an and are as at be by for from in is it of on or the to with".split())
 SNIPPET_CHARS = 160
 TITLE, HEADING, BODY, PHRASE = 3, 2, 1, 2
 
@@ -59,14 +63,22 @@ def search(
     field: SearchField = "all",
     limit: int = 10,
     collection: DocCollection | None = None,
+    match: MatchMode = "all",
 ) -> list[SearchHit]:
+    """Search a docs folder. `match="all"` needs every query word; `"any"` needs one
+    (common words ignored) and ranks pages by how many words they match."""
     root = Path(root)
     if not root.is_dir():
         raise DocsIndexError(f"not a directory: {root}")
     terms = list(dict.fromkeys(tokens(query)))
+    if match == "any":
+        terms = [t for t in terms if t not in STOPWORDS]
     if not terms:
         return []
     term_set = set(terms)
+
+    def matched(words: set[str]) -> bool:
+        return term_set <= words if match == "all" else bool(term_set & words)
 
     hits: list[SearchHit] = []
     for rel in discover_pages(root, collection):
@@ -80,9 +92,9 @@ def search(
         title_set = set(title_words)
 
         if field == "title":
-            if not term_set <= title_set:
+            if not matched(title_set):
                 continue
-            score = TITLE * len(terms) + (PHRASE if _phrase(terms, title_words) else 0)
+            score = TITLE * len(term_set & title_set) + (PHRASE if _phrase(terms, title_words) else 0)
             hits.append(SearchHit(path=rel, title=page.title, score=score, line=1, snippet=page.title))
             continue
 
@@ -93,7 +105,7 @@ def search(
             body_words = [w for n in range(first, last + 1) for w in tokens(visible_text(lines[n - 1]))]
             heading_set, body_set = set(heading_words), set(body_words)
             page_words |= heading_set | body_set
-            if field == "heading" and not term_set <= heading_set:
+            if field == "heading" and not matched(heading_set):
                 continue
             score = HEADING * len(term_set & heading_set) + BODY * len(term_set & body_set)
             if _phrase(terms, heading_words) or _phrase(terms, body_words):
@@ -113,7 +125,7 @@ def search(
             if best is None or score > best[0]:
                 best = (score, hit)
 
-        if field == "all" and not term_set <= page_words:
+        if field == "all" and not matched(page_words):
             continue
         title_score = TITLE * len(term_set & title_set) + (PHRASE if _phrase(terms, title_words) else 0)
         if best is None:
