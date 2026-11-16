@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, and GitHub pull request triggers. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, and a PRD-vs-code check. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -157,6 +157,15 @@ uv run docforge trigger check tests/fixtures/github/pr_merged.json --event pull_
 ```
 
 Draft pull requests, pull requests that only change dot-files, and pull requests DocForge opened itself are skipped. Decisions are appended to `.docforge/decisions.jsonl`, which Git ignores. `docforge serve` receives signed GitHub webhooks on `127.0.0.1` and only records decisions. It reads the secret from `DOCFORGE_WEBHOOK_SECRET` and refuses unsigned deliveries. Nothing is posted to GitHub.
+
+Compare a run's PRD claims with the product code. Start the run with `--code owner/repo --base <sha> --head <sha>` to add a Research stage. Then use a local checkout of that repository:
+
+```bash
+uv run docforge research packet output/my-run --checkout ../product-web
+uv run docforge research check output/my-run --code-root example-org/product-web=../product-web
+```
+
+Each claim gets one status: confirmed, PRD only, code only, conflicting, unknown, or needs engineering. Conflicts and open questions are added to the clarification register. See the [run format](docs/RUN-FORMAT.md) for `claims.json`.
 
 ## Project structure
 

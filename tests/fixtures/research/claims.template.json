@@ -1,0 +1,49 @@
+{
+  "_comment": "Research output for the Quiet Hours demo PRD against the made-up pulseboard-web change. Tests fill in each code entry's commit and excerpt_sha256.",
+  "schema_version": 1,
+  "claims": [
+    {
+      "claim_id": "C02",
+      "statement": "Quiet Hours pauses a member's own in-app alerts; email alerts are not paused.",
+      "prd": [{"source_id": "S1", "quote": "It does not pause email alerts or change another member's settings."}],
+      "code": [{"path": "src/pulseboard/quiet_hours.py", "lines": "L11", "relation": "supports"}]
+    },
+    {
+      "claim_id": "C03",
+      "statement": "The pause options are 1 hour and Until tomorrow.",
+      "prd": [{"source_id": "S1", "quote": "Choose **1 hour** or **Until tomorrow**, then select **Confirm**."}],
+      "code": [{"path": "src/pulseboard/quiet_hours.py", "lines": "L5-L8", "relation": "contradicts",
+                "note": "the code offers 2 hours, not 1 hour"}]
+    },
+    {
+      "claim_id": "C05",
+      "statement": "In-app alerts resume automatically when the selected period ends.",
+      "prd": [{"source_id": "S1", "quote": "When the selected period ends, in-app alerts resume automatically."}],
+      "code": [{"path": "src/pulseboard/quiet_hours.py", "lines": "L26-L28", "relation": "context"}],
+      "needs_engineering": "Does the notification service resume in-app alerts exactly at the end time, including when the member is offline?"
+    },
+    {
+      "claim_id": "C06",
+      "statement": "Pausing is available only while online.",
+      "prd": [{"source_id": "S1", "quote": "Pausing is available only while online."}]
+    },
+    {
+      "claim_id": "C07",
+      "statement": "An admin cannot change another member's Quiet Hours setting.",
+      "prd": [{"source_id": "S1", "quote": "An admin cannot change another member's setting."}],
+      "code": [{"path": "src/pulseboard/quiet_hours.py", "lines": "L21-L23", "relation": "supports"}]
+    },
+    {
+      "claim_id": "C08",
+      "statement": "Until tomorrow ends at 08:00 in the member's own time zone.",
+      "code": [
+        {"path": "src/pulseboard/quiet_hours.py", "lines": "L9", "relation": "supports"},
+        {"path": "src/pulseboard/quiet_hours.py", "lines": "L14-L17", "relation": "supports"}
+      ]
+    },
+    {
+      "claim_id": "C11",
+      "statement": "Release date, platform list, and rollout plan."
+    }
+  ]
+}

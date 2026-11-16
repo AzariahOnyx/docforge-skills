@@ -1,8 +1,12 @@
-"""The three stages of a documentation run and the files each one produces."""
+"""The stages of a documentation run and the files each one produces.
+
+Every run has Analyzer, Drafter and Proofreader. A run started with product code
+(`run.json` has a "code" entry) also has a Research stage after the Analyzer.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 DEFAULT_DELIVERABLES = (
     "feature/feature-guide.md",
@@ -22,7 +26,7 @@ class Stage:
     number: int
     key: str
     name: str
-    skill: str
+    skill: str | None
     reads: tuple[str, ...]  # repository files the stage reads, besides sources and earlier outputs
 
     @property
@@ -48,10 +52,26 @@ STAGES = (
 )
 
 
+RESEARCH = Stage(
+    0, "research", "Research", None,
+    ("docs/RUN-FORMAT.md",),
+)
+
+
+def stages_for(manifest: dict) -> tuple[Stage, ...]:
+    """The run's stages, numbered in order. Research is added only for runs with code."""
+    stages = list(STAGES)
+    if manifest.get("code"):
+        stages.insert(1, RESEARCH)
+    return tuple(replace(stage, number=i) for i, stage in enumerate(stages, start=1))
+
+
 def stage_outputs(stage: Stage, profile: str, deliverables: list[str]) -> list[str]:
     """Run-relative files a stage must produce."""
     if stage.key == "analyzer":
         return list(ANALYSIS_FILES)
+    if stage.key == "research":
+        return ["analysis/claims.json", "analysis/CROSS-SOURCE.md"]
     if stage.key == "drafter":
         outputs = list(deliverables) + ["analysis/COVERAGE.md"]
         if profile == "custom":

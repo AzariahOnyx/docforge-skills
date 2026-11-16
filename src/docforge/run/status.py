@@ -11,7 +11,7 @@ import sys
 
 from docforge.evidence import validate
 
-from .stages import STAGES, Stage, stage_outputs
+from .stages import Stage, stage_outputs, stages_for
 from .start import RunError
 
 MIN_CHARS = 100  # same threshold check_outputs.py uses for "appears incomplete"
@@ -44,7 +44,7 @@ class StageStatus:
 def run_status(out: Path) -> list[StageStatus]:
     manifest = load_manifest(out)
     statuses = []
-    for stage in STAGES:
+    for stage in stages_for(manifest):
         status = StageStatus(stage)
         for rel in stage_outputs(stage, manifest["profile"], manifest["deliverables"]):
             path = out / rel
@@ -72,7 +72,7 @@ def _script(name: str, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, str(script), *args], capture_output=True, text=True, check=False)
 
 
-def run_checks(out: Path, repo: Path) -> dict:
+def run_checks(out: Path, repo: Path, code_roots: dict[str, Path] | None = None) -> dict:
     """Run the structural checker for the run's profile plus the Markdown lint.
 
     Writes qa/checks.json (replacing any earlier check record) and returns it.
@@ -100,11 +100,22 @@ def run_checks(out: Path, repo: Path) -> dict:
         prefix = str(out.resolve()) + "/"
         findings = [l.replace(str(out) + "/", "").replace(prefix, "") for l in lint.stdout.splitlines()
                     if ": " in l and not l.endswith("Human review is still required.")]
+    research = None
+    if manifest.get("code"):
+        from docforge.research import ResearchError, research_check
+
+        try:
+            result = research_check(out, repo, code_roots)
+            research = {"passed": not result["errors"], "errors": result["errors"], "warnings": result["warnings"],
+                        "statuses": {r["claim_id"]: r["status"] for r in result["results"]}}
+        except ResearchError as exc:
+            research = {"passed": False, "errors": [str(exc)], "warnings": [], "statuses": {}}
     record = {
         "checked_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "profile": manifest["profile"],
         "structural": structural,
         "lint_findings": findings,
+        "research": research,
         "note": "Structural and editorial checks only. Source fidelity review and human approval are separate.",
     }
     (out / "qa").mkdir(exist_ok=True)

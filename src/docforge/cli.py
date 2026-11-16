@@ -95,6 +95,7 @@ def _run_start(args: argparse.Namespace) -> int:
         out = start_run(
             repo=args.repo, prds=args.prd, out=args.out, audience=args.audience, docs=args.docs,
             profile=args.profile, deliverables=args.deliverable, docs_include=args.docs_include,
+            code_repo=args.code, base=args.base, head=args.head,
         )
     except (RunError, OSError) as exc:
         print(exc, file=sys.stderr)
@@ -129,7 +130,7 @@ def _run_check(args: argparse.Namespace) -> int:
     from docforge.run import RunError, run_checks
 
     try:
-        record = run_checks(args.out, args.repo)
+        record = run_checks(args.out, args.repo, dict(args.code_root))
     except RunError as exc:
         print(exc, file=sys.stderr)
         return 1
@@ -140,11 +141,23 @@ def _run_check(args: argparse.Namespace) -> int:
         print("WARNING:", warning)
     for finding in record["lint_findings"]:
         print("LINT:", finding)
-    verdict = "PASS" if structural["passed"] else "FAIL"
+    research = record.get("research")
+    if research is not None:
+        for error in research["errors"]:
+            print("FAIL (research):", error)
+        for warning in research["warnings"]:
+            print("WARNING (research):", warning)
+        if research["statuses"]:
+            counts = {}
+            for status in research["statuses"].values():
+                counts[status] = counts.get(status, 0) + 1
+            print("Cross-source:", ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+    passed = structural["passed"] and (research is None or research["passed"])
+    verdict = "PASS" if passed else "FAIL"
     print(f"{verdict}: {structural['checker']}; {len(record['lint_findings'])} lint finding(s). "
           f"Saved {args.out / 'qa' / 'checks.json'}.")
     print(record["note"])
-    return 0 if structural["passed"] else 1
+    return 0 if passed else 1
 
 
 def _checkout_arg(value: str) -> tuple[str, Path]:
@@ -191,6 +204,61 @@ def _serve(args: argparse.Namespace) -> int:
         return 1
     receiver = Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout))
     serve(receiver, host=args.host, port=args.port)
+    return 0
+
+
+def _research_packet(args: argparse.Namespace) -> int:
+    from docforge.research import ResearchError, build_packet
+    from docforge.run import RunError, load_manifest
+
+    try:
+        code = load_manifest(args.run).get("code")
+        if not code:
+            raise RunError(f"{args.run} has no product code; start the run with --code, --base and --head")
+        packet = build_packet(args.checkout, code["repo"], code["base"], code["head"])
+    except (RunError, ResearchError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    target = args.run / "research" / "changes.json"
+    target.parent.mkdir(exist_ok=True)
+    target.write_text(packet.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    print(f"Wrote {target}: {len(packet.files)} changed file(s), {len(packet.hunks)} cited hunk(s).")
+    for note in packet.notes:
+        print("NOTE:", note)
+    return 0
+
+
+def _research_check(args: argparse.Namespace) -> int:
+    from docforge.research import ResearchError, research_check
+
+    try:
+        record = research_check(args.run, args.repo, dict(args.code_root))
+    except ResearchError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    for error in record["errors"]:
+        print("FAIL:", error)
+    for warning in record["warnings"]:
+        print("WARNING:", warning)
+    if record["errors"]:
+        print(f"FAIL: {len(record['errors'])} evidence error(s); nothing was written.")
+        return 1
+    for result in record["results"]:
+        question = f"  {result['question_id']}" if result["question_id"] else ""
+        print(f"{result['claim_id']:>5}  {result['status']:<17}{question}")
+    print("Wrote " + ", ".join(record["written"]) + ".")
+    return 0
+
+
+def _evidence_code_ref(args: argparse.Namespace) -> int:
+    from docforge.research import ResearchError, code_ref
+
+    try:
+        ref = code_ref(args.checkout, args.repo, args.commit, args.path, args.lines)
+    except ResearchError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(ref.model_dump_json(indent=2))
     return 0
 
 
@@ -252,6 +320,30 @@ def main(argv: list[str] | None = None) -> int:
                            metavar="OWNER/REPO=PATH", help="local checkout used to diff that repo's PRs")
     serve_cmd.set_defaults(func=_serve)
 
+    research = sub.add_parser("research", help="compare a run's PRD claims with product code")
+    research_sub = research.add_subparsers(dest="research_command", required=True)
+    packet = research_sub.add_parser("packet", help="write research/changes.json from a local checkout (read-only)")
+    packet.add_argument("run", type=Path)
+    packet.add_argument("--checkout", type=Path, required=True, help="local checkout of the run's code repo")
+    packet.set_defaults(func=_research_packet)
+    rcheck = research_sub.add_parser("check", help="verify claims.json and write the cross-source report")
+    rcheck.add_argument("run", type=Path)
+    rcheck.add_argument("--repo", type=Path, default=Path("."),
+                        help="root that run.json source paths are relative to (default: current folder)")
+    rcheck.add_argument("--code-root", type=_checkout_arg, action="append", default=[], metavar="OWNER/REPO=PATH",
+                        help="local checkout used to verify code evidence (repeatable)")
+    rcheck.set_defaults(func=_research_check)
+
+    evidence = sub.add_parser("evidence", help="evidence helpers")
+    evidence_sub = evidence.add_subparsers(dest="evidence_command", required=True)
+    ref = evidence_sub.add_parser("code-ref", help="print a verified code citation for some lines (read-only)")
+    ref.add_argument("--checkout", type=Path, required=True)
+    ref.add_argument("--repo", required=True, metavar="OWNER/REPO")
+    ref.add_argument("--commit", required=True, help="commit SHA (7-40 hex)")
+    ref.add_argument("--path", required=True, help="file path inside the repo")
+    ref.add_argument("--lines", required=True, help="L10 or L10-L24")
+    ref.set_defaults(func=_evidence_code_ref)
+
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)
     start = run_sub.add_parser("start", help="create a new run folder with a manifest and stage work orders")
@@ -264,6 +356,9 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--profile", choices=("default", "custom"), default="default")
     start.add_argument("--deliverable", action="append", help="custom profile: run-relative Markdown path")
     start.add_argument("--repo", type=Path, default=Path("."), help="repository root (default: current folder)")
+    start.add_argument("--code", metavar="OWNER/REPO", help="product code repo; adds a Research stage")
+    start.add_argument("--base", help="base commit SHA of the product change (with --code)")
+    start.add_argument("--head", help="head commit SHA of the product change (with --code)")
     start.set_defaults(func=_run_start)
     status = run_sub.add_parser("status", help="show which stages have their files and what comes next")
     status.add_argument("out", type=Path)
@@ -272,6 +367,8 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("out", type=Path)
     check.add_argument("--repo", type=Path, default=Path("."),
                        help="root that run.json source paths are relative to (default: current folder)")
+    check.add_argument("--code-root", type=_checkout_arg, action="append", default=[], metavar="OWNER/REPO=PATH",
+                       help="local checkout used to verify code evidence (repeatable)")
     check.set_defaults(func=_run_check)
 
     args = parser.parse_args(argv)

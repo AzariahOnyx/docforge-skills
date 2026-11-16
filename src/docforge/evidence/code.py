@@ -61,3 +61,36 @@ def verify_code_evidence(evidence: CodeEvidence, root: Path) -> list[str]:
     if excerpt_sha256(text, evidence.start_line, evidence.end_line) != evidence.excerpt_sha256:
         return [f"{cid}: code excerpt hash mismatch for {evidence.path} {evidence.lines}"]
     return []
+
+
+class CodeReadError(Exception):
+    """Raised when a file cannot be read from a local checkout."""
+
+
+def resolve_commit(root: Path, ref: str) -> str:
+    """Full 40-character SHA for a commit SHA (7-40 hex) in `root`."""
+    import re
+
+    if not re.fullmatch(r"[0-9a-f]{7,40}", ref or ""):
+        raise CodeReadError(f"expected a commit SHA (7-40 lowercase hex), got {ref!r}")
+    try:
+        result = _git(root, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise CodeReadError(f"could not read checkout: {exc}") from None
+    if result.returncode != 0:
+        raise CodeReadError(f"commit {ref} not found in {root}")
+    return result.stdout.decode("ascii").strip()
+
+
+def read_file_at_commit(root: Path, commit: str, path: str) -> str:
+    """UTF-8 text of `path` at `commit` (a resolved SHA) in a local checkout."""
+    try:
+        shown = _git(root, "show", f"{commit}:{path}")
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise CodeReadError(f"could not read checkout: {exc}") from None
+    if shown.returncode != 0:
+        raise CodeReadError(f"{path} does not exist at commit {commit[:12]}")
+    try:
+        return shown.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        raise CodeReadError(f"{path} at commit {commit[:12]} is not UTF-8 text") from None
