@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, and a read-only index and search for existing docs. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -128,11 +128,21 @@ uv run pytest
 
 `docforge.yaml` is ignored by Git. Keep real configuration out of this public repository.
 
+Index an existing docs folder, or search it by keyword. Both commands only read files.
+
+```bash
+uv run docforge index output --out /tmp/output-index.json
+uv run docforge search output "quiet hours"
+uv run docforge search output steps --in heading
+```
+
+The index lists pages, front matter, sections with anchors and line ranges, links with their status, and backlinks. Add `--collection owner/repo` to apply that collection's `filter` from `docforge.yaml`.
+
 ## Project structure
 
 ```text
 .agents/skills/       Reusable skill instructions
-src/docforge/         Engine code (configuration and command line)
+src/docforge/         Engine code (configuration, evidence, docs index, command line)
 tests/                Engine tests (pytest)
 templates/            Default document and evidence templates
 standards/            Documentation writing standards
