@@ -145,6 +145,15 @@ Actions only change local files. Each prints the matching `gh pr comment` or `gh
 
 `--fix` shows the replacements Vale offers for single-replacement rules; `--apply` writes them. A fix is never made in front matter, an evidence marker, inline code, a link target, or an HTML tag, or where it overlaps an alert that needs a person. For runs meant for publishing, the claim gate runs again afterwards, and every page is restored if it fails. `docforge run check` includes the Vale result and fails on error-level alerts; if Vale is not installed, it says so and does not fail.
 
+## Learned rules
+
+Review feedback can become rules, each a YAML file in a rules folder (`--rules-dir`, else `DOCFORGE_RULES_DIR`, else `knowledge/rules`). A rule is `proposed`, then `tested`, then `live`, or ends as `rejected` or `retired`.
+
+- `avoid` rules name a word or regular expression (Vale/RE2 syntax), optionally with a replacement. `docforge rules test` runs the rule alone through Vale over past runs' pages and the pages DocForge committed, and records every hit. When live, `docforge lint` applies it.
+- `guidance` rules are instructions that cannot be checked mechanically. Their test report lists the pages they would apply to and quotes the feedback they came from, for a person to judge. When live, they appear in Drafter, Proofreader, and revision work orders.
+
+`docforge rules approve` needs a test report that matches the rule's current wording. Editing a tested or live rule makes it `proposed` again, and lint and work orders stop using it until it is tested and approved again. `docforge rules suggest` gathers close reasons and change requests across runs for drafting new rules. Keep rules learned from private feedback in a private repository.
+
 ## Source citations
 
 Use `[S1#L9]` or `[S1#L9-L11]` for a source with stable line numbers. Page and section references such as `[S1#p2]` or `[S1#section:Authentication]` are recorded but require manual verification. The checker cannot inspect a PDF image or infer section boundaries from these references. A citation can exist and still fail to support the claim.

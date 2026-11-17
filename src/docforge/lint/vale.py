@@ -125,8 +125,19 @@ def lint_run(run: Path, *, changed_only: bool = True, config: Path | None = None
         raise LintError("Vale is not installed. Install it (https://vale.sh) or set DOCFORGE_VALE to its path.")
     manifest = json.loads((run / "run.json").read_text(encoding="utf-8"))
     pages = {d: run / d for d in manifest.get("deliverables", []) if (run / d).is_file()}
-    config = config or DEFAULT_CONFIG
-    alerts = run_vale(pages, config, binary)
+    learned_used = False
+    if config is None:
+        from docforge.rules import RuleError, lint_config, rules_dir
+
+        try:
+            with lint_config(rules_dir()) as learned:
+                alerts = run_vale(pages, learned or DEFAULT_CONFIG, binary)
+                learned_used = learned is not None
+        except RuleError as exc:
+            raise LintError(f"learned rules could not be loaded: {exc}") from None
+        config = DEFAULT_CONFIG
+    else:
+        alerts = run_vale(pages, config, binary)
 
     # Page -> lines changed since DocForge last committed it (pages never proposed are absent: all lines count).
     changed: dict[str, set[int]] = {}
@@ -149,8 +160,8 @@ def lint_run(run: Path, *, changed_only: bool = True, config: Path | None = None
             skipped += 1
             continue
         kept.append(alert)
-    result = LintResult(vale_version=vale_version(binary), config=os.path.relpath(config, TOOLS_ROOT)
-                        if config.resolve().is_relative_to(TOOLS_ROOT) else config.name,
+    label = os.path.relpath(config, TOOLS_ROOT) if config.resolve().is_relative_to(TOOLS_ROOT) else config.name
+    result = LintResult(vale_version=vale_version(binary), config=label + (" + live learned rules" if learned_used else ""),
                         changed_only=changed_only, pages=sorted(pages), alerts=kept, unchanged_alerts=skipped)
     if write:
         (run / "qa").mkdir(exist_ok=True)

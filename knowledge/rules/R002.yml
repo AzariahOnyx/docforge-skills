@@ -1,0 +1,33 @@
+id: R002
+kind: guidance
+title: How-to intros name the alerts that keep arriving
+message: Readers need to know what a pause does not stop.
+ignorecase: true
+level: warning
+guidance: In a how-to that pauses or turns off notifications, say in the opening paragraph which alerts
+  are not affected, when the sources state it.
+applies_to:
+- how-to/
+origins:
+- run: quiet-hours-docs
+  feedback_id: 80d3877af9ea
+proposed_by: Claude (DocForge session)
+proposed_at: '2026-11-17T08:59:39+00:00'
+status: live
+test:
+  at: '2026-11-17T08:59:39+00:00'
+  content_hash: 6e7ec5b8d773971ce4f5d651de7dbe1d6e32b7679d4ea1c6b48d9ab067102fd1
+  runs:
+  - quiet-hours-docs
+  - quiet-hours-m3
+  pages_checked: 1
+  hits: []
+  feedback:
+  - 'quiet-hours-docs 80d3877af9ea (request_changes, Demo reviewer): The intro should say that email alerts
+    are not paused, so readers know what still reaches them.'
+  note: Guidance cannot be checked automatically. It would apply to the pages listed by count; a person
+    judges whether it is right and general enough.
+approval:
+  by: Azariah Onyx
+  at: '2026-11-17T09:05:50+00:00'
+  content_hash: 6e7ec5b8d773971ce4f5d651de7dbe1d6e32b7679d4ea1c6b48d9ab067102fd1

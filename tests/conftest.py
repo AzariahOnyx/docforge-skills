@@ -51,3 +51,11 @@ def materialize_claims(root: Path, head: str) -> dict:
             ref = code_ref(root, CODE_REPO, head, entry["path"], entry["lines"])
             entry.update(repo=ref.repo, commit=ref.commit, lines=ref.lines, excerpt_sha256=ref.excerpt_sha256)
     return data
+
+
+@pytest.fixture(autouse=True)
+def isolated_rules(tmp_path, monkeypatch):
+    """Every test sees an empty learned-rules folder unless it sets one up."""
+    folder = tmp_path / "learned-rules"
+    monkeypatch.setenv("DOCFORGE_RULES_DIR", str(folder))
+    return folder

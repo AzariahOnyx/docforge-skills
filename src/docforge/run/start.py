@@ -117,6 +117,16 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool) ->
         "- Write only inside the run folder. Never change source files or earlier runs.",
         "- Do not invent product behavior. Keep unknowns, assumptions and contradictions visible.",
     ]
+    if stage.key in ("drafter", "proofreader"):
+        from docforge.rules import RuleError, guidance_lines, rules_dir
+
+        try:
+            learned = guidance_lines(rules_dir(), manifest["deliverables"])
+        except RuleError:
+            learned = []
+        if learned:
+            lines += ["- Follow the learned guidance below. It was approved from earlier review feedback; "
+                      "it never overrides the sources."] + learned
     if stage.key == "drafter" and manifest.get("publish"):
         lines += [
             "- These pages will be published to "

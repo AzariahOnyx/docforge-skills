@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -435,6 +436,59 @@ def _lint(args: argparse.Namespace) -> int:
         return 1
 
 
+def _rules_folder(args: argparse.Namespace) -> Path:
+    from docforge.rules import rules_dir
+
+    return rules_dir(args.rules_dir)
+
+
+def _origin_arg(value: str) -> tuple[str, str]:
+    run, sep, feedback = value.partition(":")
+    if not sep or not run or not re.fullmatch(r"[0-9a-f]{12}", feedback):
+        raise argparse.ArgumentTypeError("use run-name:feedback-id (12 hex characters)")
+    return run, feedback
+
+
+def _rules(args: argparse.Namespace) -> int:
+    from docforge.rules import RuleError, approve, close, feedback_digest, load_rules, propose, try_rule
+
+    folder = _rules_folder(args)
+    try:
+        if args.rules_command == "list":
+            rules = load_rules(folder)
+            if not rules:
+                print(f"No rules in {folder}.")
+            for rule in rules:
+                print(f"{rule.id}  {rule.effective_status():<30} {rule.kind:<9} {rule.title}")
+        elif args.rules_command == "suggest":
+            print(json.dumps(feedback_digest(args.runs, folder), indent=2))
+        elif args.rules_command == "propose":
+            rule = propose(folder, kind=args.kind, title=args.title, message=args.message, pattern=args.pattern,
+                           replace=args.replace, level=args.level, guidance=args.guidance,
+                           applies_to=args.applies_to, origins=args.origin, proposed_by=args.by,
+                           ignorecase=not args.case_sensitive)
+            print(f"Proposed {rule.id} ({rule.kind}): {rule.title}. Next: docforge rules test {rule.id} --runs ...")
+        elif args.rules_command == "test":
+            report = try_rule(folder, args.id, args.runs)
+            print(f"Tried {args.id} on {len(report.runs)} run(s), {report.pages_checked} page(s).")
+            for hit in report.hits:
+                print(f"  HIT {hit.run}/{hit.page}:{hit.line} '{hit.match}': {hit.text}")
+            for quote in report.feedback:
+                print(f"  FROM {quote}")
+            print(report.note)
+        elif args.rules_command == "approve":
+            rule = approve(folder, args.id, by=args.by)
+            print(f"{rule.id} is live (approved by {rule.approval.by}).")
+        else:
+            status = "rejected" if args.rules_command == "reject" else "retired"
+            rule = close(folder, args.id, status=status, by=args.by, reason=args.reason)
+            print(f"{rule.id} is {rule.status}.")
+    except RuleError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return 0
+
+
 def _add_collection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--collection", help="limit to a doc_collections entry's filter (owner/repo)")
     parser.add_argument("--config", default="docforge.yaml", help="config used with --collection")
@@ -576,6 +630,41 @@ def main(argv: list[str] | None = None) -> int:
     lint.add_argument("--apply", action="store_true", help="write the safe fixes (re-runs the claim gate)")
     lint.add_argument("--vale-config", type=Path, help="Vale config (default: DocForge's .vale.ini)")
     lint.set_defaults(func=_lint)
+
+    rules = sub.add_parser("rules", help="learned rules: propose, try against past runs, approve")
+    rules.add_argument("--rules-dir", type=Path, help="rules folder (default $DOCFORGE_RULES_DIR or knowledge/rules)")
+    rules_sub = rules.add_subparsers(dest="rules_command", required=True)
+    rules_sub.add_parser("list", help="list rules and their status").set_defaults(func=_rules)
+    rsuggest = rules_sub.add_parser("suggest", help="gather review feedback across runs as JSON")
+    rsuggest.add_argument("--runs", type=Path, nargs="+", default=[Path("output")])
+    rsuggest.set_defaults(func=_rules)
+    rpropose = rules_sub.add_parser("propose", help="propose a rule from feedback")
+    rpropose.add_argument("--kind", required=True, choices=("avoid", "guidance"))
+    rpropose.add_argument("--title", required=True)
+    rpropose.add_argument("--message", required=True, help="what a writer is told")
+    rpropose.add_argument("--pattern", help="avoid: word or regular expression (Vale/RE2 syntax)")
+    rpropose.add_argument("--replace", help="avoid: replacement, which makes the rule auto-fixable")
+    rpropose.add_argument("--level", choices=("suggestion", "warning", "error"), default="warning")
+    rpropose.add_argument("--case-sensitive", action="store_true")
+    rpropose.add_argument("--guidance", help="guidance: the instruction for writers")
+    rpropose.add_argument("--applies-to", action="append", default=[], help="only pages whose path contains this")
+    rpropose.add_argument("--origin", type=_origin_arg, action="append", default=[], metavar="RUN:FEEDBACK-ID")
+    rpropose.add_argument("--by", required=True, help="who proposes it")
+    rpropose.set_defaults(func=_rules)
+    rtest = rules_sub.add_parser("test", help="try a rule against past runs and save the report")
+    rtest.add_argument("id")
+    rtest.add_argument("--runs", type=Path, nargs="+", default=[Path("output")])
+    rtest.set_defaults(func=_rules)
+    rapprove = rules_sub.add_parser("approve", help="make a tested rule live")
+    rapprove.add_argument("id")
+    rapprove.add_argument("--by", required=True)
+    rapprove.set_defaults(func=_rules)
+    for name, help_text in (("reject", "reject a rule that is not live"), ("retire", "take a live rule out of use")):
+        closer = rules_sub.add_parser(name, help=help_text)
+        closer.add_argument("id")
+        closer.add_argument("--by", required=True)
+        closer.add_argument("--reason", required=True)
+        closer.set_defaults(func=_rules)
 
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)

@@ -36,6 +36,12 @@ def write_revision_order(run: Path, plan: PrPlan, feedback: list) -> Path:
         "## Pages",
         "",
     ]
+    learned = _learned([p["src"] for p in plan.placements])
+    if learned:
+        insert = lines.index("## Pages")
+        lines[insert:insert] = ["## Learned guidance", "",
+                                "Approved from earlier review feedback; it never overrides the sources.", "",
+                                *learned, ""]
     lines += [f"- `{p['src']}` (published as `{p['dest']}`)" for p in plan.placements]
     lines += [
         "",
@@ -50,3 +56,12 @@ def write_revision_order(run: Path, plan: PrPlan, feedback: list) -> Path:
     path.parent.mkdir(exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
+
+
+def _learned(pages: list[str]) -> list[str]:
+    from docforge.rules import RuleError, guidance_lines, rules_dir
+
+    try:
+        return guidance_lines(rules_dir(), pages)
+    except RuleError:
+        return []

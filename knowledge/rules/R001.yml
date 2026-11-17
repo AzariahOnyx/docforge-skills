@@ -1,0 +1,13 @@
+id: R001
+kind: avoid
+title: Say pause, not mute
+message: Quiet Hours pauses alerts; it does not mute them.
+pattern: mute
+replace: pause
+ignorecase: true
+level: suggestion
+applies_to: []
+origins: []
+proposed_by: DocForge demo
+proposed_at: '2026-11-17T08:55:59+00:00'
+status: proposed
