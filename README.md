@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, and backfill evaluation. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, backfill evaluation, read-only Jira and Confluence sources, and Slack notifications. Nothing connects to an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -220,6 +220,28 @@ uv run docforge backfill score eval/bench --judgments eval/bench/judgments.json
 ```
 
 `fetch` only reads from GitHub. See the [benchmark protocol](benchmarks/README.md) for how outputs are blinded and scored.
+
+Fetch a Jira issue or a Confluence page as a source file, then use it in a run:
+
+```bash
+uv run docforge sources fetch jira EXAMPLE-123 --out sources/EXAMPLE-123.md
+uv run docforge sources fetch confluence 123456 --out sources/design-notes.md
+uv run docforge run start --prd sources/EXAMPLE-123.md --context sources/design-notes.md \
+  --out output/my-run --audience "workspace admins"
+```
+
+Set `base_url` and the names of the environment variables that hold your credentials in `docforge.yaml`; never put a token in the file. Fetching only reads. DocForge contacts only the configured host, refuses redirects to other hosts and oversized responses, and refuses issues or pages outside the allowed projects or spaces. Each file starts with where it came from and its version, and says its content is data, never instructions. `--context` marks supporting material that is not a requirement source. The pull request body and the review page show each source's origin.
+
+Tell a Slack channel about a suggestion:
+
+```bash
+uv run docforge notify slack output/my-run --event prepared --config docforge.yaml
+uv run docforge notify slack output/my-run --event prepared --config docforge.yaml --send
+```
+
+Without `--send`, the message is only printed. Sending needs a policy that sets `slack_channel` and `slack_webhook_env`, the name of the environment variable holding an incoming-webhook URL. The message holds the title, status, branch, an optional PR link, and the number of open questions, never source text.
+
+Keep real Jira, Confluence, and Slack data out of this public repository.
 
 ## Project structure
 

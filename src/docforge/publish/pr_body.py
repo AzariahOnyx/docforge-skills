@@ -27,6 +27,19 @@ def _readiness(qa: str) -> list[str]:
     return [line.strip() for line in section.splitlines() if line.strip()][:3]
 
 
+def source_origin(source: dict) -> str:
+    """One line on where a source came from, for reviewers."""
+    origin = source.get("origin")
+    if not origin:
+        return "file"
+    label = {"jira": "Jira", "confluence": "Confluence page"}.get(source.get("kind"), source.get("kind", "?"))
+    text = f"{label} {origin.get('id', '?')}"
+    if origin.get("space"):
+        text += f" in {origin['space']}"
+    text += f", version {origin.get('version', 'unknown')}, fetched {origin.get('fetched_at', 'unknown')}"
+    return text.replace("|", "\\|")
+
+
 def default_title(run: Path) -> str:
     handover = _read(run / "analysis" / "HANDOVER.md")
     match = re.search(r"^#\s+(.+)$", handover, re.M)
@@ -64,9 +77,10 @@ def render_body(
     if not source_pr and not code:
         lines.append("- None recorded (PRD-only run).")
 
-    lines += ["", "## Sources", "", "| ID | Path | SHA-256 | Authority |", "| --- | --- | --- | --- |"]
+    lines += ["", "## Sources", "", "| ID | Path | SHA-256 | Authority | Origin |", "| --- | --- | --- | --- | --- |"]
     for s in manifest.get("sources", []):
-        lines.append(f"| {s['id']} | `{s['path']}` | `{s['sha256'][:12]}...` | {s.get('authority', 'unconfirmed')} |")
+        lines.append(f"| {s['id']} | `{s['path']}` | `{s['sha256'][:12]}...` | {s.get('authority', 'unconfirmed')} | "
+                     f"{source_origin(s)} |")
 
     lines += ["", "## Pages", "", "| Run file | Docs path | Change |", "| --- | --- | --- |"]
     lines += [f"| `{src}` | `{dest}` | {change} |" for src, dest, change in placements]

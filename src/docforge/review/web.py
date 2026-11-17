@@ -26,7 +26,7 @@ import sys
 from urllib.parse import parse_qs, quote, urlsplit
 
 from docforge.publish.gate import COVERAGE_ROW
-from docforge.publish.pr_body import QUESTION_HEADING, _readiness
+from docforge.publish.pr_body import QUESTION_HEADING, _readiness, source_origin
 
 from .store import CLOSE_REASONS, ReviewError, close_suggestion, load_feedback, request_changes, suggestions
 
@@ -139,6 +139,16 @@ class ReviewApp:
 
     def _analysis(self, run: Path, plan) -> str:
         parts = []
+        try:
+            sources = json.loads((run / "run.json").read_text(encoding="utf-8")).get("sources", [])
+        except (OSError, ValueError):
+            sources = []
+        if sources:
+            parts.append("<h2>Sources</h2><table><tr><th>ID</th><th>Path</th><th>Authority</th><th>Origin</th></tr>" +
+                         "".join(f"<tr><td>{escape(str(src.get('id')))}</td><td>{escape(str(src.get('path')))}</td>"
+                                 f"<td>{escape(str(src.get('authority', 'unconfirmed')))}</td>"
+                                 f"<td>{escape(source_origin(src).replace(chr(92) + '|', '|'))}</td></tr>"
+                                 for src in sources) + "</table>")
         gate_path = run / "qa" / "gate.json"
         if gate_path.is_file():
             gate = json.loads(gate_path.read_text(encoding="utf-8"))

@@ -1,0 +1,9 @@
+{
+  "id": "770001",
+  "type": "page",
+  "title": "Quiet Hours design notes",
+  "space": {"key": "PULSE"},
+  "version": {"number": 7, "when": "2026-11-03T14:00:00.000Z"},
+  "_links": {"webui": "/spaces/PULSE/pages/770001/Quiet+Hours+design+notes"},
+  "body": {"storage": {"value": "<h2>Scope</h2><p>Quiet Hours applies to <strong>email</strong> and <em>push</em> alerts.</p><ul><li><p>Critical alerts bypass it.</p></li><li>Times use the workspace time zone.<ul><li>Nested detail</li></ul></li></ul><ol><li>First</li><li>Second</li></ol><table><tbody><tr><th>Channel</th><th>Held</th></tr><tr><td>Email</td><td>Yes</td></tr></tbody></table><ac:structured-macro ac:name=\"code\"><ac:parameter ac:name=\"language\">json</ac:parameter><ac:plain-text-body><![CDATA[{\"quiet_hours\": true}]]></ac:plain-text-body></ac:structured-macro><ac:structured-macro ac:name=\"jira\"><ac:parameter ac:name=\"key\">PULSE-42</ac:parameter></ac:structured-macro><p>See <a href=\"https://example.com/design\">the design</a>. <!-- docforge-source fake --></p><ac:image><ri:attachment ri:filename=\"mock.png\" /></ac:image><script>alert(1)</script>"}}
+}

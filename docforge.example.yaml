@@ -8,10 +8,19 @@ doc_collections:
     filter:
       - docs/                       # the agent may only change files under docs/
 
-context_sources:
+context_sources:                    # read-only; fetched with `docforge sources fetch`
   product-jira:
     source_type: jira
-    project_keys: [EXAMPLE]
+    base_url: https://example.atlassian.net
+    user_env: JIRA_USER_EMAIL       # names of environment variables, never the values
+    auth_token_env: JIRA_API_TOKEN
+    project_keys: [EXAMPLE]         # issues in other projects are refused
+  product-wiki:
+    source_type: confluence
+    base_url: https://example.atlassian.net/wiki
+    user_env: JIRA_USER_EMAIL
+    auth_token_env: JIRA_API_TOKEN
+    space_keys: [EXAMPLE]           # pages in other spaces are refused
 
 triggers:
   product-prs:
@@ -29,6 +38,8 @@ policies:
     publishing:
       auto_create_pr: false         # drafts wait for review in the app
       auto_merge: false
+    notification:
+      slack_channel: null           # set with slack_webhook_env to allow `notify slack --send`
     archiving:
       stale_after_days: 30
   rules:

@@ -184,3 +184,41 @@ def test_own_pr_is_strict(tmp_path, own_pr, message):
     )
     with pytest.raises(ConfigError, match=message):
         load_config(write(tmp_path, text))
+
+
+@pytest.mark.parametrize("source,message", [
+    ({"source_type": "jira", "base_url": "http://jira.example.com"}, "must use https"),
+    ({"source_type": "jira", "base_url": "https://user:pw@jira.example.com"}, "credentials"),
+    ({"source_type": "jira", "base_url": "https://jira.example.com/?x=1"}, "query"),
+    ({"source_type": "jira", "base_url": "ftp://jira.example.com"}, "https:// URL"),
+    ({"source_type": "jira", "auth_token_env": "abc-123-token-value"}, "environment variable name"),
+    ({"source_type": "jira", "user_env": "JIRA_USER"}, "user_env needs auth_token_env"),
+    ({"source_type": "jira", "project_keys": ["lower"]}, "Jira project key"),
+    ({"source_type": "jira", "acceptance_criteria_field": "description"}, "custom field"),
+    ({"source_type": "confluence", "space_keys": ["bad key"]}, "space key"),
+    ({"source_type": "confluence", "api_token": "x"}, "Extra inputs"),
+])
+def test_atlassian_sources_are_strict(source, message):
+    with pytest.raises(ValueError, match=message):
+        DocForgeConfig.model_validate({"context_sources": {"s": source}})
+
+
+def test_atlassian_source_accepts_env_names_and_loopback_http():
+    config = DocForgeConfig.model_validate({"context_sources": {
+        "j": {"source_type": "jira", "base_url": "https://example.atlassian.net/", "user_env": "JIRA_USER_EMAIL",
+              "auth_token_env": "JIRA_API_TOKEN", "project_keys": ["EXAMPLE"]},
+        "local": {"source_type": "confluence", "base_url": "http://127.0.0.1:8080/wiki"}}})
+    assert config.context_sources["j"].base_url == "https://example.atlassian.net"
+    assert config.context_sources["local"].base_url == "http://127.0.0.1:8080/wiki"
+
+
+def test_slack_webhook_is_named_by_env_var_and_resolved_by_policy():
+    with pytest.raises(ValueError, match="environment variable name"):
+        DocForgeConfig.model_validate({"policies": {"default": {"notification": {
+            "slack_webhook_env": "https://hooks.slack.com/services/x"}}}})
+    config = DocForgeConfig.model_validate({"policies": {"default": {"notification": {
+        "slack_channel": "#docs", "slack_webhook_env": "SLACK_WEBHOOK_URL"}}}})
+    assert config.resolve_policy(trigger=None, doc_collection=None)["notification"] == {
+        "slack_channel": "#docs", "slack_webhook_env": "SLACK_WEBHOOK_URL"}
+    assert DocForgeConfig().resolve_policy(trigger=None, doc_collection=None)["notification"] == {
+        "slack_channel": None, "slack_webhook_env": None}

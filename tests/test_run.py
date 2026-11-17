@@ -51,7 +51,7 @@ def test_start_creates_manifest_matches_and_work_orders(repo):
     assert manifest["profile"] == "default"
     assert manifest["sources"] == [{
         "id": "S1", "path": "demo/mock-prd.md",
-        "sha256": hashlib.sha256(PRD.read_bytes()).hexdigest(), "authority": "unconfirmed",
+        "sha256": hashlib.sha256(PRD.read_bytes()).hexdigest(), "authority": "unconfirmed", "kind": "file",
     }]
     assert manifest["deliverables"] == ["feature/feature-guide.md", "how-to/how-to.md", "release-note/release-note.md"]
     assert manifest["review"]["human_approval"] == "pending"

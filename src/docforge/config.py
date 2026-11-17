@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Annotated, Literal, Union
+from urllib.parse import urlsplit
 
 import yaml
 from pydantic import (
@@ -78,14 +79,91 @@ class DocCollection(Strict):
 # --- context_sources -------------------------------------------------------
 
 
-class JiraSource(Strict):
+ENV_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$")
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+JIRA_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,31}$")
+SPACE_KEY_RE = re.compile(r"^~?[A-Za-z0-9_]{1,255}$")
+FIELD_ID_RE = re.compile(r"^customfield_[0-9]{1,10}$")
+
+
+def check_service_url(value: str) -> str:
+    """HTTPS with a host and no credentials, query or fragment. Plain HTTP is
+    accepted only for loopback hosts, so local test servers work."""
+    parts = urlsplit(value)
+    if parts.scheme not in ("https", "http") or not parts.hostname:
+        raise ValueError(f"must be an https:// URL with a host: {value!r}")
+    if parts.scheme == "http" and parts.hostname not in LOOPBACK_HOSTS:
+        raise ValueError(f"must use https (plain http is allowed only for localhost): {value!r}")
+    if parts.username or parts.password or parts.query or parts.fragment:
+        raise ValueError(f"must not contain credentials, a query or a fragment: {value!r}")
+    return value.rstrip("/")
+
+
+def check_env_name(value: str | None) -> str | None:
+    if value is not None and not ENV_NAME_RE.match(value):
+        raise ValueError(f"must be an environment variable name like JIRA_API_TOKEN, not a value: {value!r}")
+    return value
+
+
+class AtlassianSource(Strict):
+    """Read-only connection settings. Credentials are named by environment
+    variable; their values never appear in the config file."""
+
+    base_url: str | None = None
+    # With user_env set, requests use basic auth (Atlassian Cloud: account
+    # email plus API token); without it, a bearer token (Data Center PAT).
+    user_env: str | None = None
+    auth_token_env: str | None = None
+
+    @field_validator("base_url")
+    @classmethod
+    def _url(cls, value):
+        return None if value is None else check_service_url(value)
+
+    @field_validator("user_env", "auth_token_env")
+    @classmethod
+    def _env(cls, value):
+        return check_env_name(value)
+
+    @model_validator(mode="after")
+    def _user_needs_token(self):
+        if self.user_env and not self.auth_token_env:
+            raise ValueError("user_env needs auth_token_env")
+        return self
+
+
+class JiraSource(AtlassianSource):
     source_type: Literal["jira"]
     project_keys: list[str] = Field(default_factory=list)
+    acceptance_criteria_field: str | None = None
+
+    @field_validator("project_keys")
+    @classmethod
+    def _keys(cls, value):
+        for key in value:
+            if not JIRA_KEY_RE.match(key):
+                raise ValueError(f"not a Jira project key: {key!r}")
+        return value
+
+    @field_validator("acceptance_criteria_field")
+    @classmethod
+    def _field(cls, value):
+        if value is not None and not FIELD_ID_RE.match(value):
+            raise ValueError(f"must be a custom field ID like customfield_10050: {value!r}")
+        return value
 
 
-class ConfluenceSource(Strict):
+class ConfluenceSource(AtlassianSource):
     source_type: Literal["confluence"]
     space_keys: list[str] = Field(default_factory=list)
+
+    @field_validator("space_keys")
+    @classmethod
+    def _keys(cls, value):
+        for key in value:
+            if not SPACE_KEY_RE.match(key):
+                raise ValueError(f"not a Confluence space key: {key!r}")
+        return value
 
 
 ContextSource = Annotated[
@@ -165,6 +243,13 @@ class Publishing(Strict):
 
 class Notification(Strict):
     slack_channel: str | None = None
+    # Name of the environment variable holding the Slack incoming-webhook URL.
+    slack_webhook_env: str | None = None
+
+    @field_validator("slack_webhook_env")
+    @classmethod
+    def _env(cls, value):
+        return check_env_name(value)
 
 
 class Archiving(Strict):
@@ -208,7 +293,7 @@ DEFAULT_POLICY = {
         "auto_merge": False,
         "suppress_source_pr_comments": False,
     },
-    "notification": {"slack_channel": None},
+    "notification": {"slack_channel": None, "slack_webhook_env": None},
     "archiving": {"enabled": True, "stale_after_days": 30},
 }
 

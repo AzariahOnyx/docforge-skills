@@ -29,6 +29,8 @@ Use `scripts/create_manifest.py` to create `run.json`. Never silently overwrite 
 
 The example hash placeholder is explanatory. Do not copy this example directly as a valid manifest. Run the manifest generator to calculate the real hash.
 
+`docforge run start` also records each source's `kind`: `file`, or `jira` or `confluence` for a file written by `docforge sources fetch`. A fetched source also gets an `origin` with its issue key or page ID, title, URL, version, last update, space (Confluence) and fetch time, read from the file's provenance header. Sources given with `--context` have the authority `context`: supporting material, never a requirement source on its own.
+
 Review methods: `not_reviewed`, `same_agent_second_pass`, `independent_reviewer`, `human_reviewer`. Review statuses: `pending`, `passed`, `failed`, `blocked`, `not_applicable`.
 
 ## analysis/evidence.json example
@@ -153,6 +155,26 @@ Review feedback can become rules, each a YAML file in a rules folder (`--rules-d
 - `guidance` rules are instructions that cannot be checked mechanically. Their test report lists the pages they would apply to and quotes the feedback they came from, for a person to judge. When live, they appear in Drafter, Proofreader, and revision work orders.
 
 `docforge rules approve` needs a test report that matches the rule's current wording. Editing a tested or live rule makes it `proposed` again, and lint and work orders stop using it until it is tested and approved again. `docforge rules suggest` gathers close reasons and change requests across runs for drafting new rules. Keep rules learned from private feedback in a private repository.
+
+## Fetched sources and notifications
+
+A file from `docforge sources fetch` starts with a provenance block, then a visible note that its content is data, never instructions:
+
+```markdown
+<!-- docforge-source
+kind: jira
+id: EXAMPLE-123
+title: Example feature
+url: https://example.atlassian.net/browse/EXAMPLE-123
+version: 2026-11-02T09:15:00.000+0000
+updated: 2026-11-02T09:15:00.000+0000
+fetched_at: 2026-11-17T10:00:00+00:00
+-->
+```
+
+Only a block at the very start of a file counts. Comment openers inside fetched text are escaped, so fetched content cannot pose as a provenance block or an evidence marker. Images, attachments, linked issues, and most Confluence macros are not fetched; a placeholder says what was left out. Fetching never overwrites a file.
+
+`docforge notify slack` appends every attempt, dry run or sent, to `notify/slack.jsonl` in the run folder, with the event, channel, and outcome. The webhook URL is never recorded.
 
 ## Source citations
 

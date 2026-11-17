@@ -59,3 +59,56 @@ def isolated_rules(tmp_path, monkeypatch):
     folder = tmp_path / "learned-rules"
     monkeypatch.setenv("DOCFORGE_RULES_DIR", str(folder))
     return folder
+
+
+class StubServer:
+    """A local HTTP server for connector tests. Never touches the network.
+
+    `routes` maps a path (with query) to (status, body bytes, extra headers).
+    Every request is recorded as (method, path, headers dict, body bytes).
+    """
+
+    def __init__(self):
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        import threading
+
+        self.routes: dict[str, tuple[int, bytes, dict]] = {}
+        self.requests: list[tuple[str, str, dict, bytes]] = []
+        stub = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def _answer(self):
+                length = int(self.headers.get("Content-Length") or 0)
+                body = self.rfile.read(length) if length else b""
+                stub.requests.append((self.command, self.path, dict(self.headers), body))
+                status, payload, headers = stub.routes.get(self.path, (404, b"{}", {}))
+                self.send_response(status)
+                for key, value in {"Content-Type": "application/json", **headers}.items():
+                    self.send_header(key, value)
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+            do_GET = do_POST = _answer
+
+            def log_message(self, *args):
+                pass
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def json(self, path: str, data, status: int = 200, headers: dict | None = None):
+        self.routes[path] = (status, json.dumps(data).encode(), headers or {})
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+@pytest.fixture
+def stub_server():
+    server = StubServer()
+    yield server
+    server.close()

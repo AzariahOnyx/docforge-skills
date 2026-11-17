@@ -98,6 +98,7 @@ def _run_start(args: argparse.Namespace) -> int:
             profile=args.profile, deliverables=args.deliverable, docs_include=args.docs_include,
             code_repo=args.code, base=args.base, head=args.head,
             publish_to=args.publish_to, source_pr=args.source_pr, source_state=args.source_state,
+            context=args.context,
         )
     except (RunError, OSError) as exc:
         print(exc, file=sys.stderr)
@@ -536,6 +537,51 @@ def _add_collection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--config", default="docforge.yaml", help="config used with --collection")
 
 
+def _pick_source(config, kind: str, name: str | None):
+    matches = {k: v for k, v in config.context_sources.items() if v.source_type == kind}
+    if name is not None:
+        if name not in matches:
+            raise ConfigError(f"no {kind} source named {name!r} in context_sources")
+        return matches[name]
+    if len(matches) != 1:
+        raise ConfigError(f"{len(matches)} {kind} sources are configured; choose one with --source")
+    return next(iter(matches.values()))
+
+
+def _sources_fetch(args: argparse.Namespace) -> int:
+    from docforge.sources import SourceFetchError, provenance
+    from docforge.sources.confluence import fetch_page
+    from docforge.sources.jira import fetch_issue
+
+    try:
+        source = _pick_source(load_config(args.config), args.kind, args.source)
+        if args.out.exists():
+            raise SourceFetchError(f"{args.out} already exists; choose a new file (sources are never overwritten)")
+        fetch = fetch_issue if args.kind == "jira" else fetch_page
+        text, meta = fetch(source, args.id)
+        provenance.write_new(args.out, text)
+    except (ConfigError, SourceFetchError, OSError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Fetched {args.kind} {meta['id']} (version {meta['version']}) to {args.out}")
+    print(f"Use it with: docforge run start --prd {args.out} ...  (or --context for supporting material)")
+    return 0
+
+
+def _notify_slack(args: argparse.Namespace) -> int:
+    from docforge.notify import NotifyError, notify
+
+    try:
+        config = load_config(args.config) if args.config else None
+        outcome = notify(args.run, args.event, config=config, trigger=args.trigger, pr_url=args.pr_url, send=args.send)
+    except (ConfigError, NotifyError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(outcome.text)
+    print(f"\n[{outcome.reason}]")
+    return 0 if outcome.sent or not args.send else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="docforge")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -737,11 +783,34 @@ def main(argv: list[str] | None = None) -> int:
     bscore.add_argument("--judgments", type=Path, required=True)
     bscore.set_defaults(func=_backfill)
 
+    srcs = sub.add_parser("sources", help="fetch Jira issues and Confluence pages as source files (read-only)")
+    srcs_sub = srcs.add_subparsers(dest="sources_command", required=True)
+    sfetch = srcs_sub.add_parser("fetch", help="save one issue or page as Markdown with a provenance header")
+    sfetch.add_argument("kind", choices=("jira", "confluence"))
+    sfetch.add_argument("id", help="Jira issue key (PROJ-123) or Confluence page ID")
+    sfetch.add_argument("--out", type=Path, required=True, help="new Markdown file; never overwritten")
+    sfetch.add_argument("--config", default="docforge.yaml")
+    sfetch.add_argument("--source", help="context_sources name, when more than one of this kind is configured")
+    sfetch.set_defaults(func=_sources_fetch)
+
+    ntf = sub.add_parser("notify", help="notifications about suggestions (dry run unless --send)")
+    ntf_sub = ntf.add_subparsers(dest="notify_command", required=True)
+    nslack = ntf_sub.add_parser("slack", help="print, or with --send post, a short Slack message about a run")
+    nslack.add_argument("run", type=Path)
+    nslack.add_argument("--event", required=True, choices=("prepared", "revised", "closed", "ready"))
+    nslack.add_argument("--config", help="docforge.yaml; sending needs a policy with slack_channel and slack_webhook_env")
+    nslack.add_argument("--trigger", help="trigger name, for policy rules that match on it")
+    nslack.add_argument("--pr-url", help="GitHub pull request URL to link")
+    nslack.add_argument("--send", action="store_true", help="post the message (otherwise only print it)")
+    nslack.set_defaults(func=_notify_slack)
+
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)
     start = run_sub.add_parser("start", help="create a new run folder with a manifest and stage work orders")
     start.add_argument("--prd", action="append", required=True, help="source file inside the repo (repeatable)")
     start.add_argument("--out", type=Path, required=True, help="new run folder, for example output/<slug>")
+    start.add_argument("--context", action="append",
+                       help="supporting source inside the repo, recorded with authority 'context' (repeatable)")
     start.add_argument("--audience", required=True)
     start.add_argument("--docs", type=Path, help="existing docs folder to index and match against")
     start.add_argument("--docs-include", action="append",
