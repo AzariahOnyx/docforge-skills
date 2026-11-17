@@ -1,0 +1,110 @@
+{
+  "collection": null,
+  "pages": [
+    {
+      "path": "feature/feature-guide.md",
+      "title": "Pause in-app alerts with Quiet Hours",
+      "front_matter": {},
+      "sections": [
+        {
+          "heading": "Pause in-app alerts with Quiet Hours",
+          "level": 1,
+          "anchor": "pause-in-app-alerts-with-quiet-hours",
+          "start_line": 1,
+          "end_line": 15,
+          "word_count": 28
+        },
+        {
+          "heading": "How it works",
+          "level": 2,
+          "anchor": "how-it-works",
+          "start_line": 5,
+          "end_line": 10,
+          "word_count": 62
+        },
+        {
+          "heading": "Access and availability",
+          "level": 2,
+          "anchor": "access-and-availability",
+          "start_line": 11,
+          "end_line": 15,
+          "word_count": 43
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "path": "how-to/how-to.md",
+      "title": "Pause your in-app alerts for 1 hour",
+      "front_matter": {},
+      "sections": [
+        {
+          "heading": "Pause your in-app alerts for 1 hour",
+          "level": 1,
+          "anchor": "pause-your-in-app-alerts-for-1-hour",
+          "start_line": 1,
+          "end_line": 19,
+          "word_count": 16
+        },
+        {
+          "heading": "Before you begin",
+          "level": 2,
+          "anchor": "before-you-begin",
+          "start_line": 5,
+          "end_line": 9,
+          "word_count": 14
+        },
+        {
+          "heading": "Steps",
+          "level": 2,
+          "anchor": "steps",
+          "start_line": 10,
+          "end_line": 16,
+          "word_count": 17
+        },
+        {
+          "heading": "Expected result",
+          "level": 2,
+          "anchor": "expected-result",
+          "start_line": 17,
+          "end_line": 19,
+          "word_count": 40
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "path": "release-note/release-note.md",
+      "title": "Quiet Hours: pause in-app alerts",
+      "front_matter": {},
+      "sections": [
+        {
+          "heading": "Quiet Hours: pause in-app alerts",
+          "level": 1,
+          "anchor": "quiet-hours-pause-in-app-alerts",
+          "start_line": 1,
+          "end_line": 7,
+          "word_count": 59
+        }
+      ],
+      "warnings": []
+    }
+  ],
+  "links": [
+    {
+      "source": "feature/feature-guide.md",
+      "line": 15,
+      "target": "../how-to/how-to.md",
+      "status": "ok",
+      "resolved_path": "how-to/how-to.md",
+      "anchor": null,
+      "note": null
+    }
+  ],
+  "backlinks": {
+    "how-to/how-to.md": [
+      "feature/feature-guide.md"
+    ]
+  },
+  "broken_links": []
+}

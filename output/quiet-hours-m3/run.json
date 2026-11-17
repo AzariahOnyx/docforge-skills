@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "profile": "default",
+  "audience": "signed-in members of the fictional Pulseboard application",
+  "sources": [
+    {
+      "id": "S1",
+      "path": "demo/mock-prd.md",
+      "sha256": "3f317c5eb25ff324da8617eb4af910d6cdf67a5d92b553c973528ca01541bc83",
+      "authority": "unconfirmed"
+    }
+  ],
+  "deliverables": [
+    "feature/feature-guide.md",
+    "how-to/how-to.md",
+    "release-note/release-note.md"
+  ],
+  "review": {
+    "method": "not_reviewed",
+    "source_fidelity": "pending",
+    "product_verification": "pending",
+    "human_approval": "pending"
+  }
+}

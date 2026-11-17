@@ -1,0 +1,76 @@
+{
+  "docs_path": "output/quiet-hours",
+  "include": [
+    "feature/",
+    "how-to/",
+    "release-note/"
+  ],
+  "pages": 3,
+  "sections": 8,
+  "note": "Keyword matches only. Inspect a page before proposing UPDATE; a match is not proof the topic is covered.",
+  "queries": [
+    {
+      "source_id": "S1",
+      "query": "Fictional PRD: Quiet Hours",
+      "hits": [
+        {
+          "path": "feature/feature-guide.md",
+          "title": "Pause in-app alerts with Quiet Hours",
+          "score": 12,
+          "anchor": "pause-in-app-alerts-with-quiet-hours",
+          "heading": "Pause in-app alerts with Quiet Hours",
+          "line": 3,
+          "snippet": "Quiet Hours lets a Pulseboard member pause their own in-app alerts for a selected period. It does not pause email alerts or change another member's settings."
+        },
+        {
+          "path": "release-note/release-note.md",
+          "title": "Quiet Hours: pause in-app alerts",
+          "score": 10,
+          "anchor": "quiet-hours-pause-in-app-alerts",
+          "heading": "Quiet Hours: pause in-app alerts",
+          "line": 1,
+          "snippet": "Quiet Hours: pause in-app alerts"
+        },
+        {
+          "path": "how-to/how-to.md",
+          "title": "Pause your in-app alerts for 1 hour",
+          "score": 2,
+          "anchor": "pause-your-in-app-alerts-for-1-hour",
+          "heading": "Pause your in-app alerts for 1 hour",
+          "line": 3,
+          "snippet": "Use Quiet Hours when you want to pause your own in-app alerts for one hour."
+        }
+      ]
+    },
+    {
+      "source_id": "S1",
+      "query": "Product context",
+      "hits": []
+    },
+    {
+      "source_id": "S1",
+      "query": "Feature",
+      "hits": []
+    },
+    {
+      "source_id": "S1",
+      "query": "UI and workflow",
+      "hits": []
+    },
+    {
+      "source_id": "S1",
+      "query": "Permissions",
+      "hits": []
+    },
+    {
+      "source_id": "S1",
+      "query": "Known gap",
+      "hits": []
+    },
+    {
+      "source_id": "S1",
+      "query": "Release",
+      "hits": []
+    }
+  ]
+}
