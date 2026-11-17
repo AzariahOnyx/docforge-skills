@@ -1,0 +1,74 @@
+[
+  {
+    "number": 11,
+    "title": "Add Quiet Hours to notification settings",
+    "state": "closed",
+    "draft": false,
+    "merged_at": "2026-10-01T10:00:00Z",
+    "user": {
+      "login": "example-dev"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "1111111111111111111111111111111111111111"
+    },
+    "head": {
+      "ref": "feature/quiet-hours",
+      "sha": "1111111111111111111111111111111111111111"
+    }
+  },
+  {
+    "number": 12,
+    "title": "Experiment: alert batching",
+    "state": "closed",
+    "draft": false,
+    "merged_at": null,
+    "user": {
+      "login": "example-dev"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "1111111111111111111111111111111111111111"
+    },
+    "head": {
+      "ref": "spike/batching",
+      "sha": "2222222222222222222222222222222222222222"
+    }
+  },
+  {
+    "number": 13,
+    "title": "CI: run tests on pull requests",
+    "state": "closed",
+    "draft": false,
+    "merged_at": "2026-10-03T10:00:00Z",
+    "user": {
+      "login": "example-dev"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "1111111111111111111111111111111111111111"
+    },
+    "head": {
+      "ref": "ci/pr-tests",
+      "sha": "3333333333333333333333333333333333333333"
+    }
+  },
+  {
+    "number": 14,
+    "title": "Docs: Quiet Hours",
+    "state": "closed",
+    "draft": false,
+    "merged_at": "2026-10-04T10:00:00Z",
+    "user": {
+      "login": "example-docs[bot]"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "1111111111111111111111111111111111111111"
+    },
+    "head": {
+      "ref": "docforge/quiet-hours-docs",
+      "sha": "4444444444444444444444444444444444444444"
+    }
+  }
+]

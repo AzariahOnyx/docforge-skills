@@ -1,0 +1,7 @@
+diff --git a/src/alerts/batching.py b/src/alerts/batching.py
+new file mode 100644
+--- /dev/null
++++ b/src/alerts/batching.py
+@@ -0,0 +1,2 @@
++def batch(alerts):
++    return [alerts]

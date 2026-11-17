@@ -1,0 +1,12 @@
+{
+  "full_name": "example-org/product-web",
+  "owner": {
+    "login": "example-org"
+  },
+  "topics": [
+    "docs-sync",
+    "web"
+  ],
+  "default_branch": "main",
+  "private": false
+}

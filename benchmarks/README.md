@@ -34,3 +34,9 @@ Report assertion pass rate as `passed / (passed + failed + uncertain)` and publi
 ## Reproducibility
 
 The cases and expected outcomes are in `cases.json`. No benchmark outcomes are supplied in this repository. Run and record evaluations before making impact claims.
+
+## Running it with DocForge
+
+`docforge backfill prepare --out <new folder>` creates both arms for every case: a `direct` folder with one drafting work order, and a `staged` run with Analyzer, Drafter, and Proofreader work orders. Each arm writes its document to `output.md`. `docforge backfill blind <folder>` copies the outputs under random names with a `REVIEW.md` per output and writes `judgments.template.json`; the arm key is kept in `key.json`, which reviewers must not open. Reviewers fill in `result`, `reviewer`, and `evidence` for every assertion. `docforge backfill score <folder> --judgments <file>` unblinds and reports raw counts and pass rates per case and arm, plus automatic checks (Vale, structural validation, claim dispositions) that are labelled as automatic. A result counts as human-reviewed only when no reviewer is the generator.
+
+Trigger decisions can be replayed too: `docforge backfill fetch` saves past pull requests read-only, a person labels them in `labels.json`, and `docforge backfill replay` compares DocForge's "docs needed?" decision with those labels.

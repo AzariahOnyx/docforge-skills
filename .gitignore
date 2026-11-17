@@ -15,3 +15,6 @@ docforge.yaml
 
 # Local DocForge state (decision logs)
 .docforge/
+
+# Evaluation folders (fetched PRs, labels, benchmark outputs); commit deliberately if ever
+eval/

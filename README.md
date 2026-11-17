@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, and learned rules. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, and backfill evaluation. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -207,6 +207,19 @@ uv run docforge rules approve R001 --by "Your name"
 ```
 
 Live `avoid` rules join the Vale check, and live `guidance` rules join the work orders. Keep rules learned from private feedback outside this public repository with `--rules-dir` or `DOCFORGE_RULES_DIR`.
+
+Replay past pull requests and the benchmark cases as an evaluation set. A person labels the pull requests and judges the benchmark outputs; DocForge never grades itself:
+
+```bash
+uv run docforge backfill fetch example-org/product-web --out eval/prs
+uv run docforge backfill label eval/prs
+uv run docforge backfill replay eval/prs --config docforge.yaml
+uv run docforge backfill prepare --out eval/bench
+uv run docforge backfill blind eval/bench
+uv run docforge backfill score eval/bench --judgments eval/bench/judgments.json
+```
+
+`fetch` only reads from GitHub. See the [benchmark protocol](benchmarks/README.md) for how outputs are blinded and scored.
 
 ## Project structure
 

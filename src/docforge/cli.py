@@ -489,6 +489,48 @@ def _rules(args: argparse.Namespace) -> int:
     return 0
 
 
+def _backfill(args: argparse.Namespace) -> int:
+    from docforge import backfill
+
+    try:
+        command = args.backfill_command
+        if command == "fetch":
+            manifest = backfill.fetch_prs(args.repo, args.out, state=args.state, limit=args.limit)
+            print(f"Fetched {len(manifest['prs'])} PR(s) of {args.repo} into {args.out} (read-only).")
+            print(f"Next: docforge backfill label {args.out}, then a person fills in labels.json.")
+        elif command == "label":
+            path = backfill.write_labels_template(args.folder)
+            print(f"Wrote {path}. A person sets docs_needed (yes/no) and labelled_by for each PR.")
+        elif command == "replay":
+            labels = args.labels or (args.folder / "labels.json" if (args.folder / "labels.json").is_file() else None)
+            report = backfill.replay(args.folder, load_config(args.config), labels)
+            c = report["counts"]
+            print(f"Replayed {report['prs']} PR(s); {report['labelled']} labelled. "
+                  f"TP {c['true_positive']}, FP {c['false_positive']}, FN {c['false_negative']}, TN {c['true_negative']}. "
+                  f"Precision {report['precision']}, recall {report['recall']}.")
+            if report["unscored"]:
+                print("Unscored (no label): " + ", ".join(f"#{n}" for n in report["unscored"]))
+            print("Wrote " + ", ".join(report["files"]) + ".")
+        elif command == "prepare":
+            record = backfill.prepare(args.cases, args.out, args.repo)
+            print(f"Prepared {len(record['arms'])} arm(s) in {args.out}. Each arm's work order is in its folder; "
+                  "outputs go to output.md.")
+        elif command == "blind":
+            result = backfill.blind(args.folder)
+            print(f"Blinded {result['outputs']} output(s); {result['assertions']} assertion(s) in "
+                  "judgments.template.json. Reviewers must not open key.json.")
+        else:
+            report = backfill.score(args.folder, args.judgments)
+            for arm, s in report["by_arm"].items():
+                print(f"{arm}: {s['pass']} pass, {s['fail']} fail, {s['uncertain']} uncertain; pass rate {s['pass_rate']}")
+            print("Human-reviewed." if report["human_reviewed"] else "NOT human-reviewed: a reviewer is the generator.")
+            print("Wrote " + ", ".join(report["files"]) + ".")
+    except (backfill.BackfillError, ConfigError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    return 0
+
+
 def _add_collection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--collection", help="limit to a doc_collections entry's filter (owner/repo)")
     parser.add_argument("--config", default="docforge.yaml", help="config used with --collection")
@@ -665,6 +707,35 @@ def main(argv: list[str] | None = None) -> int:
         closer.add_argument("--by", required=True)
         closer.add_argument("--reason", required=True)
         closer.set_defaults(func=_rules)
+
+    bf = sub.add_parser("backfill", help="replay past PRs and benchmark cases as an evaluation set")
+    bf_sub = bf.add_subparsers(dest="backfill_command", required=True)
+    bfetch = bf_sub.add_parser("fetch", help="save past PRs and diffs with gh (read-only)")
+    bfetch.add_argument("repo", metavar="OWNER/REPO")
+    bfetch.add_argument("--out", type=Path, required=True, help="new evaluation folder")
+    bfetch.add_argument("--state", choices=("closed", "open", "all"), default="closed")
+    bfetch.add_argument("--limit", type=int, default=30)
+    bfetch.set_defaults(func=_backfill)
+    blabel = bf_sub.add_parser("label", help="write a labels template for a person to fill in")
+    blabel.add_argument("folder", type=Path)
+    blabel.set_defaults(func=_backfill)
+    breplay = bf_sub.add_parser("replay", help="decide every fetched PR again and compare with labels")
+    breplay.add_argument("folder", type=Path)
+    breplay.add_argument("--config", default="docforge.yaml")
+    breplay.add_argument("--labels", type=Path, help="default: the folder's labels.json, if present")
+    breplay.set_defaults(func=_backfill)
+    bprep = bf_sub.add_parser("prepare", help="create direct and staged arms for each benchmark case")
+    bprep.add_argument("--cases", type=Path, default=Path("benchmarks/cases.json"))
+    bprep.add_argument("--out", type=Path, required=True, help="new evaluation folder")
+    bprep.add_argument("--repo", type=Path, default=Path("."))
+    bprep.set_defaults(func=_backfill)
+    bblind = bf_sub.add_parser("blind", help="copy finished outputs under random names for reviewers")
+    bblind.add_argument("folder", type=Path)
+    bblind.set_defaults(func=_backfill)
+    bscore = bf_sub.add_parser("score", help="unblind and score reviewer judgments")
+    bscore.add_argument("folder", type=Path)
+    bscore.add_argument("--judgments", type=Path, required=True)
+    bscore.set_defaults(func=_backfill)
 
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)
