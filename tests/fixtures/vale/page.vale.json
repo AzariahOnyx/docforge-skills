@@ -1,0 +1,150 @@
+{
+  "page.md": [
+    {
+      "Action": {
+        "Name": "",
+        "Params": null
+      },
+      "Suggestions": [],
+      "Span": [
+        1,
+        6
+      ],
+      "Check": "DocForge.Subjective",
+      "Description": "",
+      "Link": "",
+      "Message": "'Simply' judges difficulty for the reader; state the step or fact instead.",
+      "Severity": "warning",
+      "Match": "Simply",
+      "Line": 7
+    },
+    {
+      "Action": {
+        "Name": "replace",
+        "Params": [
+          "select"
+        ]
+      },
+      "Suggestions": [
+        "select"
+      ],
+      "Span": [
+        8,
+        15
+      ],
+      "Check": "DocForge.DeviceNeutral",
+      "Description": "",
+      "Link": "",
+      "Message": "Use 'select' instead of 'click on'; it does not assume a mouse.",
+      "Severity": "warning",
+      "Match": "click on",
+      "Line": 7
+    },
+    {
+      "Action": {
+        "Name": "replace",
+        "Params": [
+          "to"
+        ]
+      },
+      "Suggestions": [
+        "to"
+      ],
+      "Span": [
+        34,
+        44
+      ],
+      "Check": "DocForge.Wordiness",
+      "Description": "",
+      "Link": "",
+      "Message": "Use 'to' instead of 'in order to'.",
+      "Severity": "suggestion",
+      "Match": "in order to",
+      "Line": 7
+    },
+    {
+      "Action": {
+        "Name": "replace",
+        "Params": [
+          "allowlist"
+        ]
+      },
+      "Suggestions": [
+        "allowlist"
+      ],
+      "Span": [
+        22,
+        30
+      ],
+      "Check": "DocForge.Inclusive",
+      "Description": "",
+      "Link": "",
+      "Message": "Use 'allowlist' instead of 'whitelist'.",
+      "Severity": "error",
+      "Match": "whitelist",
+      "Line": 9
+    },
+    {
+      "Action": {
+        "Name": "replace",
+        "Params": [
+          "select"
+        ]
+      },
+      "Suggestions": [
+        "select"
+      ],
+      "Span": [
+        38,
+        42
+      ],
+      "Check": "DocForge.DeviceNeutral",
+      "Description": "",
+      "Link": "",
+      "Message": "Use 'select' instead of 'click'; it does not assume a mouse.",
+      "Severity": "warning",
+      "Match": "click",
+      "Line": 9
+    },
+    {
+      "Action": {
+        "Name": "",
+        "Params": null
+      },
+      "Suggestions": [],
+      "Span": [
+        38,
+        47
+      ],
+      "Check": "DocForge.GenericLinkText",
+      "Description": "",
+      "Link": "",
+      "Message": "Use words that say where a link goes instead of 'click here'.",
+      "Severity": "warning",
+      "Match": "click here",
+      "Line": 9
+    },
+    {
+      "Action": {
+        "Name": "replace",
+        "Params": [
+          "before"
+        ]
+      },
+      "Suggestions": [
+        "before"
+      ],
+      "Span": [
+        25,
+        32
+      ],
+      "Check": "DocForge.Wordiness",
+      "Description": "",
+      "Link": "",
+      "Message": "Use 'before' instead of 'Prior to'.",
+      "Severity": "suggestion",
+      "Match": "Prior to",
+      "Line": 11
+    }
+  ]
+}

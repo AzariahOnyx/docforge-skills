@@ -1,0 +1,8 @@
+extends: existence
+message: "Use words that say where a link goes instead of '%s'."
+level: warning
+ignorecase: true
+tokens:
+  - click here
+  - read more
+  - learn more

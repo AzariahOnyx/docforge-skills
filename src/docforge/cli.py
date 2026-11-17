@@ -153,7 +153,16 @@ def _run_check(args: argparse.Namespace) -> int:
             for status in research["statuses"].values():
                 counts[status] = counts.get(status, 0) + 1
             print("Cross-source:", ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
-    passed = structural["passed"] and (research is None or research["passed"])
+    vale = record.get("vale") or {}
+    if vale.get("available"):
+        for alert in vale["alerts"]:
+            print("VALE:", alert)
+        counts = vale["counts"]
+        print(f"Vale: {counts.get('error', 0)} error(s), {counts.get('warning', 0)} warning(s), "
+              f"{counts.get('suggestion', 0)} suggestion(s) on changed prose.")
+    elif vale:
+        print("Vale: not run.", vale.get("note", ""))
+    passed = structural["passed"] and (research is None or research["passed"]) and vale.get("passed", True)
     verdict = "PASS" if passed else "FAIL"
     print(f"{verdict}: {structural['checker']}; {len(record['lint_findings'])} lint finding(s). "
           f"Saved {args.out / 'qa' / 'checks.json'}.")
@@ -393,6 +402,39 @@ def _review_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _lint(args: argparse.Namespace) -> int:
+    from docforge.lint import LintError, apply_fixes, lint_run, plan_fixes
+
+    try:
+        result = lint_run(args.run, changed_only=not args.all, config=args.vale_config)
+        for alert in result.alerts:
+            fix = f" -> '{alert.replacement}'" if alert.replacement else ""
+            print(f"{alert.page}:{alert.line}:{alert.start} {alert.severity} {alert.check}: {alert.message}{fix}")
+        counts = result.counts
+        scope = "changed prose" if result.changed_only else "all prose"
+        print(f"Vale {result.vale_version}: {counts['error']} error(s), {counts['warning']} warning(s), "
+              f"{counts['suggestion']} suggestion(s) on {scope} in {len(result.pages)} page(s)"
+              + (f"; {result.unchanged_alerts} on unchanged lines not shown." if result.unchanged_alerts else "."))
+        if not (args.fix or args.apply):
+            return 1 if counts["error"] else 0
+        plan = plan_fixes(args.run, result)
+        for skipped in plan.skipped:
+            print("NOT FIXED:", skipped)
+        if not plan.fixes:
+            print("No automatic fixes available.")
+            return 1 if counts["error"] else 0
+        print(plan.diff, end="")
+        if not args.apply:
+            print(f"{len(plan.fixes)} fix(es) proposed. Rerun with --apply to write them.")
+            return 0
+        apply_fixes(args.run, plan)
+        print(f"Applied {len(plan.fixes)} fix(es); the claim gate still passes where it applies.")
+        return 0
+    except (LintError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+
 def _add_collection_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--collection", help="limit to a doc_collections entry's filter (owner/repo)")
     parser.add_argument("--config", default="docforge.yaml", help="config used with --collection")
@@ -526,6 +568,14 @@ def main(argv: list[str] | None = None) -> int:
     rclose.add_argument("--note", default="")
     rclose.add_argument("--reviewer", required=True)
     rclose.set_defaults(func=_review_close)
+
+    lint = sub.add_parser("lint", help="Vale style check on a run's changed prose, with safe fixes")
+    lint.add_argument("run", type=Path)
+    lint.add_argument("--all", action="store_true", help="report alerts on every line, not only changed prose")
+    lint.add_argument("--fix", action="store_true", help="show the fixes Vale can make safely")
+    lint.add_argument("--apply", action="store_true", help="write the safe fixes (re-runs the claim gate)")
+    lint.add_argument("--vale-config", type=Path, help="Vale config (default: DocForge's .vale.ini)")
+    lint.set_defaults(func=_lint)
 
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)

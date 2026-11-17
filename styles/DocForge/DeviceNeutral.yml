@@ -1,0 +1,10 @@
+# Readers may use a mouse, keyboard, touch screen or assistive technology.
+extends: substitution
+message: "Use '%s' instead of '%s'; it does not assume a mouse."
+level: warning
+ignorecase: true
+swap:
+  click on: select
+  click: select
+action:
+  name: replace

@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, and a review loop. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, and Vale style linting. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -188,12 +188,22 @@ uv run docforge review close output/my-run --reason already_documented --reviewe
 
 The page shows each suggestion's diff, analysis, and history. Closing needs one of six reasons, and every action is stored as structured feedback in the run's `review/feedback.jsonl`.
 
+Check a run's changed prose against DocForge's Vale house style, and apply the safe fixes:
+
+```bash
+uv run docforge lint output/my-run
+uv run docforge lint output/my-run --fix --apply
+```
+
+Install [Vale](https://vale.sh) first, or set `DOCFORGE_VALE` to its path. Fixes never touch evidence markers, code, or link targets, and pages are restored if the claim gate fails afterwards.
+
 ## Project structure
 
 ```text
 .agents/skills/       Reusable skill instructions
 src/docforge/         Engine code (configuration, evidence, docs index, command line)
 tests/                Engine tests (pytest)
+styles/DocForge/      Vale rules for the house style
 templates/            Default document and evidence templates
 standards/            Documentation writing standards
 docs/                 Intake, setup, review, and run format

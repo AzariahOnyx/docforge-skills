@@ -139,6 +139,12 @@ Each prepared suggestion has a status in `publish/pr.json`: `open`, `changes_req
 
 Actions only change local files. Each prints the matching `gh pr comment` or `gh pr close` command for a person to run. Stored commands use the placeholders `<docs-checkout>` and `<run>`, so run files hold no local paths.
 
+## Style linting (Vale)
+
+`docforge lint <run>` runs [Vale](https://vale.sh) with DocForge's house style (`.vale.ini` and `styles/DocForge/`) on the run's pages and saves `qa/vale.json`. Once a suggestion exists, only lines that changed since DocForge last committed the page are reported; `--all` reports every line. The rules flag internal claim or question IDs in reader-facing text, placeholders, generic link text, subjective words, non-inclusive terms, mouse-only wording, and wordy phrases. Evidence markers and code blocks are not linted.
+
+`--fix` shows the replacements Vale offers for single-replacement rules; `--apply` writes them. A fix is never made in front matter, an evidence marker, inline code, a link target, or an HTML tag, or where it overlaps an alert that needs a person. For runs meant for publishing, the claim gate runs again afterwards, and every page is restored if it fails. `docforge run check` includes the Vale result and fails on error-level alerts; if Vale is not installed, it says so and does not fail.
+
 ## Source citations
 
 Use `[S1#L9]` or `[S1#L9-L11]` for a source with stable line numbers. Page and section references such as `[S1#p2]` or `[S1#section:Authentication]` are recorded but require manual verification. The checker cannot inspect a PDF image or infer section boundaries from these references. A citation can exist and still fail to support the claim.

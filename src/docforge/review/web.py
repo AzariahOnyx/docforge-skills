@@ -164,6 +164,15 @@ class ReviewApp:
             parts.append("<h2>PRD vs code</h2><table><tr><th>Claim</th><th>Status</th><th>Question</th></tr>" + "".join(
                 f"<tr><td>{escape(r['claim_id'])}</td><td>{escape(r['status'])}</td>"
                 f"<td>{escape(r.get('question') or '')}</td></tr>" for r in results) + "</table>")
+        vale_path = run / "qa" / "vale.json"
+        if vale_path.is_file():
+            vale = json.loads(vale_path.read_text(encoding="utf-8"))
+            alerts = vale.get("alerts", [])
+            parts.append(f"<h2>Style (Vale {escape(str(vale.get('vale_version')))})</h2>")
+            parts.append("<table><tr><th>Page</th><th>Line</th><th>Level</th><th>Rule</th><th>Message</th></tr>" + "".join(
+                f"<tr><td>{escape(a['page'])}</td><td>{a['line']}</td><td>{escape(a['severity'])}</td>"
+                f"<td>{escape(a['check'])}</td><td>{escape(a['message'])}</td></tr>" for a in alerts) + "</table>"
+                if alerts else "<p>No alerts on changed prose.</p>")
         qa = run / "qa" / "QA-REPORT.md"
         readiness = _readiness(qa.read_text(encoding="utf-8")) if qa.is_file() else []
         parts.append("<h2>QA readiness</h2>" + ("".join(f"<p>{escape(re.sub(r'[*`]', '', l))}</p>" for l in readiness)

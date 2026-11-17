@@ -106,6 +106,17 @@ def render_body(
     else:
         lines += ["", "Structural check: not run (`docforge run check`)."]
 
+    vale_path = run / "qa" / "vale.json"
+    if vale_path.is_file():
+        vale = json.loads(vale_path.read_text(encoding="utf-8"))
+        alerts = vale.get("alerts", [])
+        counts = {s: sum(a["severity"] == s for a in alerts) for s in ("error", "warning", "suggestion")}
+        lines += ["", "## Style (Vale)", "",
+                  f"Vale {vale.get('vale_version')} on {'changed' if vale.get('changed_only') else 'all'} prose: "
+                  f"{counts['error']} error(s), {counts['warning']} warning(s), {counts['suggestion']} suggestion(s)."]
+        lines += [f"- `{a['page']}` line {a['line']}: {a['severity']} {a['check']}: {a['message']}" for a in alerts[:20]]
+        if len(alerts) > 20:
+            lines.append(f"- ...and {len(alerts) - 20} more in `qa/vale.json`.")
     lines += ["", "## Open questions", ""]
     questions = [f"- **{qid}** {title.strip()}" for qid, title in QUESTION_HEADING.findall(
         _read(run / "analysis" / "clarifications-and-assumptions.md"))]

@@ -1,0 +1,11 @@
+extends: existence
+message: "'%s' judges difficulty for the reader; state the step or fact instead."
+level: warning
+ignorecase: true
+tokens:
+  - simply
+  - obviously
+  - just
+  - easy
+  - easily
+  - of course

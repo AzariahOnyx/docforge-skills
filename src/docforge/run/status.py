@@ -110,14 +110,30 @@ def run_checks(out: Path, repo: Path, code_roots: dict[str, Path] | None = None)
                         "statuses": {r["claim_id"]: r["status"] for r in result["results"]}}
         except ResearchError as exc:
             research = {"passed": False, "errors": [str(exc)], "warnings": [], "statuses": {}}
+    vale = vale_summary(out)
     record = {
         "checked_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "profile": manifest["profile"],
         "structural": structural,
         "lint_findings": findings,
         "research": research,
+        "vale": vale,
         "note": "Structural and editorial checks only. Source fidelity review and human approval are separate.",
     }
     (out / "qa").mkdir(exist_ok=True)
     (out / "qa" / "checks.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return record
+
+
+def vale_summary(out: Path) -> dict:
+    """Vale on changed prose. Error-level alerts fail the check; Vale missing is reported, not fatal."""
+    from docforge.lint import LintError, lint_run
+
+    try:
+        result = lint_run(out)
+    except LintError as exc:
+        return {"available": False, "passed": True, "note": str(exc), "counts": {}, "alerts": []}
+    counts = result.counts
+    return {"available": True, "passed": counts.get("error", 0) == 0, "counts": counts,
+            "unchanged_alerts": result.unchanged_alerts,
+            "alerts": [f"{a.page}:{a.line}:{a.start} {a.severity} {a.check}: {a.message}" for a in result.alerts]}

@@ -43,5 +43,16 @@ jobs:
           version: "0.13.8"
       - name: Install the engine and its dependencies
         run: uv sync --locked
+      - name: Install Vale (pinned, checksum-verified)
+        env:
+          VALE_VERSION: "3.27.0"
+          VALE_SHA256: "c80d62f6bce87b81843ac5b512a26e63213927b957adba0a64fc594570da2000"
+        run: |
+          archive="vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/${archive}"
+          echo "${VALE_SHA256}  $RUNNER_TEMP/$archive" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/vale"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP/vale" vale
+          echo "DOCFORGE_VALE=$RUNNER_TEMP/vale/vale" >> "$GITHUB_ENV"
       - name: Run engine tests
         run: uv run pytest

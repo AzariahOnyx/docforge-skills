@@ -1,0 +1,8 @@
+# Internal claim and question IDs belong in analysis files and evidence markers, not in reader-facing text.
+extends: existence
+message: "Remove the internal ID '%s' from reader-facing text."
+level: error
+ignorecase: false
+tokens:
+  - 'C\d{2,}[A-Z]?'
+  - 'Q\d{2,}'

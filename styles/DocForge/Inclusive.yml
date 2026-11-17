@@ -1,0 +1,13 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: error
+ignorecase: true
+swap:
+  whitelisted: allowlisted
+  whitelist: allowlist
+  blacklisted: blocklisted
+  blacklist: blocklist
+  he/she: they
+  his/her: their
+action:
+  name: replace
