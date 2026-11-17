@@ -1,6 +1,6 @@
 # Pause your in-app alerts for 1 hour
 
-Use Quiet Hours when you want to pause your own in-app alerts for one hour. <!-- evidence: C02, C03 -->
+Use Quiet Hours when you want to pause your own in-app alerts for one hour. Email alerts are not paused. <!-- evidence: C02, C03 -->
 
 ## Before you begin
 
