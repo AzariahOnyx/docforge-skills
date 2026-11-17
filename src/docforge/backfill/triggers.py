@@ -60,12 +60,22 @@ def load_labels(path: Path) -> dict[int, str]:
     return labels
 
 
+GENERATOR_MARKERS = ("claude", "docforge session", "claude-code-session")
+
+
+def labellers(path: Path) -> list[str]:
+    rows = json.loads(path.read_text(encoding="utf-8"))["labels"]
+    return sorted({r["labelled_by"].strip() for r in rows if r.get("docs_needed") is not None})
+
+
 def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None) -> dict:
     """Decide every fetched PR again and compare with the labels. Writes replay-<time>.json and .md."""
     events = sorted((folder / "events").glob("*.json"), key=lambda p: int(p.stem)) if (folder / "events").is_dir() else []
     if not events:
         raise BackfillError(f"no fetched events in {folder}")
     labels = load_labels(labels_path) if labels_path else {}
+    by = labellers(labels_path) if labels_path else []
+    independent = bool(by) and not any(m in name.casefold() for name in by for m in GENERATOR_MARKERS)
     rows = []
     counts = {"true_positive": 0, "false_positive": 0, "false_negative": 0, "true_negative": 0}
     for path in events:
@@ -96,7 +106,12 @@ def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None
         "precision": f"{tp}/{tp + fp}" if tp + fp else "n/a (no predicted yes among labelled PRs)",
         "recall": f"{tp}/{tp + fn}" if tp + fn else "n/a (no labelled yes)",
         "rows": rows,
-        "note": "Labels are a person's judgement; this compares DocForge's rule-based triage with them.",
+        "labelled_by": by,
+        "independent_labels": independent,
+        "note": ("Labels are a person's judgement; this compares DocForge's rule-based triage with them."
+                 if independent else
+                 "Labels were not made independently of DocForge (labelled by the generating session, or none). "
+                 "Treat agreement as a consistency check, not as measured accuracy."),
     }
     stamp = _stamp()
     (folder / f"replay-{stamp}.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -109,7 +124,8 @@ def render_replay(report: dict) -> str:
     c = report["counts"]
     lines = [
         "# Trigger replay", "",
-        f"{report['prs']} PR(s) replayed, {report['labelled']} labelled. {report['note']}", "",
+        f"{report['prs']} PR(s) replayed, {report['labelled']} labelled"
+        + (f" by {', '.join(report['labelled_by'])}." if report["labelled_by"] else ".") + f" {report['note']}", "",
         "| | Labelled yes | Labelled no |", "| --- | --- | --- |",
         f"| DocForge said yes | {c['true_positive']} | {c['false_positive']} |",
         f"| DocForge said no | {c['false_negative']} | {c['true_negative']} |", "",

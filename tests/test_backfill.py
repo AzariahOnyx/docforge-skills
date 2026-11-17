@@ -134,6 +134,17 @@ def test_replay_scores_against_labels(fetched):
     assert (report["precision"], report["recall"], report["unscored"]) == ("1/1", "1/2", [14])
     md = (fetched / report["files"][1]).read_text(encoding="utf-8")
     assert "| DocForge said yes | 1 | 0 |" in md and "| 14 | Docs: Quiet Hours |" in md
+    assert report["independent_labels"] is True and report["labelled_by"] == ["Docs lead"]
+
+
+def test_session_made_labels_are_flagged(fetched):
+    path = write_labels(fetched, {11: "yes"})
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["labels"][0]["labelled_by"] = "Claude (DocForge session)"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    report = replay(fetched, load_config(CONFIG), path)
+    assert report["independent_labels"] is False
+    assert "not as measured accuracy" in (fetched / report["files"][1]).read_text(encoding="utf-8")
 
 
 def test_replay_without_labels_reports_all_unscored(fetched):
