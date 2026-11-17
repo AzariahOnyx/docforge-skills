@@ -1,6 +1,6 @@
 """Publishing: evidence markers, the claim gate, suggestion branches and PR drafts."""
 
-from .branch import BRANCH_PREFIX, BranchResult, PublishError, create_branch
+from .branch import BRANCH_PREFIX, BranchResult, PublishError, create_branch, diff_commits, update_branch
 from .gate import (
     EvidenceManifest,
     EvidenceRules,
@@ -12,7 +12,7 @@ from .gate import (
     rules_for_run,
 )
 from .markers import Statement, read_marker, statements
-from .plan import PrPlan, mark_ready, prepare_publish
+from .plan import PrPlan, load_plan, mark_ready, prepare_publish, resolve_commands, save_plan, update_publish
 from .pr_body import default_title, render_body
 
 __all__ = [
@@ -36,4 +36,10 @@ __all__ = [
     "render_body",
     "rules_for_run",
     "statements",
+    "update_publish",
+    "save_plan",
+    "resolve_commands",
+    "load_plan",
+    "update_branch",
+    "diff_commits",
 ]

@@ -128,6 +128,17 @@ See [Pause in-app alerts for 1 hour](../how-to/how-to.md).
 
 `docforge publish prepare` runs the gate, then commits the pages to a new local branch `docforge/<run>` in a docs checkout, together with an evidence manifest (`<docs folder>/_docforge/<run>.evidence.json`). It rewrites links between the placed pages, never changes the checkout's working tree or current branch, and never pushes. It writes `publish/pr.json` and `publish/pr-body.md` and prints the `git push` and `gh pr create` commands for a person to run after review. The pull request is a draft unless the run's `--source-pr` is recorded as merged; `docforge publish ready <run> --source-state merged` records the merge and prints `gh pr ready`. A docs repository can run the gate in CI with `templates/ci/docforge-gate.yml`.
 
+## Review loop
+
+Each prepared suggestion has a status in `publish/pr.json`: `open`, `changes_requested`, `revised`, or `closed`. Every review action appends one record to `review/feedback.jsonl` (never rewritten) with the reviewer, time, action, comment, optional page and line, and the commit and revision it applies to.
+
+- `docforge review request-changes <run> --comment ... --reviewer ...` records a change request and writes `prompts/revise-N.md`, a work order that lists every request since the last revision.
+- `docforge publish update <run> --docs-checkout <clone>` re-runs the claim gate and adds a follow-up commit to the same suggestion branch, only if no one else moved it. It never pushes.
+- `docforge review close <run> --reason <reason> --reviewer ...` closes the suggestion with one of six reasons: `inaccurate`, `not_needed`, `already_documented`, `wrong_place`, `quality`, or `source_changed`.
+- `docforge review serve --runs output` opens a local web page on 127.0.0.1 with Diff, Analysis, and History views and the same two actions.
+
+Actions only change local files. Each prints the matching `gh pr comment` or `gh pr close` command for a person to run. Stored commands use the placeholders `<docs-checkout>` and `<run>`, so run files hold no local paths.
+
 ## Source citations
 
 Use `[S1#L9]` or `[S1#L9-L11]` for a source with stable line numbers. Page and section references such as `[S1#p2]` or `[S1#section:Authentication]` are recorded but require manual verification. The checker cannot inspect a PDF image or infer section boundaries from these references. A citation can exist and still fail to support the claim.

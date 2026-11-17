@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, and a claim gate with draft docs pull requests. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, and a review loop. Nothing connects to GitHub or an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -176,6 +176,17 @@ uv run docforge publish prepare output/my-run --docs-checkout ../docs-site \
 ```
 
 `publish prepare` commits to a new local branch only. It prints the `git push` and `gh pr create --draft` commands for a person to run after review; nothing is pushed or opened automatically. Copy `templates/ci/docforge-gate.yml` into a docs repository to run the gate on its pull requests.
+
+Review suggestions in a local web page, or from the command line:
+
+```bash
+uv run docforge review serve --runs output --reviewer "Your name"
+uv run docforge review request-changes output/my-run --comment "Mention email alerts" --reviewer "Your name"
+uv run docforge publish update output/my-run --docs-checkout ../docs-site
+uv run docforge review close output/my-run --reason already_documented --reviewer "Your name"
+```
+
+The page shows each suggestion's diff, analysis, and history. Closing needs one of six reasons, and every action is stored as structured feedback in the run's `review/feedback.jsonl`.
 
 ## Project structure
 

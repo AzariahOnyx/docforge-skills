@@ -94,3 +94,35 @@ def create_branch(root: Path, branch: str, base: str, files: list[tuple[Path, st
     # Creating with an all-zero old value fails if the branch appeared meanwhile.
     _git(root, "update-ref", f"refs/heads/{branch}", commit, ZERO_SHA)
     return BranchResult(branch=branch, base_ref=base_ref, base_commit=base_commit, commit=commit, changes=changes)
+
+
+def update_branch(root: Path, branch: str, expected_tip: str, files: list[tuple[Path, str]], message: str) -> BranchResult:
+    """Add a follow-up commit on `branch`, only if its tip is still `expected_tip`."""
+    if not branch.startswith(BRANCH_PREFIX):
+        raise PublishError(f"suggestion branches must start with {BRANCH_PREFIX!r}")
+    if not _exists(root, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"):
+        raise PublishError(f"branch {branch} not found in {root}")
+    tip = _git(root, "rev-parse", f"refs/heads/{branch}")
+    if tip != expected_tip:
+        raise PublishError(f"branch {branch} moved since DocForge last committed ({tip[:12]} != {expected_tip[:12]}); "
+                           "reconcile it by hand")
+    changes: list[FileChange] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {**os.environ, "GIT_INDEX_FILE": str(Path(tmp) / "index")}
+        _git(root, "read-tree", tip, env=env)
+        for source, dest in files:
+            blob = _git(root, "hash-object", "-w", "--", str(source))
+            existed = _exists(root, "cat-file", "-e", f"{tip}:{dest}")
+            _git(root, "update-index", "--add", "--cacheinfo", f"100644,{blob},{dest}", env=env)
+            changes.append(FileChange(path=dest, change="modified" if existed else "added"))
+        tree = _git(root, "write-tree", env=env)
+    if tree == _git(root, "rev-parse", f"{tip}^{{tree}}"):
+        raise PublishError("nothing changed since the last suggestion commit")
+    commit = _git(root, "commit-tree", tree, "-p", tip, "-m", message)
+    _git(root, "update-ref", f"refs/heads/{branch}", commit, tip)
+    return BranchResult(branch=branch, base_ref=f"refs/heads/{branch}", base_commit=tip, commit=commit, changes=changes)
+
+
+def diff_commits(root: Path, base: str, head: str) -> str:
+    """Unified diff of the files changed between two commits."""
+    return _git(root, "diff", "--no-color", "--no-ext-diff", f"{base}..{head}") + "\n"

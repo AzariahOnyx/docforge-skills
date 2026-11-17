@@ -299,7 +299,7 @@ def _gate(args: argparse.Namespace) -> int:
 
 
 def _publish_prepare(args: argparse.Namespace) -> int:
-    from docforge.publish import PublishError, prepare_publish
+    from docforge.publish import PublishError, prepare_publish, resolve_commands
 
     try:
         config = load_config(args.config)
@@ -318,7 +318,7 @@ def _publish_prepare(args: argparse.Namespace) -> int:
     print(f"Pull request: {'draft' if plan.draft else 'ready for review'}; policy action: {plan.action}.")
     print(f"Wrote {args.run / 'publish' / 'pr.json'} and {args.run / 'publish' / 'pr-body.md'}.")
     print("After review, a person runs:")
-    for command in plan.commands:
+    for command in resolve_commands(plan.commands, run=args.run, checkout=args.docs_checkout):
         print("  " + command)
     return 0
 
@@ -334,6 +334,62 @@ def _publish_ready(args: argparse.Namespace) -> int:
     print(f"Recorded that the source change is merged; {plan.branch} may leave draft. A person runs:")
     for command in plan.commands:
         print("  " + command)
+    return 0
+
+
+def _publish_update(args: argparse.Namespace) -> int:
+    from docforge.publish import PublishError, resolve_commands, update_publish
+
+    try:
+        plan = update_publish(run=args.run, checkout=args.docs_checkout, config=load_config(args.config))
+    except (ConfigError, PublishError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Added revision {plan.revision} to local branch {plan.branch} at {plan.commit[:12]} (not pushed).")
+    print("After review, a person runs:")
+    for command in resolve_commands(plan.commands, run=args.run, checkout=args.docs_checkout):
+        print("  " + command)
+    return 0
+
+
+def _review_request_changes(args: argparse.Namespace) -> int:
+    from docforge.review import ReviewError, request_changes
+
+    try:
+        feedback, order, commands = request_changes(args.run, comment=args.comment, reviewer=args.reviewer,
+                                                    page=args.page, line=args.line)
+    except ReviewError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Recorded change request {feedback.feedback_id}. Revision work order: {order}")
+    print("To mirror it on GitHub, run:")
+    for command in commands:
+        print("  " + command)
+    return 0
+
+
+def _review_close(args: argparse.Namespace) -> int:
+    from docforge.review import ReviewError, close_suggestion
+
+    try:
+        feedback, commands = close_suggestion(args.run, reason=args.reason, note=args.note, reviewer=args.reviewer)
+    except ReviewError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Closed {args.run} with reason {feedback.reason} ({feedback.feedback_id}).")
+    print("To mirror it on GitHub, run:")
+    for command in commands:
+        print("  " + command)
+    return 0
+
+
+def _review_serve(args: argparse.Namespace) -> int:
+    from docforge.review.web import ReviewApp, serve
+
+    if not args.runs.is_dir():
+        print(f"not a directory: {args.runs}", file=sys.stderr)
+        return 1
+    serve(ReviewApp(root=args.runs, reviewer=args.reviewer or ""), host=args.host, port=args.port)
     return 0
 
 
@@ -437,10 +493,39 @@ def main(argv: list[str] | None = None) -> int:
     prepare.add_argument("--title")
     prepare.add_argument("--config", default="docforge.yaml")
     prepare.set_defaults(func=_publish_prepare)
+    update = publish_sub.add_parser("update", help="gate a revised run and add a follow-up commit (local only)")
+    update.add_argument("run", type=Path)
+    update.add_argument("--docs-checkout", type=Path, required=True, help="the clone used by publish prepare")
+    update.add_argument("--config", default="docforge.yaml")
+    update.set_defaults(func=_publish_update)
     ready = publish_sub.add_parser("ready", help="record that the source change merged; print the ready command")
     ready.add_argument("run", type=Path)
     ready.add_argument("--source-state", required=True, choices=("open", "merged"))
     ready.set_defaults(func=_publish_ready)
+
+    from docforge.review import CLOSE_REASONS
+
+    review = sub.add_parser("review", help="review suggestions: request changes, close with a reason, web UI")
+    review_sub = review.add_subparsers(dest="review_command", required=True)
+    rserve = review_sub.add_parser("serve", help="local web UI for suggestions (records feedback only)")
+    rserve.add_argument("--runs", type=Path, default=Path("output"), help="folder of run folders (or one run)")
+    rserve.add_argument("--host", default="127.0.0.1")
+    rserve.add_argument("--port", type=int, default=8790)
+    rserve.add_argument("--reviewer", help="name prefilled in the forms")
+    rserve.set_defaults(func=_review_serve)
+    rchanges = review_sub.add_parser("request-changes", help="record a change request and write a revision order")
+    rchanges.add_argument("run", type=Path)
+    rchanges.add_argument("--comment", required=True)
+    rchanges.add_argument("--reviewer", required=True)
+    rchanges.add_argument("--page", help="docs path the comment is about")
+    rchanges.add_argument("--line", type=int)
+    rchanges.set_defaults(func=_review_request_changes)
+    rclose = review_sub.add_parser("close", help="close a suggestion with one of six reasons")
+    rclose.add_argument("run", type=Path)
+    rclose.add_argument("--reason", required=True, choices=sorted(CLOSE_REASONS))
+    rclose.add_argument("--note", default="")
+    rclose.add_argument("--reviewer", required=True)
+    rclose.set_defaults(func=_review_close)
 
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)
