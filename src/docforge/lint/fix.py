@@ -14,15 +14,13 @@ from __future__ import annotations
 
 import difflib
 from pathlib import Path
-import re
 
 from pydantic import BaseModel
 
 from docforge.docs_index.build import split_front_matter
+from docforge.textguard import gate_or_restore, protected_spans
 
 from .vale import Alert, LintError, LintResult
-
-PROTECTED = re.compile(r"<!--.*?-->|`+[^`]*`+|\]\([^)]*\)|<[^>\n]+>")
 
 
 class Fix(BaseModel):
@@ -47,11 +45,6 @@ def _match_case(original: str, replacement: str) -> str:
     if original[:1].isupper():
         return replacement[:1].upper() + replacement[1:]
     return replacement
-
-
-def _protected(line: str) -> list[tuple[int, int]]:
-    """0-based [start, end) ranges a fix must not touch."""
-    return [(m.start(), m.end()) for m in PROTECTED.finditer(line)]
 
 
 def plan_fixes(run: Path, result: LintResult) -> FixPlan:
@@ -79,7 +72,7 @@ def plan_fixes(run: Path, result: LintResult) -> FixPlan:
             if text[start:end].casefold() != alert.match.casefold():
                 skipped.append(f"{where}: text no longer matches '{alert.match}'")
                 continue
-            if any(s < end and start < e for s, e in _protected(text)):
+            if any(s < end and start < e for s, e in protected_spans(text)):
                 skipped.append(f"{where}: inside a marker, code, link target or tag")
                 continue
             overlaps = [o for o in alerts if o is not alert and o.line == alert.line and o.start <= alert.end
@@ -119,27 +112,4 @@ def apply_fixes(run: Path, plan: FixPlan) -> None:
                 raise LintError(f"{page}:{fix.line} changed since the fixes were planned; lint again")
             lines[fix.line - 1] = line[: fix.start - 1] + fix.after + line[fix.end:]
         (run / page).write_text("".join(lines), encoding="utf-8")
-    if _is_for_publishing(run):
-        from docforge.publish import GateError
-
-        def restore(reason: str) -> None:
-            for page, text in originals.items():
-                (run / page).write_text(text, encoding="utf-8")
-            raise LintError(f"the claim gate failed after fixing ({reason}); every page was restored")
-
-        try:
-            result = gate_run(run, write=False)
-        except (GateError, OSError, ValueError) as exc:
-            restore(str(exc))
-        if not result.passed:
-            first = result.errors[0]
-            restore(f"{first.path}:{first.line} {first.message}")
-
-
-def _is_for_publishing(run: Path) -> bool:
-    """Pages of a run started with --publish-to, or already proposed, must keep passing the gate."""
-    import json
-
-    if (run / "publish" / "pr.json").is_file():
-        return True
-    return bool(json.loads((run / "run.json").read_text(encoding="utf-8")).get("publish"))
+    gate_or_restore(run, originals, LintError, "fixing")

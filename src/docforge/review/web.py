@@ -176,6 +176,15 @@ class ReviewApp:
             parts.append("<h2>PRD vs code</h2><table><tr><th>Claim</th><th>Status</th><th>Question</th></tr>" + "".join(
                 f"<tr><td>{escape(r['claim_id'])}</td><td>{escape(r['status'])}</td>"
                 f"<td>{escape(r.get('question') or '')}</td></tr>" for r in results) + "</table>")
+        cleanup_path = run / "qa" / "cleanup.json"
+        if cleanup_path.is_file():
+            cleanup = json.loads(cleanup_path.read_text(encoding="utf-8"))
+            parts.append(f"<h2>Clean-up ({escape(str(cleanup.get('pack')))})</h2>")
+            rows = [(c["page"], c["line"], c["step"], c["action"], c["before"], c["after"]) for c in cleanup["changes"]]
+            rows += [(f["page"], f["line"], f["step"], "finding", f["text"], f["message"]) for f in cleanup["findings"]]
+            parts.append("<table><tr><th>Page</th><th>Line</th><th>Step</th><th>Action</th><th>Before</th><th>After</th></tr>"
+                         + "".join("<tr>" + "".join(f"<td>{escape(str(v))}</td>" for v in row) + "</tr>" for row in rows)
+                         + "</table>" if rows else "<p>No automatic changes.</p>")
         vale_path = run / "qa" / "vale.json"
         if vale_path.is_file():
             vale = json.loads(vale_path.read_text(encoding="utf-8"))

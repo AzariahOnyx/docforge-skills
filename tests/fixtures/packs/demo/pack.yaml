@@ -37,10 +37,47 @@ article_specs:
     applies_to: [feature/]
   - type: faq
     path: specs/faq.md
-cleanup_steps:
+cleanup_steps:                    # fictional house rules, run in this order
+  - id: em-dashes
+    kind: replace
+    description: Replace em dashes with a spaced hyphen.
+    pattern: " *\u2014 *"
+    replacement: " - "
+  - id: triage-tags
+    kind: replace
+    description: Remove triage tags the drafter echoed.
+    pattern: '\s*\[(?:UPDATE EXISTING|NET-NEW)\]'
+    replacement: ""
+    ignorecase: true
+  - id: feature-flags
+    kind: drop_sentences
+    description: Remove sentences that name an internal flag (three or more snake_case parts).
+    pattern: '\b[a-z][a-z0-9]*(?:_[a-z][a-z0-9]+){2,}\b'
   - id: support-links
-    description: Turn support markers into links.
+    kind: marker_link
+    description: Turn support markers into pre-filled support email links.
     path: cleanup/README.md
+    pattern: '\[\s*SUPPORT\s+(?P<type>INQUIRY|ENABLE)\s*(?::(?P<phrase>[^\]]*))?\]'
+    address: support@pulseboard.example
+    templates:
+      INQUIRY: {subject: "Question about {phrase}", line: "I have a question about {phrase}."}
+      ENABLE: {subject: "Enable {phrase}", line: "Please enable {phrase} for my workspace."}
+    default_type: INQUIRY
+    body: "Hello Pulseboard Support,\n\n{line}\n\nThanks,\n"
+  - id: merge-notes
+    kind: merge_alerts
+    description: Merge notes that follow each other into one note with a list.
+    types: [NOTE]
+  - id: preview-first
+    kind: move_to_top
+    description: Put the Preview callout first, except in release notes.
+    skip: [release-note/]
+    match: '^> \*\*Preview\*\*'
+  - id: no-raw-html
+    kind: check
+    description: Report raw HTML other than details and summary.
+    pattern: '<(?!/?(?:details|summary)\b)[A-Za-z/][^>]*>'
+    message: raw HTML is not allowed outside details
 vale:
   styles_path: styles
   based_on: [DemoPack]

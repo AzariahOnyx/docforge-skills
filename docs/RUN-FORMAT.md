@@ -180,10 +180,21 @@ article_specs:
   - type: procedural
     path: specs/how-to.md
     applies_to: [how-to/]            # empty: the Analyzer chooses where it applies
-cleanup_steps:
+cleanup_steps:                       # run in order; each kind has its own fields
+  - id: em-dashes
+    kind: replace                      # pattern, replacement, ignorecase
+    description: Replace em dashes.
+    pattern: "\u2014"
+    replacement: " - "
   - id: support-links
+    kind: marker_link                  # pattern with (?P<type>...) and (?P<phrase>...), address, templates
     description: Turn support markers into links.
-    path: cleanup/support-links.md
+    pattern: '\[SUPPORT (?P<type>INQUIRY|ENABLE)(?:: (?P<phrase>[^\]]*))?\]'
+    address: support@example.com
+    templates: {INQUIRY: {subject: "Question about {phrase}", line: "I have a question about {phrase}."}}
+    default_type: INQUIRY
+    applies_to: [how-to/]              # optional, like references
+    skip: [release-note/]              # optional: deliverables the step never runs on
 vale:
   styles_path: styles
   based_on: [House]
@@ -196,7 +207,7 @@ Unknown keys are errors. Every path must stay inside the pack, including through
 
 With `run start --pack`, `run.json` gets a `pack` entry with the name, version, hash, each file's path, role and hash, and `copied_to: "pack"`. The manifest, conventions, references and article specs are copied to the run's `pack/` folder, and work orders point there. Revision orders check the copied `pack.yaml` against its recorded hash. With `--product <key>`, the run records the product and work orders include only references for that product (and references with no `products`). Without it, product references are left out and the orders list the pack's products.
 
-Vale style files are copied to the run too. `docforge lint` checks them against their recorded hashes and runs them with DocForge's house style and live learned rules; a pack style cannot use the names `DocForge`, `DocForgeLearned` or `Vale`. Clean-up steps and capture profiles are checked and recorded but not used yet.
+Vale style files are copied to the run too. `docforge lint` checks them against their recorded hashes and runs them with DocForge's house style and live learned rules; a pack style cannot use the names `DocForge`, `DocForgeLearned` or `Vale`. Capture profiles are checked and recorded but not used yet.
 
 ## API backend
 
@@ -237,6 +248,12 @@ Citations: `[F1#step3]` or `[F1#step3-5]`. `scripts/check_outputs.py` and `scrip
 ```
 
 The quote must appear in that step. With `flow_steps` required, the claim gate treats a claim as flow-backed when its row in `analysis/HANDOVER.md` cites an existing flow step (default profile) or it has a flow evidence row (custom profile), and every numbered list item in the pages must cite at least one flow-backed claim. `qa/gate.json` and the pull request body report how many numbered steps were backed.
+
+## Clean-up
+
+`docforge cleanup <run> [--apply]` runs the run's pack `cleanup_steps` (from the hash-checked copy of `pack.yaml`) over the deliverables, in order. Kinds: `replace`, `drop_sentences` (a matching sentence goes; a match in code, or a table cell that is only the match, stays and is reported), `marker_link` (a pre-filled `mailto:` link), `merge_alerts` (GitHub alerts of the same type that follow each other become one alert with a list and one combined evidence marker), `move_to_top` (an alert block below the page title) and `check` (findings only; `unless_linked` skips matches that are link text). Steps never change front matter, fenced or inline code, HTML comments including evidence markers, link targets or HTML tags.
+
+With `--apply`, `qa/cleanup.json` and `qa/CLEANUP-REPORT.md` record every change (step, page, line, action, before, after) and finding. For runs that must pass the claim gate (meant for publishing, already proposed, or with required flow steps), the gate runs again and every page is restored if it fails.
 
 ## Fetched sources and notifications
 

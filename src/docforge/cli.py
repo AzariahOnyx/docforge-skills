@@ -673,6 +673,33 @@ def _sources_flow(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cleanup(args: argparse.Namespace) -> int:
+    from docforge.cleanup import CleanupError, apply_cleanup, plan_cleanup
+
+    try:
+        result = plan_cleanup(args.run)
+        if args.apply:
+            apply_cleanup(args.run, result)
+    except (CleanupError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if not result.steps:
+        print("The run's pack has no clean-up steps (or the run has no pack).")
+        return 0
+    for step in result.steps:
+        print(f"{step['id']} ({step['kind']}): {step['changes']} change(s), {step['findings']} finding(s)")
+    for f in result.findings:
+        print(f"    finding {f.page}:{f.line} [{f.step}] {f.message}")
+    if args.apply:
+        print(f"Applied {len(result.changes)} change(s) to {len(result.pages)} page(s). "
+              f"Report: {args.run / 'qa' / 'CLEANUP-REPORT.md'}")
+    else:
+        print(result.diff or "No changes.")
+        if result.changes:
+            print("Preview only. Run again with --apply to write the changes and the report.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="docforge")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -909,6 +936,11 @@ def main(argv: list[str] | None = None) -> int:
     pcheck.add_argument("path", type=Path, help="pack folder; with --config, a pack name")
     pcheck.add_argument("--config", help="docforge.yaml, to look up a pack by name")
     pcheck.set_defaults(func=_pack_check)
+
+    clean = sub.add_parser("cleanup", help="run the pack's clean-up steps on a run's pages (preview unless --apply)")
+    clean.add_argument("run", type=Path)
+    clean.add_argument("--apply", action="store_true", help="write the changes and qa/CLEANUP-REPORT.md")
+    clean.set_defaults(func=_cleanup)
 
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)

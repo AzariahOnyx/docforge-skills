@@ -101,7 +101,7 @@ def load_pack(folder: Path) -> Pack:
         named.append((manifest.conventions, "conventions"))
     named += [(r.path, "reference") for r in manifest.references]
     named += [(s.path, "article_spec") for s in manifest.article_specs]
-    named += [(c.path, "cleanup_step") for c in manifest.cleanup_steps]
+    named += [(c.path, "cleanup_step") for c in manifest.cleanup_steps if c.path]
     named += [(c.path, "capture_profile") for c in manifest.capture_profiles]
     if manifest.vale:
         styles = _inside(root, manifest.vale.styles_path, folder=True)

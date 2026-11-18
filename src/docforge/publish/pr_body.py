@@ -131,6 +131,16 @@ def render_body(
     else:
         lines += ["", "Structural check: not run (`docforge run check`)."]
 
+    cleanup_path = run / "qa" / "cleanup.json"
+    if cleanup_path.is_file():
+        cleanup = json.loads(cleanup_path.read_text(encoding="utf-8"))
+        lines += ["", "## Clean-up", "",
+                  f"Pack {cleanup.get('pack')}: {len(cleanup['changes'])} automatic change(s), "
+                  f"{len(cleanup['findings'])} finding(s). Every change is listed in `qa/CLEANUP-REPORT.md`."]
+        lines += [f"- `{c['page']}` line {c['line']}: {c['step']} {c['action']}" for c in cleanup["changes"][:20]]
+        lines += [f"- `{f['page']}` line {f['line']}: {f['step']}: {f['message']}" for f in cleanup["findings"][:10]]
+        if len(cleanup["changes"]) > 20:
+            lines.append(f"- ...and {len(cleanup['changes']) - 20} more changes in the report.")
     vale_path = run / "qa" / "vale.json"
     if vale_path.is_file():
         vale = json.loads(vale_path.read_text(encoding="utf-8"))

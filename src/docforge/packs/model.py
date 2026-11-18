@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import PurePosixPath
 import re
-from typing import Literal
+from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -100,11 +100,25 @@ class ArticleSpec(PackFileEntry):
         return value
 
 
-class CleanupStep(PackFileEntry):
-    """Declared now; the step format and how steps run are defined with the clean-up stage."""
+def _regex(value: str, flags: int = 0) -> str:
+    try:
+        re.compile(value, flags)
+    except re.error as exc:
+        raise ValueError(f"invalid regular expression {value!r}: {exc}") from None
+    return value
+
+
+class StepBase(Strict):
+    """A clean-up step: data the engine interprets. A pack never supplies code."""
 
     id: str
     description: str = Field(min_length=1)
+    # Deliverable paths or folders this step runs on. Empty means all.
+    applies_to: list[str] = Field(default_factory=list)
+    # Deliverable paths or folders this step never runs on.
+    skip: list[str] = Field(default_factory=list)
+    # Optional documentation file inside the pack.
+    path: str | None = None
 
     @field_validator("id")
     @classmethod
@@ -112,6 +126,125 @@ class CleanupStep(PackFileEntry):
         if not SLUG_RE.match(value):
             raise ValueError(f"id must be a lowercase slug: {value!r}")
         return value
+
+    @field_validator("applies_to", "skip")
+    @classmethod
+    def _prefixes(cls, value):
+        return check_prefixes(value)
+
+    def runs_on(self, deliverable: str) -> bool:
+        return applies(self.applies_to, deliverable) and not (self.skip and applies(self.skip, deliverable))
+
+    @field_validator("path")
+    @classmethod
+    def _path(cls, value):
+        return None if value is None else check_relative(value)
+
+
+class ReplaceStep(StepBase):
+    """Replace every match in prose. `replacement` may use \\1 group references."""
+
+    kind: Literal["replace"]
+    pattern: str
+    replacement: str
+    ignorecase: bool = False
+
+    @field_validator("pattern")
+    @classmethod
+    def _pattern(cls, value):
+        return _regex(value)
+
+
+class DropSentencesStep(StepBase):
+    """Remove every prose sentence that matches. Matches in code, and a table cell that is only the match, stay."""
+
+    kind: Literal["drop_sentences"]
+    pattern: str
+    ignorecase: bool = False
+
+    @field_validator("pattern")
+    @classmethod
+    def _pattern(cls, value):
+        return _regex(value)
+
+
+class LinkTemplate(Strict):
+    subject: str = Field(min_length=1)
+    line: str = Field(min_length=1)
+
+
+class MarkerLinkStep(StepBase):
+    """Turn markers such as [SUPPORT INQUIRY: phrase] into pre-filled mailto links.
+
+    `pattern` needs the named groups `type` and `phrase`. `{phrase}` in a template is
+    the cleaned phrase; `{line}` in `body` is the template's line.
+    """
+
+    kind: Literal["marker_link"]
+    pattern: str
+    address: str = Field(pattern=r"^[^@\s<>()]+@[^@\s<>()]+\.[A-Za-z]{2,}$")
+    link_text: str | None = None
+    templates: dict[str, LinkTemplate] = Field(min_length=1)
+    default_type: str
+    body: str = "{line}"
+
+    @field_validator("pattern")
+    @classmethod
+    def _pattern(cls, value):
+        _regex(value)
+        groups = re.compile(value).groupindex
+        if "type" not in groups or "phrase" not in groups:
+            raise ValueError("marker_link pattern needs named groups 'type' and 'phrase'")
+        return value
+
+    @model_validator(mode="after")
+    def _default(self):
+        if self.default_type not in self.templates:
+            raise ValueError(f"default_type {self.default_type!r} has no template")
+        if "{line}" not in self.body:
+            raise ValueError("body must contain {line}")
+        return self
+
+
+class MergeAlertsStep(StepBase):
+    """Merge GitHub alerts of the same type that follow each other into one alert with a list."""
+
+    kind: Literal["merge_alerts"]
+    types: list[Literal["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"]] = Field(default_factory=list)
+
+
+class MoveToTopStep(StepBase):
+    """Move the first alert block whose text matches `match` to just below the page title."""
+
+    kind: Literal["move_to_top"]
+    match: str
+
+    @field_validator("match")
+    @classmethod
+    def _match(cls, value):
+        return _regex(value)
+
+
+class CheckStep(StepBase):
+    """Report matches in prose without changing anything."""
+
+    kind: Literal["check"]
+    pattern: str
+    message: str = Field(min_length=1)
+    ignorecase: bool = False
+    # Report only matches that are not already link text.
+    unless_linked: bool = False
+
+    @field_validator("pattern")
+    @classmethod
+    def _pattern(cls, value):
+        return _regex(value)
+
+
+CleanupStep = Annotated[
+    Union[ReplaceStep, DropSentencesStep, MarkerLinkStep, MergeAlertsStep, MoveToTopStep, CheckStep],
+    Field(discriminator="kind"),
+]
 
 
 class ValeStyles(Strict):

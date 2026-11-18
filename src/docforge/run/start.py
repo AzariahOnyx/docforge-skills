@@ -186,6 +186,12 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pa
             "`<!-- evidence: C03, C07 -->` naming the claims it rests on, each INCLUDED for that page in "
             "`analysis/COVERAGE.md`. Text that states no product fact gets `<!-- evidence: none (reason) -->`.",
         ]
+    if stage.key == "drafter" and pack is not None and pack.manifest.cleanup_steps:
+        lines.append(f"- When the pages are written, run `uv run docforge cleanup {out_label} --apply`: the pack's "
+                     "clean-up steps make deterministic edits and list every change in `qa/CLEANUP-REPORT.md`.")
+    if stage.key == "proofreader" and pack is not None and pack.manifest.cleanup_steps:
+        lines.append("- Read `qa/CLEANUP-REPORT.md` and check that each automatic change kept the meaning and the "
+                     "evidence markers of its statement.")
     if stage.key == "proofreader":
         lines.append("- Record the review method: `same_agent_second_pass` if the session that drafted also reviews, "
                      "`independent_reviewer` if a separate reviewer does.")

@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, backfill evaluation, read-only Jira and Confluence sources, Slack notifications, house packs, flow PDFs as evidence, and an optional Anthropic API backend. Nothing calls an AI model unless a `backend` section is configured, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, backfill evaluation, read-only Jira and Confluence sources, Slack notifications, house packs with clean-up steps, flow PDFs as evidence, and an optional Anthropic API backend. Nothing calls an AI model unless a `backend` section is configured, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -230,6 +230,15 @@ uv run docforge run start --prd demo/mock-prd.md --out output/my-run --audience 
 ```
 
 A pack is a folder with a `pack.yaml` that lists its files. `run start` checks the pack, copies the files the stages and `docforge lint` use into the run's `pack/` folder, and records the pack's name, version, and hash in `run.json`. The Analyzer, Drafter, and Proofreader work orders, and revision orders, name the files that apply to each deliverable. Add `--product <key>` to include that product's references. A pack's Vale styles join `docforge lint`. Pack material shapes format and style; it never overrides the sources and is never evidence. Keep real packs in a private repository.
+
+Apply a pack's clean-up steps to a run's pages after drafting:
+
+```bash
+uv run docforge cleanup output/my-run
+uv run docforge cleanup output/my-run --apply
+```
+
+Clean-up steps are data in `pack.yaml`, never code: replace text, drop sentences that match a pattern (an internal flag name, for example), turn markers into pre-filled email links, merge callouts that follow each other, move a callout to the top, and check for patterns without changing anything. They never touch front matter, code, evidence markers, or link targets. Without `--apply` you see a diff; with it, every change and finding is listed in the run's `qa/CLEANUP-REPORT.md`, and pages that must pass the claim gate are restored if they no longer do. `run exec` applies the clean-up after the Drafter stage.
 
 Turn a step-by-step flow PDF (one step per page, headed "Step 3/7") into evidence that procedure steps can cite:
 

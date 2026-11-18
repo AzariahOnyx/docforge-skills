@@ -136,6 +136,19 @@ def _checks(run: Path, repo: Path, stage: Stage, manifest: dict) -> list[str]:
     return problems
 
 
+def _cleanup(run: Path) -> list[str]:
+    """Apply the pack's clean-up steps after drafting; a gate failure comes back as a problem to repair."""
+    from docforge.cleanup import CleanupError, apply_cleanup, plan_cleanup
+
+    try:
+        result = plan_cleanup(run)
+        if result.steps:
+            apply_cleanup(run, result)
+    except CleanupError as exc:
+        return [f"clean-up: {exc}"]
+    return []
+
+
 def _mark_independent_review(run: Path) -> None:
     path = run / "run.json"
     manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -248,6 +261,8 @@ def exec_run(run: Path, repo: Path, config: DocForgeConfig | None, *, only: int 
                 problems = [str(exc)]
             else:
                 problems = _checks(run, repo, stage, manifest)
+            if not problems and stage.key == "drafter":
+                problems = _cleanup(run)
             if not problems:
                 outcome.status, outcome.message = "done", ""
                 if stage.key == "proofreader":
