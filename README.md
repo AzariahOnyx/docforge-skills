@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, backfill evaluation, read-only Jira and Confluence sources, and Slack notifications. Nothing connects to an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, backfill evaluation, read-only Jira and Confluence sources, Slack notifications, and house packs. Nothing connects to an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -220,6 +220,16 @@ uv run docforge backfill score eval/bench --judgments eval/bench/judgments.json
 ```
 
 `fetch` only reads from GitHub. See the [benchmark protocol](benchmarks/README.md) for how outputs are blinded and scored.
+
+Use a house pack to give drafts your conventions, references, and article structure specs:
+
+```bash
+uv run docforge pack check tests/fixtures/packs/demo
+uv run docforge run start --prd demo/mock-prd.md --out output/my-run --audience "admins" \
+  --pack house --config docforge.yaml
+```
+
+A pack is a folder with a `pack.yaml` that lists its files. `run start` checks the pack, copies the files the stages read into the run's `pack/` folder, and records the pack's name, version, and hash in `run.json`. The Analyzer, Drafter, and Proofreader work orders, and revision orders, name the files that apply to each deliverable. Pack material shapes format and style; it never overrides the sources and is never evidence. Keep real packs in a private repository.
 
 Fetch a Jira issue or a Confluence page as a source file, then use it in a run:
 

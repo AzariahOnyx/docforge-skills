@@ -1,0 +1,36 @@
+# Fictional demo pack for tests. Real house packs live in a private repository.
+schema_version: 1
+name: demo
+version: 0.1.0
+description: House style for the fictional Pulseboard product.
+conventions: conventions.md
+references:
+  - path: references/voice.md
+    title: Pulseboard voice
+  - path: references/product-terms.md
+    title: Pulseboard product terms
+    stages: [analyzer, drafter, proofreader]
+  - path: references/how-to-extras.md
+    title: Extra rules for how-to articles
+    applies_to: [how-to/]
+article_specs:
+  - type: procedural
+    title: Step-by-step article
+    path: specs/how-to.md
+    applies_to: [how-to/]
+  - type: overview
+    title: Feature overview
+    path: specs/feature-guide.md
+    applies_to: [feature/]
+  - type: faq
+    path: specs/faq.md
+cleanup_steps:
+  - id: support-links
+    description: Turn support markers into links.
+    path: cleanup/README.md
+vale:
+  styles_path: styles
+  based_on: [DemoPack]
+capture_profiles:
+  - name: demo-app
+    path: capture/profiles.yml

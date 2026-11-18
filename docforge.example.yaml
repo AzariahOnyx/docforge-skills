@@ -22,6 +22,10 @@ context_sources:                    # read-only; fetched with `docforge sources 
     auth_token_env: JIRA_API_TOKEN
     space_keys: [EXAMPLE]           # pages in other spaces are refused
 
+packs:                              # house style; keep real packs in a private repository
+  house:
+    path: ../my-docs-pack           # folder with pack.yaml, relative to this file
+
 triggers:
   product-prs:
     trigger_type: github_pr

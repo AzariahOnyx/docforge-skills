@@ -42,6 +42,10 @@ def write_revision_order(run: Path, plan: PrPlan, feedback: list) -> Path:
         lines[insert:insert] = ["## Learned guidance", "",
                                 "Approved from earlier review feedback; it never overrides the sources.", "",
                                 *learned, ""]
+    pack_lines = _pack(run, [p["src"] for p in plan.placements])
+    if pack_lines:
+        insert = lines.index("## Pages")
+        lines[insert:insert] = [*pack_lines[1:], ""]
     lines += [f"- `{p['src']}` (published as `{p['dest']}`)" for p in plan.placements]
     lines += [
         "",
@@ -65,3 +69,22 @@ def _learned(pages: list[str]) -> list[str]:
         return guidance_lines(rules_dir(), pages)
     except RuleError:
         return []
+
+
+def _pack(run: Path, pages: list[str]) -> list[str]:
+    """The house pack section for a revision, from the copy inside the run. A broken copy is reported, not hidden."""
+    import json
+
+    from docforge.packs import PackError, run_manifest, stage_lines
+
+    try:
+        record = json.loads((run / "run.json").read_text(encoding="utf-8")).get("pack")
+    except (OSError, ValueError):
+        return []
+    if not record:
+        return []
+    try:
+        manifest = run_manifest(run, record)
+    except (PackError, ValueError) as exc:
+        return ["", "## House pack", "", f"The run's pack copy cannot be used: {exc}. Ask a person before revising."]
+    return stage_lines(manifest, record, "revision", pages, run.name)

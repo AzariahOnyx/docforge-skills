@@ -82,6 +82,11 @@ def render_body(
         lines.append(f"| {s['id']} | `{s['path']}` | `{s['sha256'][:12]}...` | {s.get('authority', 'unconfirmed')} | "
                      f"{source_origin(s)} |")
 
+    pack = manifest.get("pack")
+    if pack:
+        lines += ["", f"House pack: `{pack['name']}` {pack['version']} (sha256 `{pack['sha256'][:12]}...`). "
+                      "It shapes format and style only; it is not a source."]
+
     lines += ["", "## Pages", "", "| Run file | Docs path | Change |", "| --- | --- | --- |"]
     lines += [f"| `{src}` | `{dest}` | {change} |" for src, dest, change in placements]
     lines += ["", f"Evidence manifest for CI: `{evidence_manifest}`"]

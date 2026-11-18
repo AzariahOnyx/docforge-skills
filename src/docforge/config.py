@@ -1,11 +1,12 @@
 """Schema and loader for docforge.yaml, the single configuration file.
 
-The file has four sections, all optional:
+The file has five sections, all optional:
 
 - doc_collections: Git repositories the agent may write documentation to.
 - context_sources: read-only sources the agent may consult, with scope limits.
 - triggers: named events that start documentation work.
 - policies: what happens to a suggestion (publishing, notifications, archiving).
+- packs: local folders with house style, references and article specs.
 
 Validation is strict: unknown keys, bad values, and references to undefined
 triggers or collections are errors.
@@ -298,6 +299,15 @@ DEFAULT_POLICY = {
 }
 
 
+# --- packs -----------------------------------------------------------------
+
+
+class PackRef(Strict):
+    """A local folder holding a pack.yaml. Relative paths resolve against docforge.yaml's folder."""
+
+    path: str = Field(min_length=1)
+
+
 # --- root ------------------------------------------------------------------
 
 
@@ -306,6 +316,7 @@ class DocForgeConfig(Strict):
     context_sources: dict[str, ContextSource] = Field(default_factory=dict)
     triggers: dict[str, Trigger] = Field(default_factory=dict)
     policies: Policies = Field(default_factory=Policies)
+    packs: dict[str, PackRef] = Field(default_factory=dict)
 
     @field_validator("doc_collections")
     @classmethod
@@ -315,7 +326,7 @@ class DocForgeConfig(Strict):
                 raise ValueError(f"doc_collections key must be owner/repo: {key!r}")
         return value
 
-    @field_validator("context_sources", "triggers")
+    @field_validator("context_sources", "triggers", "packs")
     @classmethod
     def _slug_keys(cls, value):
         for key in value:

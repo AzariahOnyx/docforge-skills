@@ -77,7 +77,7 @@ def _source_note(source: dict) -> str:
     return f" ({'; '.join(notes)})" if notes else ""
 
 
-def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool) -> str:
+def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pack=None) -> str:
     profile = manifest["profile"]
     stages = stages_for(manifest)
     outputs = stage_outputs(stage, profile, manifest["deliverables"])
@@ -122,6 +122,10 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool) ->
             f"3. Run `uv run docforge research check {out_label} --code-root {code['repo']}=<checkout>`. It writes "
             "`analysis/CROSS-SOURCE.md` and adds the cross-source questions to the clarification register.",
         ]
+    if pack is not None:
+        from docforge.packs import stage_lines
+
+        lines += stage_lines(pack.manifest, manifest["pack"], stage.key, manifest["deliverables"], out_label)
     lines += ["", "## Write", ""] + [f"- `{f}`" for f in outputs]
     lines += [
         "",
@@ -171,6 +175,7 @@ def start_run(
     source_pr: str | None = None,
     source_state: str | None = None,
     context: list[str] | None = None,
+    pack: Path | None = None,
 ) -> Path:
     """Create a new run folder. Never overwrites: fails if `out` exists."""
     repo = repo.resolve()
@@ -253,6 +258,14 @@ def start_run(
             "human_approval": "pending",
         },
     }
+    loaded = None
+    if pack is not None:
+        from docforge.packs import PackError, load_pack
+
+        try:
+            loaded = load_pack(pack)
+        except PackError as exc:
+            raise RunError(f"pack: {exc}") from None
     if code:
         manifest["code"] = code
     if publish_to:
@@ -267,6 +280,10 @@ def start_run(
         raise RunError(f"run folder already exists; choose a new one: {out}") from None
     (out / "analysis").mkdir()
     (out / "prompts").mkdir()
+    if loaded is not None:
+        from docforge.packs import copy_into_run
+
+        manifest["pack"] = copy_into_run(loaded, out)
     (out / "run.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     (out / "analysis" / "existing-docs.json").write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
     if docs is not None:
@@ -277,5 +294,6 @@ def start_run(
     except ValueError:
         out_label = str(out)
     for stage in stages_for(manifest):
-        (out / stage.work_order).write_text(_work_order(stage, out_label, manifest, docs is not None), encoding="utf-8")
+        (out / stage.work_order).write_text(_work_order(stage, out_label, manifest, docs is not None, loaded),
+                                            encoding="utf-8")
     return out

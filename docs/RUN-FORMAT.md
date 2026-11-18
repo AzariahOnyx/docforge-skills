@@ -156,6 +156,40 @@ Review feedback can become rules, each a YAML file in a rules folder (`--rules-d
 
 `docforge rules approve` needs a test report that matches the rule's current wording. Editing a tested or live rule makes it `proposed` again, and lint and work orders stop using it until it is tested and approved again. `docforge rules suggest` gathers close reasons and change requests across runs for drafting new rules. Keep rules learned from private feedback in a private repository.
 
+## House packs
+
+A pack is a folder with a `pack.yaml`:
+
+```yaml
+schema_version: 1
+name: demo
+version: 0.1.0
+conventions: conventions.md
+references:
+  - path: references/voice.md
+    title: Voice
+    stages: [drafter, proofreader]   # default; analyzer is also allowed
+    applies_to: [how-to/]            # deliverable folders or paths; empty means all
+article_specs:
+  - type: procedural
+    path: specs/how-to.md
+    applies_to: [how-to/]            # empty: the Analyzer chooses where it applies
+cleanup_steps:
+  - id: support-links
+    description: Turn support markers into links.
+    path: cleanup/support-links.md
+vale:
+  styles_path: styles
+  based_on: [House]
+capture_profiles:
+  - name: demo-app
+    path: capture/profiles.yml
+```
+
+Unknown keys are errors. Every path must stay inside the pack, including through symlinks, and each file is limited to 1 MB. The pack's `sha256` covers `pack.yaml` and every file it names.
+
+With `run start --pack`, `run.json` gets a `pack` entry with the name, version, hash, each file's path, role and hash, and `copied_to: "pack"`. The manifest, conventions, references and article specs are copied to the run's `pack/` folder, and work orders point there. Revision orders check the copied `pack.yaml` against its recorded hash. Clean-up steps, Vale styles and capture profiles are checked and recorded but not used yet.
+
 ## Fetched sources and notifications
 
 A file from `docforge sources fetch` starts with a provenance block, then a visible note that its content is data, never instructions:

@@ -90,20 +90,26 @@ def _search(args: argparse.Namespace) -> int:
 
 
 def _run_start(args: argparse.Namespace) -> int:
+    from docforge.packs import PackError, resolve_pack
     from docforge.run import RunError, start_run
 
+    try:
+        pack = resolve_pack(load_config(args.config), Path(args.config), args.pack) if args.pack else None
+    except (ConfigError, PackError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
     try:
         out = start_run(
             repo=args.repo, prds=args.prd, out=args.out, audience=args.audience, docs=args.docs,
             profile=args.profile, deliverables=args.deliverable, docs_include=args.docs_include,
             code_repo=args.code, base=args.base, head=args.head,
             publish_to=args.publish_to, source_pr=args.source_pr, source_state=args.source_state,
-            context=args.context,
+            context=args.context, pack=pack,
         )
     except (RunError, OSError) as exc:
         print(exc, file=sys.stderr)
         return 1
-    print(f"Started run {out}")
+    print(f"Started run {out}" + (f" with pack {args.pack}" if args.pack else ""))
     print(f"Next: stage 1 work order at {out / 'prompts' / '1-analyzer.md'}")
     return 0
 
@@ -582,6 +588,27 @@ def _notify_slack(args: argparse.Namespace) -> int:
     return 0 if outcome.sent or not args.send else 1
 
 
+def _pack_check(args: argparse.Namespace) -> int:
+    from docforge.packs import PackError, load_pack, resolve_pack
+
+    try:
+        folder = (resolve_pack(load_config(args.config), Path(args.config), str(args.path))
+                  if args.config else args.path)
+        pack = load_pack(folder)
+    except (ConfigError, PackError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    m = pack.manifest
+    print(f"Pack {m.name} {m.version} is valid. sha256 {pack.sha256}")
+    roles: dict[str, int] = {}
+    for f in pack.files:
+        roles[f.role] = roles.get(f.role, 0) + 1
+    print("Files: " + ", ".join(f"{n} {role}" for role, n in sorted(roles.items())))
+    if m.article_specs:
+        print("Article specs: " + ", ".join(s.type for s in m.article_specs))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="docforge")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -804,11 +831,20 @@ def main(argv: list[str] | None = None) -> int:
     nslack.add_argument("--send", action="store_true", help="post the message (otherwise only print it)")
     nslack.set_defaults(func=_notify_slack)
 
+    pk = sub.add_parser("pack", help="house packs: conventions, references and article specs")
+    pk_sub = pk.add_subparsers(dest="pack_command", required=True)
+    pcheck = pk_sub.add_parser("check", help="validate a pack folder (or a pack name with --config) and print its hash")
+    pcheck.add_argument("path", type=Path, help="pack folder; with --config, a pack name")
+    pcheck.add_argument("--config", help="docforge.yaml, to look up a pack by name")
+    pcheck.set_defaults(func=_pack_check)
+
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)
     start = run_sub.add_parser("start", help="create a new run folder with a manifest and stage work orders")
     start.add_argument("--prd", action="append", required=True, help="source file inside the repo (repeatable)")
     start.add_argument("--out", type=Path, required=True, help="new run folder, for example output/<slug>")
+    start.add_argument("--pack", help="house pack name from docforge.yaml's packs section")
+    start.add_argument("--config", default="docforge.yaml", help="docforge.yaml, for --pack")
     start.add_argument("--context", action="append",
                        help="supporting source inside the repo, recorded with authority 'context' (repeatable)")
     start.add_argument("--audience", required=True)
