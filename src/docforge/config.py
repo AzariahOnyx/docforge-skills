@@ -1,12 +1,13 @@
 """Schema and loader for docforge.yaml, the single configuration file.
 
-The file has five sections, all optional:
+The file has six sections, all optional:
 
 - doc_collections: Git repositories the agent may write documentation to.
 - context_sources: read-only sources the agent may consult, with scope limits.
 - triggers: named events that start documentation work.
 - policies: what happens to a suggestion (publishing, notifications, archiving).
 - packs: local folders with house style, references and article specs.
+- backend: model settings for running stages through the Anthropic API.
 
 Validation is strict: unknown keys, bad values, and references to undefined
 triggers or collections are errors.
@@ -308,6 +309,64 @@ class PackRef(Strict):
     path: str = Field(min_length=1)
 
 
+# --- backend ---------------------------------------------------------------
+
+Effort = Literal["low", "medium", "high", "xhigh", "max"]
+MODEL_RE = re.compile(r"^[a-z0-9][a-z0-9.-]{1,63}$")
+
+
+class ModelPrice(Strict):
+    """US dollars per million tokens."""
+
+    input: float = Field(ge=0)
+    output: float = Field(ge=0)
+    cache_read: float = Field(ge=0)
+    cache_write_5m: float = Field(ge=0)
+    cache_write_1h: float = Field(ge=0)
+
+
+class BackendStage(Strict):
+    model: str | None = None
+    effort: Effort | None = None
+    max_tokens: int | None = Field(default=None, ge=1024, le=128000)
+
+    @field_validator("model")
+    @classmethod
+    def _model(cls, value):
+        if value is not None and not MODEL_RE.match(value):
+            raise ValueError(f"not a model ID: {value!r}")
+        return value
+
+
+class Backend(Strict):
+    """Runs stages through the Anthropic API. Without this section no paid call is ever made."""
+
+    provider: Literal["anthropic"] = "anthropic"
+    model: str = "claude-opus-5-5"
+    effort: Effort = "high"
+    max_tokens: int = Field(default=64000, ge=1024, le=128000)
+    # Name of the environment variable holding the API key. If it is unset, the SDK's own
+    # credential chain is used (for example an `ant auth login` profile).
+    api_key_env: str = "ANTHROPIC_API_KEY"
+    # Server-side refusal fallback: a declined request is re-run on another model.
+    fallbacks: bool = True
+    max_cost_usd: float = Field(default=5.0, gt=0)
+    prices: dict[str, ModelPrice] = Field(default_factory=dict)
+    stages: dict[Literal["analyzer", "drafter", "proofreader"], BackendStage] = Field(default_factory=dict)
+
+    @field_validator("model")
+    @classmethod
+    def _model(cls, value):
+        if not MODEL_RE.match(value):
+            raise ValueError(f"not a model ID: {value!r}")
+        return value
+
+    @field_validator("api_key_env")
+    @classmethod
+    def _env(cls, value):
+        return check_env_name(value)
+
+
 # --- root ------------------------------------------------------------------
 
 
@@ -317,6 +376,7 @@ class DocForgeConfig(Strict):
     triggers: dict[str, Trigger] = Field(default_factory=dict)
     policies: Policies = Field(default_factory=Policies)
     packs: dict[str, PackRef] = Field(default_factory=dict)
+    backend: Backend | None = None
 
     @field_validator("doc_collections")
     @classmethod

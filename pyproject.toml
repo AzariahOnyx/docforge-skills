@@ -12,6 +12,11 @@ dependencies = [
 [project.scripts]
 docforge = "docforge.cli:main"
 
+[project.optional-dependencies]
+api = [
+    "anthropic>=1,<2",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.3,<9",

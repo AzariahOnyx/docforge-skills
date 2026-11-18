@@ -132,6 +132,13 @@ def _run_status(args: argparse.Namespace) -> int:
         print(f"All stages have their files. Next: uv run docforge run check {args.out}")
     else:
         print(f"Next: stage {upcoming.stage.number} work order at {args.out / upcoming.stage.work_order}")
+    try:
+        backend = json.loads((args.out / "run.json").read_text(encoding="utf-8")).get("backend")
+    except (OSError, ValueError):
+        backend = None
+    if backend:
+        print(f"API backend: {backend['calls']} call(s), estimated ${backend['cost_usd']:.2f} "
+              f"(models: {', '.join(backend.get('models') or ['none'])}; prices as of {backend.get('prices_as_of')})")
     return 0
 
 
@@ -609,6 +616,35 @@ def _pack_check(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_exec(args: argparse.Namespace) -> int:
+    from docforge.backend import BackendError, exec_run
+
+    try:
+        config = load_config(args.config) if Path(args.config).is_file() else None
+        if config is None and not args.dry_run:
+            raise BackendError(f"{args.config} not found; the backend needs its backend section")
+        outcomes = exec_run(args.out, args.repo, config, only=args.stage, dry_run=args.dry_run, repair=args.repair)
+    except (ConfigError, BackendError, OSError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    failed = False
+    for o in outcomes:
+        line = f"{o.stage}: {o.status.replace('_', ' ')}"
+        if o.calls:
+            line += f", {o.calls} call(s), ${o.cost_usd:.4f}"
+        if o.estimate_usd is not None and o.status == "dry_run":
+            line += f", worst case ${o.estimate_usd:.2f}"
+        print(line + (f" ({o.message})" if o.message else ""))
+        for f in o.files:
+            print(f"    {f}")
+        if o.notes:
+            print(f"    notes: {o.notes}")
+        failed = failed or o.status == "failed"
+    if args.dry_run:
+        print("Dry run: no API call was made. Estimates are upper bounds from a local token estimate.")
+    return 1 if failed else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="docforge")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -862,6 +898,14 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--source-pr", metavar="OWNER/REPO#N", help="the product pull request this run documents")
     start.add_argument("--source-state", choices=("open", "merged"), help="state of --source-pr (default open)")
     start.set_defaults(func=_run_start)
+    rexec = run_sub.add_parser("exec", help="run the stages through the Anthropic API (needs a backend section)")
+    rexec.add_argument("out", type=Path)
+    rexec.add_argument("--repo", type=Path, default=Path("."), help="root that run.json source paths are relative to")
+    rexec.add_argument("--config", default="docforge.yaml")
+    rexec.add_argument("--stage", type=int, help="run only this stage number")
+    rexec.add_argument("--dry-run", action="store_true", help="write the requests and estimates; call nothing")
+    rexec.add_argument("--repair", type=int, default=0, help="repair turns after failed checks (0-2, default 0)")
+    rexec.set_defaults(func=_run_exec)
     status = run_sub.add_parser("status", help="show which stages have their files and what comes next")
     status.add_argument("out", type=Path)
     status.set_defaults(func=_run_status)

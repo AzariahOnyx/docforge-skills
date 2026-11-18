@@ -82,6 +82,10 @@ def render_body(
         lines.append(f"| {s['id']} | `{s['path']}` | `{s['sha256'][:12]}...` | {s.get('authority', 'unconfirmed')} | "
                      f"{source_origin(s)} |")
 
+    backend = manifest.get("backend")
+    if backend:
+        lines += ["", f"Drafted through the Anthropic API: {backend['calls']} call(s), models "
+                      f"{', '.join(backend.get('models') or ['unknown'])}, estimated cost ${backend['cost_usd']:.2f}."]
     pack = manifest.get("pack")
     if pack:
         lines += ["", f"House pack: `{pack['name']}` {pack['version']} (sha256 `{pack['sha256'][:12]}...`). "

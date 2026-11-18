@@ -115,7 +115,7 @@ Neither checker proves that a cited passage supports a drafted claim. The Proofr
 
 ## Engine (in progress)
 
-DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, backfill evaluation, read-only Jira and Confluence sources, Slack notifications, and house packs. Nothing connects to an AI model yet, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
+DocForge is adding an engine that will turn product changes into documentation pull requests for human review. See the [implementation plan](IMPLEMENTATION_PLAN.md). So far it contains the `docforge.yaml` configuration format and its validator, the evidence core behind `scripts/validate_run.py`, a read-only index and search for existing docs, run tooling, GitHub pull request triggers, a PRD-vs-code check, a claim gate with draft docs pull requests, a review loop, Vale style linting, learned rules, backfill evaluation, read-only Jira and Confluence sources, Slack notifications, house packs, and an optional Anthropic API backend. Nothing calls an AI model unless a `backend` section is configured, and nothing is opened, merged, or published without a person's approval unless a policy rule explicitly allows it.
 
 The engine needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -230,6 +230,16 @@ uv run docforge run start --prd demo/mock-prd.md --out output/my-run --audience 
 ```
 
 A pack is a folder with a `pack.yaml` that lists its files. `run start` checks the pack, copies the files the stages and `docforge lint` use into the run's `pack/` folder, and records the pack's name, version, and hash in `run.json`. The Analyzer, Drafter, and Proofreader work orders, and revision orders, name the files that apply to each deliverable. Add `--product <key>` to include that product's references. A pack's Vale styles join `docforge lint`. Pack material shapes format and style; it never overrides the sources and is never evidence. Keep real packs in a private repository.
+
+Run the stages through the Anthropic API instead of a Claude Code session:
+
+```bash
+uv sync --extra api
+uv run docforge run exec output/my-run --dry-run
+uv run docforge run exec output/my-run --config docforge.yaml
+```
+
+`--dry-run` writes each stage's request and a worst-case cost estimate to the run's `backend/dry-run/` folder and calls nothing. A real run needs a `backend` section in `docforge.yaml` and an API key in the environment variable it names (or an `ant auth login` profile); the key is never written to run files or logs. Each stage is one streaming call whose answer may only name that stage's output files. After each stage DocForge runs its checks, and `--repair 1` gives the model one chance to fix what failed. The Proofreader runs in a fresh call and is recorded as an independent reviewer. Every call is recorded in `backend/calls.jsonl` with the model, token usage, and estimated cost, and a run stops before any call that could take it past `max_cost_usd`.
 
 Fetch a Jira issue or a Confluence page as a source file, then use it in a run:
 

@@ -42,7 +42,7 @@ jobs:
         with:
           version: "0.13.8"
       - name: Install the engine and its dependencies
-        run: uv sync --locked
+        run: uv sync --locked --extra api
       - name: Install Vale (pinned, checksum-verified)
         env:
           VALE_VERSION: "3.27.0"

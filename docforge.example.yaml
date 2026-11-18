@@ -26,6 +26,15 @@ packs:                              # house style; keep real packs in a private 
   house:
     path: ../my-docs-pack           # folder with pack.yaml, relative to this file
 
+backend:                            # optional: run stages through the Anthropic API (costs money)
+  model: claude-opus-5-5
+  effort: high
+  api_key_env: ANTHROPIC_API_KEY    # name of the environment variable, never the key
+  max_cost_usd: 5                   # a run stops before a call that could exceed this
+  stages:
+    proofreader:
+      effort: high                  # per-stage overrides: model, effort, max_tokens
+
 triggers:
   product-prs:
     trigger_type: github_pr

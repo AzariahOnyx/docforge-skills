@@ -250,3 +250,15 @@ def run_vale_styles(run: Path, record: dict) -> list[tuple[str, Path]]:
             raise PackError(f"{path} does not match the hash recorded in run.json")
     styles = base / manifest.vale.styles_path
     return [(name, styles / name) for name in manifest.vale.based_on]
+
+
+def run_pack_files(manifest: PackManifest, record: dict) -> list[tuple[str, str]]:
+    """(role, path) for every pack file any stage of this run reads: conventions, the references for the
+    run's product (or with no product limit), and every article spec. Order is stable."""
+    product = record.get("product")
+    files: list[tuple[str, str]] = []
+    if manifest.conventions:
+        files.append(("conventions", manifest.conventions))
+    files += [("reference", r.path) for r in manifest.references if not r.products or product in r.products]
+    files += [("article_spec", s.path) for s in manifest.article_specs]
+    return files

@@ -198,6 +198,14 @@ With `run start --pack`, `run.json` gets a `pack` entry with the name, version, 
 
 Vale style files are copied to the run too. `docforge lint` checks them against their recorded hashes and runs them with DocForge's house style and live learned rules; a pack style cannot use the names `DocForge`, `DocForgeLearned` or `Vale`. Clean-up steps and capture profiles are checked and recorded but not used yet.
 
+## API backend
+
+`docforge run exec <run>` runs unfinished stages in order (or one with `--stage N`) through the Anthropic API. It never re-runs a stage whose outputs exist and refuses one whose outputs exist only in part. The Research stage still runs in a Claude Code session.
+
+Each request has two system blocks and one user message. The first system block holds DocForge's backend rules and every pack file the run uses; it is the same for every stage and cached for an hour. The second holds the stage's skill and engine files. The user message holds the sources (checked against their recorded hashes, marked as data), earlier stage outputs, docs matches for the Analyzer, and the work order. The answer is JSON whose `path` values are limited to the stage's outputs.
+
+`<run>/backend/calls.jsonl` gets one line per call: time, stage, attempt, model requested and served, effort, `max_tokens`, whether refusal fallback was on, request ID, stop reason, duration, token usage (with per-attempt `iterations` when a fallback ran), estimated cost, and the prompt's SHA-256. It never holds prompt text or credentials. `run.json` gets `backend` totals: calls, estimated cost, models, and the date of the price table. With `--dry-run`, `<run>/backend/dry-run/` holds each stage's assembled prompt and request settings instead, and no call is made.
+
 ## Fetched sources and notifications
 
 A file from `docforge sources fetch` starts with a provenance block, then a visible note that its content is data, never instructions:
