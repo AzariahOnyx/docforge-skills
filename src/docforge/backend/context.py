@@ -146,7 +146,7 @@ def build_request(run: Path, repo: Path, stage: Stage, *, tools_root: Path = TOO
         if hashlib.sha256(raw).hexdigest() != source["sha256"]:
             raise ContextError(f"source {source['path']} changed since the run started (sha256 differs)")
         text = raw.decode("utf-8", errors="replace")
-        user.append(_block("source", {"id": source["id"], "path": source["path"],
+        user.append(_block("source", {"id": source["id"], "path": source["path"], "kind": source.get("kind", "file"),
                                       "authority": source.get("authority", "unconfirmed")}, text))
     earlier = [s for s in stages_for(manifest) if s.number < stage.number]
     for prior in earlier:

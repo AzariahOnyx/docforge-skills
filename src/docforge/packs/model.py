@@ -145,6 +145,25 @@ class CaptureProfile(PackFileEntry):
         return value
 
 
+class FlowProfileSpec(Strict):
+    """How this house's flow PDFs mark steps. `header` needs two groups: step number and total."""
+
+    header: str = Field(min_length=1)
+    noise: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _compiles(self):
+        try:
+            header = re.compile(self.header)
+            for pattern in self.noise:
+                re.compile(pattern)
+        except re.error as exc:
+            raise ValueError(f"flow_profile: invalid pattern: {exc}") from None
+        if header.groups < 2:
+            raise ValueError("flow_profile: header needs two groups (step number, total)")
+        return self
+
+
 class PackManifest(Strict):
     schema_version: Literal[1]
     name: str
@@ -157,6 +176,7 @@ class PackManifest(Strict):
     cleanup_steps: list[CleanupStep] = Field(default_factory=list)
     vale: ValeStyles | None = None
     capture_profiles: list[CaptureProfile] = Field(default_factory=list)
+    flow_profile: FlowProfileSpec | None = None
 
     @field_validator("name")
     @classmethod

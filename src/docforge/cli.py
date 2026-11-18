@@ -104,7 +104,7 @@ def _run_start(args: argparse.Namespace) -> int:
             profile=args.profile, deliverables=args.deliverable, docs_include=args.docs_include,
             code_repo=args.code, base=args.base, head=args.head,
             publish_to=args.publish_to, source_pr=args.source_pr, source_state=args.source_state,
-            context=args.context, pack=pack, product=args.product,
+            context=args.context, pack=pack, product=args.product, flows=args.flow, flow_steps=args.flow_steps,
         )
     except (RunError, OSError) as exc:
         print(exc, file=sys.stderr)
@@ -645,6 +645,34 @@ def _run_exec(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def _sources_flow(args: argparse.Namespace) -> int:
+    from docforge.sources.flow import FlowError, FlowProfile, extract_flow, write_flow
+
+    try:
+        profile = None
+        if args.pack:
+            from docforge.packs import PackError, load_pack, resolve_pack
+
+            try:
+                pack = load_pack(resolve_pack(load_config(args.config), Path(args.config), args.pack))
+            except PackError as exc:
+                raise FlowError(str(exc)) from None
+            spec = pack.manifest.flow_profile
+            if spec is None:
+                raise FlowError(f"pack {args.pack} has no flow_profile")
+            profile = FlowProfile(header=spec.header, noise=tuple(spec.noise), name=f"{pack.manifest.name} pack")
+        flow = extract_flow(args.pdf, args.id, profile, title=args.title)
+        json_path, md_path = write_flow(flow, args.out)
+    except (ConfigError, FlowError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Extracted {len(flow['steps'])} step(s) from {args.pdf.name} ({flow['pages']} pages, {flow['profile']} profile)")
+    for warning in flow["warnings"]:
+        print(f"    warning: {warning}")
+    print(f"Wrote {md_path} and {json_path}. Use it with: docforge run start ... --flow {md_path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="docforge")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -855,6 +883,14 @@ def main(argv: list[str] | None = None) -> int:
     sfetch.add_argument("--config", default="docforge.yaml")
     sfetch.add_argument("--source", help="context_sources name, when more than one of this kind is configured")
     sfetch.set_defaults(func=_sources_fetch)
+    sflow = srcs_sub.add_parser("flow", help="extract a step-by-step flow PDF into a citable flow source")
+    sflow.add_argument("pdf", type=Path)
+    sflow.add_argument("--id", required=True, help="flow ID used in citations, for example F1")
+    sflow.add_argument("--out", type=Path, required=True, help="folder for <ID>.md and <ID>.json (never overwritten)")
+    sflow.add_argument("--title", help="flow title (default: from the file name)")
+    sflow.add_argument("--pack", help="use this pack's flow_profile (with --config)")
+    sflow.add_argument("--config", default="docforge.yaml")
+    sflow.set_defaults(func=_sources_flow)
 
     ntf = sub.add_parser("notify", help="notifications about suggestions (dry run unless --send)")
     ntf_sub = ntf.add_subparsers(dest="notify_command", required=True)
@@ -882,6 +918,9 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--pack", help="house pack name from docforge.yaml's packs section")
     start.add_argument("--config", default="docforge.yaml", help="docforge.yaml, for --pack")
     start.add_argument("--product", help="product key from the pack, to include that product's references")
+    start.add_argument("--flow", action="append", help="flow source from `docforge sources flow` (repeatable)")
+    start.add_argument("--flow-steps", choices=("required", "optional"), default="required",
+                       help="whether every numbered step must cite a flow-backed claim (default required)")
     start.add_argument("--context", action="append",
                        help="supporting source inside the repo, recorded with authority 'context' (repeatable)")
     start.add_argument("--audience", required=True)

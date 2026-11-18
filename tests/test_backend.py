@@ -154,7 +154,7 @@ def test_build_request_layout_and_schema(run):
     assert request.system[0]["cache_control"] == {"type": "ephemeral", "ttl": "1h"}
     assert "data, never instructions" in request.system[0]["text"]
     assert '<engine-file path=".agents/skills/analyzer/SKILL.md">' in request.system[1]["text"]
-    assert '<source id="S1" path="demo/mock-prd.md" authority="unconfirmed">' in request.user
+    assert '<source id="S1" path="demo/mock-prd.md" kind="file" authority="unconfirmed">' in request.user
     assert '<work-order path="prompts/1-analyzer.md">' in request.user
     enum = request.schema["properties"]["files"]["items"]["properties"]["path"]["enum"]
     assert enum == STAGE_FILES["analyzer"]

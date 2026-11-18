@@ -47,3 +47,9 @@ vale:
 capture_profiles:
   - name: demo-app
     path: capture/profiles.yml
+flow_profile:                     # fictional exporter: "Step 3/7" or a bare "3/7", plus a footer
+  header: '^(?:Step\s+)?(\d+)\s*/\s*(\d+)$'
+  noise:
+    - '^\d+\s*/\s*\d+$'           # page numbers after the header
+    - '^Powered by'
+    - '^Next$'

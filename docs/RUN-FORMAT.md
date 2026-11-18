@@ -206,6 +206,38 @@ Each request has two system blocks and one user message. The first system block 
 
 `<run>/backend/calls.jsonl` gets one line per call: time, stage, attempt, model requested and served, effort, `max_tokens`, whether refusal fallback was on, request ID, stop reason, duration, token usage (with per-attempt `iterations` when a fallback ran), estimated cost, and the prompt's SHA-256. It never holds prompt text or credentials. `run.json` gets `backend` totals: calls, estimated cost, models, and the date of the price table. With `--dry-run`, `<run>/backend/dry-run/` holds each stage's assembled prompt and request settings instead, and no call is made.
 
+## Flow sources
+
+`docforge sources flow <pdf> --id F1 --out <folder>` reads a step-per-page PDF. A page is a step when a line matches the profile's header pattern (default `Step 3/7` or `Step 3 of 7`); the step's action runs to its first sentence end and the rest of the page is its explanation, without noise lines such as page numbers. It writes `F1.json` (steps with page, action, explanation and the position of the page's largest image, for screenshot capture later) and `F1.md`:
+
+```markdown
+<!-- docforge-source
+kind: flow
+id: F1
+title: Create an Alert
+version: 1a2b3c4d5e6f
+pdf: create-an-alert.pdf
+pdf_sha256: <64 hex characters>
+steps: 4
+fetched_at: 2026-11-18T10:00:00+00:00
+-->
+
+## Step 1 of 4
+
+Click New alert on the Alerts board.
+```
+
+`run start --flow F1.md` adds a source with `"kind": "flow"`, its `origin` (PDF name and hash, step count), and `"copy": "flows/F1.md"`, a copy kept in the run so the gate and checks work wherever the run folder goes. `run.json` also gets `"flow_steps": "required"` (or `"optional"`).
+
+Citations: `[F1#step3]` or `[F1#step3-5]`. `scripts/check_outputs.py` and `scripts/validate_run.py` reject a citation of a step that does not exist, a step citation of a source that is not a flow, and a run copy whose hash does not match. A flow evidence row:
+
+```json
+{"claim_id": "C03", "status": "included", "destinations": ["guides/create-alert.md"],
+ "kind": "flow", "source_id": "F1", "step": 3, "quote": "Enter a Threshold"}
+```
+
+The quote must appear in that step. With `flow_steps` required, the claim gate treats a claim as flow-backed when its row in `analysis/HANDOVER.md` cites an existing flow step (default profile) or it has a flow evidence row (custom profile), and every numbered list item in the pages must cite at least one flow-backed claim. `qa/gate.json` and the pull request body report how many numbered steps were backed.
+
 ## Fetched sources and notifications
 
 A file from `docforge sources fetch` starts with a provenance block, then a visible note that its content is data, never instructions:

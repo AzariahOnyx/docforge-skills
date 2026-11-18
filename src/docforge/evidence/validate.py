@@ -13,7 +13,9 @@ import re
 from typing import Mapping, Optional
 
 from .code import is_git_checkout, verify_code_evidence
+from .flows import check_citation, flow_steps
 from .models import (
+    FlowEvidence,
     CodeEvidence,
     EvidenceStatus,
     QuoteEvidence,
@@ -23,7 +25,7 @@ from .models import (
     parse_manifest,
 )
 
-SOURCE_REF = re.compile(r"\[([A-Za-z][\w-]*)#(L\d+(?:-L?\d+)?|p\d+(?:-\d+)?|section:[^\]]+)\]")
+SOURCE_REF = re.compile(r"\[([A-Za-z][\w-]*)#(L\d+(?:-L?\d+)?|p\d+(?:-\d+)?|step\d+(?:-\d+)?|section:[^\]]+)\]")
 LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 PLACEHOLDER = re.compile(r"\b(?:TODO|TBD|Lorem ipsum)\b|\{\{[^}]+\}\}", re.I)
 BAD_LINK = re.compile(r"\b(?:click here|read more)\b", re.I)
@@ -113,7 +115,15 @@ def validate(run: Path, repo: Path, code_roots: Optional[Mapping[str, Path]] = N
                 if sid not in source_map:
                     errors.append(f"{name}: unknown source ID {sid}")
                     continue
-                if locator.startswith("L"):
+                if locator.startswith("step"):
+                    steps = flow_steps(source_map[sid].read_text(encoding="utf-8"))
+                    if not steps:
+                        errors.append(f"{name}: [{sid}#{locator}] cites steps, but {sid} is not a flow source")
+                    else:
+                        problem = check_citation(steps, locator)
+                        if problem:
+                            errors.append(f"{name}: [{sid}#{locator}]: {problem}")
+                elif locator.startswith("L"):
                     match = re.fullmatch(r"L(\d+)(?:-L?(\d+))?", locator)
                     first = int(match.group(1))
                     last = int(match.group(2) or first)
@@ -143,6 +153,17 @@ def validate(run: Path, repo: Path, code_roots: Optional[Mapping[str, Path]] = N
                         errors.append(f"{cid}: missing source quotation")
                     elif _normalize(row.quote) not in _normalize(source_map[row.source_id].read_text(encoding="utf-8")):
                         errors.append(f"{cid}: quotation not found in source")
+                elif isinstance(row, FlowEvidence):
+                    if row.source_id not in source_map:
+                        errors.append(f"{cid}: unknown flow source {row.source_id}")
+                    else:
+                        steps = flow_steps(source_map[row.source_id].read_text(encoding="utf-8"))
+                        if not steps:
+                            errors.append(f"{cid}: {row.source_id} is not a flow source")
+                        elif row.step not in steps:
+                            errors.append(f"{cid}: {row.source_id} has no step {row.step}")
+                        elif _normalize(row.quote) not in _normalize(steps[row.step]):
+                            errors.append(f"{cid}: quotation not found in {row.source_id} step {row.step}")
                 elif isinstance(row, CodeEvidence):
                     root = code_roots.get(row.repo)
                     if root is None:

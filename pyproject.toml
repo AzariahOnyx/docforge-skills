@@ -16,6 +16,9 @@ docforge = "docforge.cli:main"
 api = [
     "anthropic>=1,<2",
 ]
+flows = [
+    "pdfplumber>=0.11,<1",
+]
 
 [dependency-groups]
 dev = [

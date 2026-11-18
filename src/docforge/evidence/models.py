@@ -45,6 +45,7 @@ class EvidenceStatus(str, Enum):
 class EvidenceKind(str, Enum):
     QUOTE = "quote"
     CODE = "code"
+    FLOW = "flow"
 
 
 class ReviewMethod(str, Enum):
@@ -203,7 +204,21 @@ class CodeEvidence:
         return f"L{self.start_line}-L{self.end_line}"
 
 
-Evidence = Union[QuoteEvidence, CodeEvidence]
+@dataclass(frozen=True)
+class FlowEvidence:
+    """A step of a flow source listed in run.json, with text quoted from that step."""
+
+    claim_id: str
+    status: Optional[EvidenceStatus]
+    destinations: Any
+    source_id: str
+    step: int
+    quote: str
+    claim_class: Optional[ClaimClass] = None
+    kind: EvidenceKind = field(default=EvidenceKind.FLOW, init=False)
+
+
+Evidence = Union[QuoteEvidence, CodeEvidence, FlowEvidence]
 
 
 def parse_line_range(value: Any) -> Optional[tuple[int, int]]:
@@ -268,6 +283,18 @@ def parse_evidence(data: Any) -> tuple[list[Evidence], list[str]]:
             evidence = _parse_code(row, cid, status, destinations, claim_class, errors)
             if evidence is not None:
                 rows.append(evidence)
+        elif kind == EvidenceKind.FLOW.value:
+            source_id, step, quote = row.get("source_id"), row.get("step"), row.get("quote")
+            bad = []
+            if not isinstance(source_id, str) or not re.fullmatch(r"F[1-9][0-9]{0,2}", source_id):
+                bad.append(f"{cid}: flow evidence source_id must be a flow ID such as F1")
+            if not isinstance(step, int) or isinstance(step, bool) or step < 1:
+                bad.append(f"{cid}: flow evidence step must be a positive whole number")
+            if not isinstance(quote, str) or not quote.strip():
+                bad.append(f"{cid}: flow evidence needs a quote from the step")
+            errors.extend(bad)
+            if not bad:
+                rows.append(FlowEvidence(cid, status, destinations, source_id, step, quote, claim_class))
         else:
             errors.append(f"{cid}: unknown evidence kind {kind!r}")
     return rows, errors

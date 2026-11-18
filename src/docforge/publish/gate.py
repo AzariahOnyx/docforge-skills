@@ -26,6 +26,7 @@ from .markers import statements
 BLOCKED_STATUSES = {"conflicting", "unknown", "needs_engineering"}
 COVERAGE_ROW = re.compile(r"^\|\s*(C\d+[A-Z]?)\s*\|\s*([A-Z]+)\s*\|\s*([^|]*)\|", re.M)
 CLAIM_IN_TEXT = re.compile(r"\bC\d+[A-Z]?\b")
+ORDERED_STEP = re.compile(r"^ {0,3}\d+[.)]\s")
 
 
 class GateIssue(BaseModel):
@@ -49,6 +50,9 @@ class GateResult(BaseModel):
     exemptions: list[Exemption] = Field(default_factory=list)
     errors: list[GateIssue] = Field(default_factory=list)
     claims_cited: dict[str, list[str]] = Field(default_factory=dict)
+    # Numbered steps checked for flow backing, and how many were backed (None when the rule is off).
+    flow_steps: int | None = None
+    flow_backed_steps: int | None = None
 
 
 class EvidenceRules(BaseModel):
@@ -59,6 +63,8 @@ class EvidenceRules(BaseModel):
     allowed: dict[str, list[str]]
     # claim -> cross-source status, for claims that cannot back a statement
     blocked: dict[str, str] = Field(default_factory=dict)
+    # Claims backed by a flow step. None: numbered steps need no flow backing.
+    flow_backed: list[str] | None = None
 
 
 class GateError(Exception):
@@ -113,13 +119,41 @@ def rules_for_run(run: Path) -> EvidenceRules:
         except (ValueError, KeyError, TypeError) as exc:
             raise GateError(f"cannot read analysis/cross-source.json: {exc}") from None
 
-    return EvidenceRules(known=sorted(known), allowed={k: sorted(v) for k, v in allowed.items()}, blocked=blocked)
+    flow_backed = _flow_backed(run, manifest) if manifest.get("flow_steps") == "required" else None
+    return EvidenceRules(known=sorted(known), allowed={k: sorted(v) for k, v in allowed.items()}, blocked=blocked,
+                         flow_backed=flow_backed)
+
+
+def _flow_backed(run: Path, manifest: dict) -> list[str]:
+    """Claims backed by a flow step that exists: a flow citation in the claim's HANDOVER row (default
+    profile) or a flow evidence row (custom profile)."""
+    from docforge.evidence.flows import FLOW_CITATION, check_citation, run_flows
+
+    flows, problems = run_flows(run, manifest.get("sources", []))
+    if problems:
+        raise GateError("; ".join(problems))
+    backed: set[str] = set()
+    if manifest.get("profile") == "custom":
+        rows = json.loads((run / "analysis" / "evidence.json").read_text(encoding="utf-8"))
+        for row in rows if isinstance(rows, list) else []:
+            if isinstance(row, dict) and row.get("kind") == "flow" and row.get("step") in flows.get(row.get("source_id"), {}):
+                backed.add(row["claim_id"])
+    else:
+        handover = run / "analysis" / "HANDOVER.md"
+        for line in handover.read_text(encoding="utf-8").splitlines() if handover.is_file() else []:
+            citations = FLOW_CITATION.findall(line)
+            if any(fid in flows and check_citation(flows[fid], loc) is None for fid, loc in citations):
+                backed |= set(CLAIM_IN_TEXT.findall(line))
+    return sorted(backed)
 
 
 def check_pages(pages: dict[str, str], rules: EvidenceRules, ledger: str = "the coverage ledger") -> GateResult:
     """Gate pages given as {path: markdown}."""
     known, blocked = set(rules.known), rules.blocked
+    flow_backed = None if rules.flow_backed is None else set(rules.flow_backed)
     result = GateResult(passed=True, pages=sorted(pages))
+    if flow_backed is not None:
+        result.flow_steps = result.flow_backed_steps = 0
     for path, text in sorted(pages.items()):
         allowed = set(rules.allowed.get(path, []))
         cited: set[str] = set()
@@ -137,6 +171,13 @@ def check_pages(pages: dict[str, str], rules: EvidenceRules, ledger: str = "the 
                                                message=f"statement has no evidence marker: \"{s.snippet}\""))
             else:
                 result.cited += 1
+                if flow_backed is not None and s.kind == "list" and ORDERED_STEP.match(s.lines[0]):
+                    result.flow_steps += 1
+                    if flow_backed & set(s.claims):
+                        result.flow_backed_steps += 1
+                    else:
+                        result.errors.append(GateIssue(path=path, line=s.line, message=(
+                            f"numbered step is not backed by a flow step (cites {', '.join(s.claims)}): \"{s.snippet}\"")))
                 for cid in s.claims:
                     cited.add(cid)
                     if cid not in known:

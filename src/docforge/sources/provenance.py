@@ -22,8 +22,8 @@ import re
 
 OPEN = "<!-- docforge-source"
 CLOSE = "-->"
-KINDS = {"jira": "Jira issue", "confluence": "Confluence page"}
-FIELDS = ("kind", "id", "title", "url", "version", "updated", "space", "fetched_at")
+KINDS = {"jira": "Jira issue", "confluence": "Confluence page", "flow": "Flow PDF"}
+FIELDS = ("kind", "id", "title", "url", "version", "updated", "space", "pdf", "pdf_sha256", "steps", "fetched_at")
 _SAFE = re.compile(r"[\r\n]+")
 
 

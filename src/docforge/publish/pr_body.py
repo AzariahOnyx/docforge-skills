@@ -98,6 +98,8 @@ def render_body(
     lines += ["", "## Claim gate", "",
               f"**{'PASS' if gate.passed else 'FAIL'}**: {gate.statements} statement(s), {gate.cited} backed by claims, "
               f"{len(gate.exemptions)} exempt, {len(gate.errors)} error(s)."]
+    if gate.flow_steps is not None:
+        lines += ["", f"Numbered steps backed by flow steps: {gate.flow_backed_steps}/{gate.flow_steps}."]
     if gate.exemptions:
         lines += ["", "Exempt statements (no product fact claimed; please confirm):", ""]
         lines += [f"- `{e.path}` line {e.line} ({e.reason}): {e.text}" for e in gate.exemptions]

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check the structure of one generated documentation set.
 
-This gate checks files, headings, links, placeholders, and Markdown source
-line locators. A source-first
+This gate checks files, headings, links, placeholders, Markdown source
+line locators, and flow step citations such as [F1#step3]. A source-first
 Proofreader must still check the accuracy and completeness of product claims.
 """
 
@@ -10,6 +10,9 @@ from pathlib import Path
 import re
 import sys
 from urllib.parse import unquote
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from docforge.evidence.flows import FLOW_CITATION, check_citation, run_flows  # noqa: E402  (standard library only)
 
 
 REQUIRED = {
@@ -50,6 +53,33 @@ def check_source_lines(relative: str, body: str, errors: list[str]) -> None:
             errors.append(f"{relative}: invalid source lines {match.group(0)}")
         elif not any(lines[index - 1].strip() for index in range(first, last + 1)):
             errors.append(f"{relative}: source citation points only to blank lines: {match.group(0)}")
+
+
+def load_flows(root: Path, errors: list[str]) -> dict:
+    """{flow ID: steps} from the flow copies in the run's run.json (none if there is no run.json)."""
+    manifest_path = root / "run.json"
+    if not manifest_path.is_file():
+        return {}
+    try:
+        import json
+
+        sources = json.loads(manifest_path.read_text(encoding="utf-8")).get("sources", [])
+    except (OSError, ValueError) as exc:
+        errors.append(f"run.json: cannot read ({exc})")
+        return {}
+    flows, problems = run_flows(root, sources)
+    errors.extend(f"run.json: {p}" for p in problems)
+    return flows
+
+
+def check_flow_citations(relative: str, body: str, flows: dict, errors: list[str]) -> None:
+    for flow_id, locator in FLOW_CITATION.findall(body):
+        if flow_id not in flows:
+            errors.append(f"{relative}: [{flow_id}#{locator}] names a flow the run does not have")
+            continue
+        problem = check_citation(flows[flow_id], locator)
+        if problem:
+            errors.append(f"{relative}: [{flow_id}#{locator}]: {problem}")
 
 
 def main() -> int:
@@ -151,7 +181,9 @@ def main() -> int:
             # proofreader reviews those references rather than rejecting them.
             warnings.append(f"analysis/CHANGE-IMPACT.md: check prior-source reference {claim}")
 
+    flows = load_flows(root, errors)
     for relative, body in texts.items():
+        check_flow_citations(relative, body, flows, errors)
         if relative.startswith(("analysis/", "qa/")):
             check_source_lines(relative, body, errors)
     if impact_path.is_file():

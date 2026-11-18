@@ -155,6 +155,8 @@ class ReviewApp:
             verdict = "<span class=\"ok\">PASS</span>" if gate["passed"] else "<span class=\"bad\">FAIL</span>"
             parts.append(f"<h2>Claim gate</h2><p>{verdict}: {gate['statements']} statements, {gate['cited']} backed "
                          f"by claims, {len(gate['exemptions'])} exempt, {len(gate['errors'])} errors.</p>")
+            if gate.get("flow_steps") is not None:
+                parts.append(f"<p>Numbered steps backed by flow steps: {gate['flow_backed_steps']}/{gate['flow_steps']}.</p>")
             if gate["exemptions"]:
                 parts.append("<table><tr><th>Page</th><th>Line</th><th>Reason</th><th>Text</th></tr>" + "".join(
                     f"<tr><td>{escape(e['path'])}</td><td>{e['line']}</td><td>{escape(e['reason'])}</td>"

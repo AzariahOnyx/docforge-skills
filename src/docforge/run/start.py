@@ -51,7 +51,7 @@ def _existing_docs(repo: Path, docs: Path | None, sources: list[dict], include: 
     index = build_index(docs, collection=include)
     queries = []
     for source in sources:
-        if source.get("authority") == "context":
+        if source.get("authority") == "context" or source.get("kind") == "flow":
             continue
         text = (repo / source["path"]).read_text(encoding="utf-8")
         for query in _queries(text, source["path"]):
@@ -70,11 +70,36 @@ def _existing_docs(repo: Path, docs: Path | None, sources: list[dict], include: 
 def _source_note(source: dict) -> str:
     notes = []
     origin = source.get("origin")
-    if origin:
+    if source.get("kind") == "flow":
+        notes.append(f"flow from {origin.get('pdf', 'a PDF')}, {origin.get('steps', '?')} steps; "
+                     f"cite steps as [{source['id']}#step3]")
+    elif origin:
         notes.append(f"fetched from {source['kind']} {origin['id']}, version {origin.get('version', 'unknown')}")
     if source.get("authority") == "context":
         notes.append("context only: background, not a requirement source; never cite it alone for product behavior")
     return f" ({'; '.join(notes)})" if notes else ""
+
+
+def _flow_lines(stage: str, flows: list[str], manifest: dict) -> list[str]:
+    ids = ", ".join(flows)
+    required = manifest.get("flow_steps") == "required"
+    custom = manifest["profile"] == "custom"
+    lines = ["", "## Flow evidence", "",
+             f"Flow sources ({ids}) are step-by-step recordings of the product. Cite a step as `[F1#step3]` "
+             "(or `[F1#step3-5]`); the step must exist in the flow source."]
+    if stage == "analyzer":
+        lines.append("- Put the flow citation in the same claim row as the claim it supports, next to any PRD "
+                     "citation. A claim about a procedure step needs the flow step that shows it.")
+        if custom:
+            lines.append("- In `analysis/evidence.json`, back such a claim with a row "
+                         '`{"kind": "flow", "source_id": "F1", "step": 3, "quote": "<exact text from that step>"}`.')
+    if stage == "drafter" and required:
+        lines.append("- Every numbered procedure step must carry an evidence marker that names at least one claim "
+                     "backed by a flow step. The claim gate rejects steps backed only by PRD claims.")
+    if stage == "proofreader":
+        lines.append("- Check each procedure step against the flow step its claim cites: same action, same UI "
+                     "labels, same order. Report any step the flow does not show.")
+    return lines
 
 
 def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pack=None,
@@ -126,6 +151,9 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pa
             f"3. Run `uv run docforge research check {out_label} --code-root {code['repo']}=<checkout>`. It writes "
             "`analysis/CROSS-SOURCE.md` and adds the cross-source questions to the clarification register.",
         ]
+    flows = [x["id"] for x in manifest["sources"] if x.get("kind") == "flow"]
+    if flows and stage.key in ("analyzer", "drafter", "proofreader"):
+        lines += _flow_lines(stage.key, flows, manifest)
     if pack is not None:
         from docforge.packs import stage_lines
 
@@ -148,10 +176,12 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pa
         if learned:
             lines += ["- Follow the learned guidance below. It was approved from earlier review feedback; "
                       "it never overrides the sources."] + learned
-    if stage.key == "drafter" and manifest.get("publish"):
+    gated = manifest.get("publish") or manifest.get("flow_steps") == "required"
+    if stage.key == "drafter" and gated:
         lines += [
-            "- These pages will be published to "
-            f"`{manifest['publish']['collection']}` and must pass the claim gate (`uv run docforge gate {out_label}`).",
+            (f"- These pages will be published to `{manifest['publish']['collection']}` and must pass the claim "
+             f"gate (`uv run docforge gate {out_label}`)." if manifest.get("publish") else
+             f"- These pages must pass the claim gate (`uv run docforge gate {out_label}`), which checks flow-backed steps."),
             "- End every paragraph, list item and table row with an invisible marker: "
             "`<!-- evidence: C03, C07 -->` naming the claims it rests on, each INCLUDED for that page in "
             "`analysis/COVERAGE.md`. Text that states no product fact gets `<!-- evidence: none (reason) -->`.",
@@ -182,6 +212,8 @@ def start_run(
     context: list[str] | None = None,
     pack: Path | None = None,
     product: str | None = None,
+    flows: list[str] | None = None,
+    flow_steps: str = "required",
 ) -> Path:
     """Create a new run folder. Never overwrites: fails if `out` exists."""
     repo = repo.resolve()
@@ -231,6 +263,8 @@ def start_run(
     elif source_state is not None:
         raise RunError("--source-state needs --source-pr")
 
+    if flow_steps not in ("required", "optional"):
+        raise RunError("--flow-steps must be required or optional")
     sources = []
     seen = set()
     entries = [(p, "unconfirmed") for p in prds] + [(p, "context") for p in context or []]
@@ -239,18 +273,37 @@ def start_run(
         if rel in seen:
             raise RunError(f"source given twice: {rel}")
         seen.add(rel)
+        origin = read_provenance(repo / rel)
+        if origin and origin.get("kind") == "flow":
+            raise RunError(f"{rel} is a flow source; pass it with --flow")
         entry = {
             "id": f"S{i}",
             "path": rel,
             "sha256": hashlib.sha256((repo / rel).read_bytes()).hexdigest(),
             "authority": authority,
         }
-        origin = read_provenance(repo / rel)
         entry["kind"] = origin.pop("kind") if origin else "file"
         if origin:
             entry["origin"] = {k: origin[k] for k in ("id", "title", "url", "version", "updated", "space", "fetched_at")
                                if k in origin}
         sources.append(entry)
+    for path in flows or []:
+        rel = _repo_relative(repo, path)
+        if rel in seen:
+            raise RunError(f"source given twice: {rel}")
+        seen.add(rel)
+        origin = read_provenance(repo / rel)
+        if not origin or origin.get("kind") != "flow":
+            raise RunError(f"{rel} is not a flow source; create it with `docforge sources flow`")
+        fid = origin.get("id", "")
+        if not re.fullmatch(r"F[1-9][0-9]{0,2}", fid) or any(s["id"] == fid for s in sources):
+            raise RunError(f"{rel}: flow ID {fid!r} is invalid or used twice")
+        sources.append({
+            "id": fid, "path": rel, "sha256": hashlib.sha256((repo / rel).read_bytes()).hexdigest(),
+            "authority": "unconfirmed", "kind": "flow", "copy": f"flows/{fid}.md",
+            "origin": {k: origin[k] for k in ("title", "version", "pdf", "pdf_sha256", "steps", "fetched_at")
+                       if k in origin},
+        })
     manifest = {
         "schema_version": 1,
         "profile": profile,
@@ -277,6 +330,8 @@ def start_run(
             raise RunError(f"pack: {exc}") from None
     elif product is not None:
         raise RunError("--product needs --pack")
+    if any(s["kind"] == "flow" for s in sources):
+        manifest["flow_steps"] = flow_steps
     if code:
         manifest["code"] = code
     if publish_to:
@@ -291,6 +346,11 @@ def start_run(
         raise RunError(f"run folder already exists; choose a new one: {out}") from None
     (out / "analysis").mkdir()
     (out / "prompts").mkdir()
+    for source in sources:
+        if source.get("copy"):
+            # The run keeps its own copy, so the gate and checks work wherever the run folder goes.
+            (out / source["copy"]).parent.mkdir(exist_ok=True)
+            (out / source["copy"]).write_bytes((repo / source["path"]).read_bytes())
     if loaded is not None:
         from docforge.packs import copy_into_run
 
