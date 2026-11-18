@@ -4,7 +4,20 @@ name: demo
 version: 0.1.0
 description: House style for the fictional Pulseboard product.
 conventions: conventions.md
+products:
+  - key: alerts
+    title: Pulseboard Alerts
+  - key: boards
+    title: Pulseboard Boards
 references:
+  - path: references/products/alerts.md
+    title: Alerts product reference
+    stages: [analyzer, drafter, proofreader]
+    products: [alerts]
+  - path: references/products/boards.md
+    title: Boards product reference
+    stages: [analyzer, drafter, proofreader]
+    products: [boards]
   - path: references/voice.md
     title: Pulseboard voice
   - path: references/product-terms.md

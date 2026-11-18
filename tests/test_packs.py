@@ -68,6 +68,9 @@ def test_any_file_change_changes_the_hash(pack):
     (lambda d: d["references"][0].update(applies_to=["/abs"]), "applies_to"),
     (lambda d: d["article_specs"].append({"type": "faq", "path": "specs/faq.md"}), "duplicate article_specs type"),
     (lambda d: d["vale"].update(based_on=["Bad Name"]), "Vale style name"),
+    (lambda d: d["vale"].update(based_on=["DocForge"]), "reserved by DocForge"),
+    (lambda d: d["references"][0].update(products=["nope"]), "unknown product"),
+    (lambda d: d["products"].append({"key": "alerts", "title": "Again"}), "duplicate products key"),
     (lambda d: d["cleanup_steps"][0].pop("description"), "description"),
 ])
 def test_manifest_is_strict(pack, change, message):
@@ -155,7 +158,9 @@ def test_run_records_pack_and_copies_only_drafting_files(tmp_path):
     assert str(tmp_path) not in json.dumps(record) and str(ROOT) not in json.dumps(record)
     copied = sorted(p.relative_to(out / "pack").as_posix() for p in (out / "pack").rglob("*") if p.is_file())
     assert copied == ["conventions.md", "pack.yaml", "references/how-to-extras.md", "references/product-terms.md",
-                      "references/voice.md", "specs/faq.md", "specs/feature-guide.md", "specs/how-to.md"]
+                      "references/products/alerts.md", "references/products/boards.md",
+                      "references/voice.md", "specs/faq.md", "specs/feature-guide.md", "specs/how-to.md",
+                      "styles/DemoPack/Terms.yml"]
     for f in record["files"]:
         if (out / "pack" / f["path"]).is_file():
             import hashlib
@@ -247,7 +252,7 @@ def test_pr_body_names_the_pack(tmp_path):
 def test_cli_pack_check(capsys, tmp_path):
     assert main(["pack", "check", str(DEMO)]) == 0
     out = capsys.readouterr().out
-    assert "Pack demo 0.1.0 is valid" in out and "3 article_spec" in out
+    assert "Pack demo 0.1.0 is valid" in out and "3 article_spec" in out and "5 reference" in out
     config = tmp_path / "docforge.yaml"
     config.write_text(yaml.safe_dump({"packs": {"demo": {"path": str(DEMO)}}}))
     assert main(["pack", "check", "demo", "--config", str(config)]) == 0
@@ -266,3 +271,76 @@ def test_cli_run_start_with_pack(tmp_path, capsys):
     assert main(["run", "start", "--repo", str(ROOT), "--prd", PRD, "--out", str(tmp_path / "r2"),
                  "--audience", "admins", "--pack", "missing", "--config", str(config)]) == 1
     assert "pack 'missing' is not in" in capsys.readouterr().err
+
+
+# --- products ------------------------------------------------------------------
+
+
+def test_product_selects_its_references(tmp_path):
+    out = _start(tmp_path, DEMO, product="alerts")
+    assert json.loads((out / "run.json").read_text())["pack"]["product"] == "alerts"
+    for name in ("1-analyzer", "2-drafter", "3-proofreader"):
+        order = (out / "prompts" / f"{name}.md").read_text()
+        assert "- Product: Pulseboard Alerts (`alerts`)" in order
+        assert "references/products/alerts.md" in order and "references/products/boards.md" not in order
+
+
+def test_without_product_product_references_are_left_out(tmp_path):
+    out = _start(tmp_path, DEMO)
+    order = (out / "prompts" / "2-drafter.md").read_text()
+    assert "Product: not chosen" in order and "`alerts`, `boards`" in order
+    assert "references/products/" not in order
+    assert "product" not in json.loads((out / "run.json").read_text())["pack"]
+
+
+def test_unknown_product_or_product_without_pack_is_refused(tmp_path):
+    with pytest.raises(RunError, match="product 'billing' is not in pack demo"):
+        _start(tmp_path, DEMO, product="billing")
+    with pytest.raises(RunError, match="--product needs --pack"):
+        _start(tmp_path, None, name="r2", product="alerts")
+    assert not (tmp_path / "run").exists()
+
+
+# --- pack Vale styles ----------------------------------------------------------
+
+
+def test_pack_vale_styles_are_listed_after_hash_check(tmp_path):
+    from docforge.packs.load import run_vale_styles
+
+    out = _start(tmp_path, DEMO)
+    record = json.loads((out / "run.json").read_text())["pack"]
+    styles = run_vale_styles(out, record)
+    assert styles == [("DemoPack", out / "pack" / "styles" / "DemoPack")]
+    (out / "pack" / "styles" / "DemoPack" / "Terms.yml").write_text("extends: existence\n")
+    with pytest.raises(PackError, match="does not match"):
+        run_vale_styles(out, record)
+
+
+vale = pytest.mark.skipif(__import__("docforge.lint.vale", fromlist=["find_vale"]).find_vale() is None,
+                          reason="Vale is not installed")
+
+
+@vale
+def test_lint_applies_pack_styles(tmp_path):
+    from docforge.lint import lint_run
+
+    out = start_run(repo=ROOT, prds=[PRD], out=tmp_path / "run", audience="admins", profile="custom",
+                    deliverables=["feature/overview.md"], pack=DEMO)
+    (out / "feature").mkdir()
+    (out / "feature" / "overview.md").write_text("# Overview\n\nOpen the dashboard to see alerts.\n")
+    result = lint_run(out)
+    assert "pack demo styles (DemoPack)" in result.config
+    assert any(a.check == "DemoPack.Terms" for a in result.alerts)
+
+
+@vale
+def test_lint_refuses_a_tampered_pack_style(tmp_path):
+    from docforge.lint import LintError, lint_run
+
+    out = start_run(repo=ROOT, prds=[PRD], out=tmp_path / "run", audience="admins", profile="custom",
+                    deliverables=["feature/overview.md"], pack=DEMO)
+    (out / "feature").mkdir()
+    (out / "feature" / "overview.md").write_text("# Overview\n")
+    (out / "pack" / "styles" / "DemoPack" / "Terms.yml").write_text("extends: existence\n")
+    with pytest.raises(LintError, match="pack styles could not be used"):
+        lint_run(out)

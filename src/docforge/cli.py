@@ -104,7 +104,7 @@ def _run_start(args: argparse.Namespace) -> int:
             profile=args.profile, deliverables=args.deliverable, docs_include=args.docs_include,
             code_repo=args.code, base=args.base, head=args.head,
             publish_to=args.publish_to, source_pr=args.source_pr, source_state=args.source_state,
-            context=args.context, pack=pack,
+            context=args.context, pack=pack, product=args.product,
         )
     except (RunError, OSError) as exc:
         print(exc, file=sys.stderr)
@@ -845,6 +845,7 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--out", type=Path, required=True, help="new run folder, for example output/<slug>")
     start.add_argument("--pack", help="house pack name from docforge.yaml's packs section")
     start.add_argument("--config", default="docforge.yaml", help="docforge.yaml, for --pack")
+    start.add_argument("--product", help="product key from the pack, to include that product's references")
     start.add_argument("--context", action="append",
                        help="supporting source inside the repo, recorded with authority 'context' (repeatable)")
     start.add_argument("--audience", required=True)

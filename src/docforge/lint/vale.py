@@ -126,13 +126,26 @@ def lint_run(run: Path, *, changed_only: bool = True, config: Path | None = None
     manifest = json.loads((run / "run.json").read_text(encoding="utf-8"))
     pages = {d: run / d for d in manifest.get("deliverables", []) if (run / d).is_file()}
     learned_used = False
+    extras_label = ""
     if config is None:
-        from docforge.rules import RuleError, lint_config, rules_dir
+        from docforge.rules import RuleError, lint_config, live_rules, rules_dir
 
+        extra_styles = []
+        pack = manifest.get("pack")
+        if pack:
+            from docforge.packs import PackError
+            from docforge.packs.load import run_vale_styles
+
+            try:
+                extra_styles = run_vale_styles(run, pack)
+            except (PackError, ValueError) as exc:
+                raise LintError(f"pack styles could not be used: {exc}") from None
+            if extra_styles:
+                extras_label = f" + pack {pack['name']} styles ({', '.join(n for n, _ in extra_styles)})"
         try:
-            with lint_config(rules_dir()) as learned:
-                alerts = run_vale(pages, learned or DEFAULT_CONFIG, binary)
-                learned_used = learned is not None
+            learned_used = any(r.kind == "avoid" for r in live_rules(rules_dir()))
+            with lint_config(rules_dir(), extra_styles) as built:
+                alerts = run_vale(pages, built or DEFAULT_CONFIG, binary)
         except RuleError as exc:
             raise LintError(f"learned rules could not be loaded: {exc}") from None
         config = DEFAULT_CONFIG
@@ -161,7 +174,7 @@ def lint_run(run: Path, *, changed_only: bool = True, config: Path | None = None
             continue
         kept.append(alert)
     label = os.path.relpath(config, TOOLS_ROOT) if config.resolve().is_relative_to(TOOLS_ROOT) else config.name
-    result = LintResult(vale_version=vale_version(binary), config=label + (" + live learned rules" if learned_used else ""),
+    result = LintResult(vale_version=vale_version(binary), config=label + extras_label + (" + live learned rules" if learned_used else ""),
                         changed_only=changed_only, pages=sorted(pages), alerts=kept, unchanged_alerts=skipped)
     if write:
         (run / "qa").mkdir(exist_ok=True)

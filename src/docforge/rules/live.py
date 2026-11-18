@@ -54,23 +54,31 @@ def sync_live(folder: Path) -> None:
 
 
 @contextmanager
-def lint_config(folder: Path) -> Iterator[Path | None]:
-    """A Vale config with the house style plus live avoid rules, or None if there are none.
+def lint_config(folder: Path, extra_styles: list[tuple[str, Path]] | None = None) -> Iterator[Path | None]:
+    """A Vale config with the house style, live avoid rules and any extra styles (for example a
+    run's pack styles), or None if there are no rules and no extra styles.
 
     Built from the rule files each time (status and content hash checked), never
     from the generated vale/ folder, so an edited or broken rule is not applied.
     """
     avoid = [r for r in live_rules(folder) if r.kind == "avoid"]
-    if not avoid:
+    extra_styles = extra_styles or []
+    if not avoid and not extra_styles:
         yield None
         return
     with tempfile.TemporaryDirectory() as tmp:
         styles = Path(tmp) / "styles"
         shutil.copytree(TOOLS_ROOT / "styles" / "DocForge", styles / "DocForge")
-        write_style(avoid, styles)
+        names = ["DocForge"]
+        for name, source in extra_styles:
+            shutil.copytree(source, styles / name)
+            names.append(name)
+        if avoid:
+            write_style(avoid, styles)
+            names.append(LEARNED_STYLE)
         config = Path(tmp) / ".vale.ini"
         config.write_text(f"StylesPath = {styles}\nMinAlertLevel = suggestion\n\n[*.md]\n"
-                          f"BasedOnStyles = DocForge, {LEARNED_STYLE}\n", encoding="utf-8")
+                          f"BasedOnStyles = {', '.join(names)}\n", encoding="utf-8")
         yield config
 
 

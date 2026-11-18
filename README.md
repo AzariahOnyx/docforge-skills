@@ -229,7 +229,7 @@ uv run docforge run start --prd demo/mock-prd.md --out output/my-run --audience 
   --pack house --config docforge.yaml
 ```
 
-A pack is a folder with a `pack.yaml` that lists its files. `run start` checks the pack, copies the files the stages read into the run's `pack/` folder, and records the pack's name, version, and hash in `run.json`. The Analyzer, Drafter, and Proofreader work orders, and revision orders, name the files that apply to each deliverable. Pack material shapes format and style; it never overrides the sources and is never evidence. Keep real packs in a private repository.
+A pack is a folder with a `pack.yaml` that lists its files. `run start` checks the pack, copies the files the stages and `docforge lint` use into the run's `pack/` folder, and records the pack's name, version, and hash in `run.json`. The Analyzer, Drafter, and Proofreader work orders, and revision orders, name the files that apply to each deliverable. Add `--product <key>` to include that product's references. A pack's Vale styles join `docforge lint`. Pack material shapes format and style; it never overrides the sources and is never evidence. Keep real packs in a private repository.
 
 Fetch a Jira issue or a Confluence page as a source file, then use it in a run:
 

@@ -226,3 +226,16 @@ def test_start_docs_include_needs_docs(repo):
     with pytest.raises(RunError, match="--docs-include needs --docs"):
         start(repo, docs_include=["docs/"])
     assert not (repo / "output" / "run1").exists()
+
+
+def test_work_orders_name_engine_files_when_the_run_is_in_another_repo(tmp_path):
+    other = tmp_path / "other-repo"
+    other.mkdir()
+    (other / "prd.md").write_text("# Feature\n\nText.\n")
+    out = start_run(repo=other, prds=["prd.md"], out=other / "runs" / "r", audience="admins")
+    order = (out / "prompts" / "1-analyzer.md").read_text()
+    assert "1. `<docforge>/.agents/skills/analyzer/SKILL.md`" in order
+    assert "`<docforge>` is the DocForge engine checkout" in order
+    assert str(tmp_path) not in order
+    own = start_run(repo=REPO, prds=[str(PRD.relative_to(REPO))], out=tmp_path / "own", audience="admins")
+    assert "<docforge>" not in (own / "prompts" / "1-analyzer.md").read_text()

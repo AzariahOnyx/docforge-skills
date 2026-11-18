@@ -165,7 +165,13 @@ schema_version: 1
 name: demo
 version: 0.1.0
 conventions: conventions.md
+products:
+  - key: alerts
+    title: Pulseboard Alerts
 references:
+  - path: references/products/alerts.md
+    title: Alerts product reference
+    products: [alerts]               # only for runs started with --product alerts
   - path: references/voice.md
     title: Voice
     stages: [drafter, proofreader]   # default; analyzer is also allowed
@@ -188,7 +194,9 @@ capture_profiles:
 
 Unknown keys are errors. Every path must stay inside the pack, including through symlinks, and each file is limited to 1 MB. The pack's `sha256` covers `pack.yaml` and every file it names.
 
-With `run start --pack`, `run.json` gets a `pack` entry with the name, version, hash, each file's path, role and hash, and `copied_to: "pack"`. The manifest, conventions, references and article specs are copied to the run's `pack/` folder, and work orders point there. Revision orders check the copied `pack.yaml` against its recorded hash. Clean-up steps, Vale styles and capture profiles are checked and recorded but not used yet.
+With `run start --pack`, `run.json` gets a `pack` entry with the name, version, hash, each file's path, role and hash, and `copied_to: "pack"`. The manifest, conventions, references and article specs are copied to the run's `pack/` folder, and work orders point there. Revision orders check the copied `pack.yaml` against its recorded hash. With `--product <key>`, the run records the product and work orders include only references for that product (and references with no `products`). Without it, product references are left out and the orders list the pack's products.
+
+Vale style files are copied to the run too. `docforge lint` checks them against their recorded hashes and runs them with DocForge's house style and live learned rules; a pack style cannot use the names `DocForge`, `DocForgeLearned` or `Vale`. Clean-up steps and capture profiles are checked and recorded but not used yet.
 
 ## Fetched sources and notifications
 

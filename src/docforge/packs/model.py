@@ -19,6 +19,7 @@ SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
 STYLE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
 STAGES = ("analyzer", "drafter", "proofreader")
+RESERVED_STYLES = frozenset({"DocForge", "DocForgeLearned", "Vale"})
 Stage = Literal["analyzer", "drafter", "proofreader"]
 
 
@@ -52,9 +53,25 @@ class PackFileEntry(Strict):
         return check_relative(value)
 
 
+class Product(Strict):
+    """A product or product line a run can be about; references can be limited to some products."""
+
+    key: str
+    title: str = Field(min_length=1)
+
+    @field_validator("key")
+    @classmethod
+    def _key(cls, value):
+        if not SLUG_RE.match(value):
+            raise ValueError(f"key must be a lowercase slug: {value!r}")
+        return value
+
+
 class Reference(PackFileEntry):
     title: str = Field(min_length=1)
     stages: list[Stage] = Field(default_factory=lambda: ["drafter", "proofreader"], min_length=1)
+    # Product keys this reference is for. Empty means every run.
+    products: list[str] = Field(default_factory=list)
     # Deliverable paths or folders (ending in "/") this reference is for. Empty means all.
     applies_to: list[str] = Field(default_factory=list)
 
@@ -134,6 +151,7 @@ class PackManifest(Strict):
     version: str
     description: str = ""
     conventions: str | None = None
+    products: list[Product] = Field(default_factory=list)
     references: list[Reference] = Field(default_factory=list)
     article_specs: list[ArticleSpec] = Field(default_factory=list)
     cleanup_steps: list[CleanupStep] = Field(default_factory=list)
@@ -164,10 +182,20 @@ class PackManifest(Strict):
         for label, values in (("article_specs type", [s.type for s in self.article_specs]),
                               ("cleanup_steps id", [s.id for s in self.cleanup_steps]),
                               ("capture_profiles name", [c.name for c in self.capture_profiles]),
-                              ("references path", [r.path for r in self.references])):
+                              ("references path", [r.path for r in self.references]),
+                              ("products key", [p.key for p in self.products])):
             dupes = sorted({v for v in values if values.count(v) > 1})
             if dupes:
                 raise ValueError(f"duplicate {label}: {', '.join(dupes)}")
+        keys = {p.key for p in self.products}
+        for ref in self.references:
+            unknown = sorted(set(ref.products) - keys)
+            if unknown:
+                raise ValueError(f"references {ref.path}: unknown product(s) {', '.join(unknown)}")
+        if self.vale:
+            for name in self.vale.based_on:
+                if name in RESERVED_STYLES:
+                    raise ValueError(f"vale: style name {name} is reserved by DocForge")
         return self
 
 

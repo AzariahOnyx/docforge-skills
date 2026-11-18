@@ -143,11 +143,19 @@ def resolve_pack(config: DocForgeConfig, config_path: Path, name: str) -> Path:
     return folder if folder.is_absolute() else (config_path.parent / folder)
 
 
-COPIED_ROLES = ("manifest", "conventions", "reference", "article_spec")
+COPIED_ROLES = ("manifest", "conventions", "reference", "article_spec", "vale_style")
 
 
-def copy_into_run(pack: Pack, run: Path) -> dict:
-    """Copy pack.yaml, conventions, references and article specs into <run>/pack/. Returns the run.json record."""
+def check_product(pack: Pack, product: str | None) -> None:
+    keys = [p.key for p in pack.manifest.products]
+    if product is not None and product not in keys:
+        raise PackError(f"product {product!r} is not in pack {pack.manifest.name} "
+                        f"(products: {', '.join(keys) or 'none'})")
+
+
+def copy_into_run(pack: Pack, run: Path, product: str | None = None) -> dict:
+    """Copy the files stages and lint use into <run>/pack/. Returns the run.json record."""
+    check_product(pack, product)
     target = run / RUN_FOLDER
     for f in pack.files:
         if f.role in COPIED_ROLES:
@@ -156,6 +164,8 @@ def copy_into_run(pack: Pack, run: Path) -> dict:
             shutil.copyfile(pack.root / f.path, dest)
     record = pack.record()
     record["copied_to"] = RUN_FOLDER
+    if product is not None:
+        record["product"] = product
     return record
 
 
@@ -175,7 +185,15 @@ def stage_lines(manifest: PackManifest, record: dict, stage: str, deliverables: 
              f"Pack sha256 `{record['sha256'][:12]}...`. {RULE}", ""]
     if manifest.conventions:
         lines.append(f"- Output conventions: {_ref(base, manifest.conventions)}")
+    product = record.get("product")
+    if product:
+        title = next((p.title for p in manifest.products if p.key == product), product)
+        lines.append(f"- Product: {title} (`{product}`)")
+    elif manifest.products:
+        lines.append("- Product: not chosen, so product references are left out. Pack products: "
+                     + ", ".join(f"`{p.key}`" for p in manifest.products))
     refs = [r for r in manifest.references if read_stage in r.stages
+            and (not r.products or product in r.products)
             and (stage == "analyzer" or any(applies(r.applies_to, d) for d in deliverables))]
     lines += [f"- Reference: {r.title}, {_ref(base, r.path)}" for r in refs]
     if stage == "analyzer":
@@ -212,3 +230,23 @@ def run_manifest(run: Path, record: dict) -> PackManifest:
     if hashlib.sha256(data).hexdigest() != expected:
         raise PackError(f"{path} does not match the hash recorded in run.json")
     return PackManifest.model_validate(yaml.safe_load(data.decode("utf-8")))
+
+
+def run_vale_styles(run: Path, record: dict) -> list[tuple[str, Path]]:
+    """(style name, folder) for each pack Vale style copied into a run, after checking every file's hash."""
+    manifest = run_manifest(run, record)
+    if manifest.vale is None:
+        return []
+    base = run / record.get("copied_to", RUN_FOLDER)
+    for f in record.get("files", []):
+        if f["role"] != "vale_style":
+            continue
+        path = base / f["path"]
+        try:
+            data = path.read_bytes()
+        except OSError:
+            raise PackError(f"{path} is missing; start the run again with the pack") from None
+        if hashlib.sha256(data).hexdigest() != f["sha256"]:
+            raise PackError(f"{path} does not match the hash recorded in run.json")
+    styles = base / manifest.vale.styles_path
+    return [(name, styles / name) for name in manifest.vale.based_on]
