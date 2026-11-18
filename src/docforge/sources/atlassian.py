@@ -101,5 +101,37 @@ class AtlassianClient:
         return data
 
 
+class _NoRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise SourceFetchError("refused a redirect on a write request")
+
+
+def post_json(client: "AtlassianClient", path: str, body: dict) -> dict:
+    """POST JSON to the configured host (used only by the Jira front door's writer). Redirects are refused."""
+    url = client.url(path)
+    data = json.dumps(body).encode("utf-8")
+    request = Request(url, method="POST", data=data, headers={
+        "Accept": "application/json", "Content-Type": "application/json", "User-Agent": USER_AGENT})
+    if client._auth:
+        request.add_unredirected_header("Authorization", client._auth)
+    where = urlsplit(url).path
+    try:
+        with build_opener(_NoRedirects()).open(request, timeout=TIMEOUT_SECONDS) as response:
+            raw = response.read(client.max_bytes + 1)
+    except SourceFetchError:
+        raise
+    except HTTPError as exc:
+        raise SourceFetchError(f"POST {where} returned HTTP {exc.code}") from None
+    except (URLError, OSError) as exc:
+        raise SourceFetchError(f"POST {where} failed: {type(getattr(exc, 'reason', exc)).__name__}") from None
+    if not raw.strip():
+        return {}
+    try:
+        result = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        raise SourceFetchError(f"POST {where} did not return JSON") from None
+    return result if isinstance(result, dict) else {"result": result}
+
+
 def segment(value: str) -> str:
     return quote(value, safe="")

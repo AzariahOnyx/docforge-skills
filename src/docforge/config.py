@@ -231,7 +231,70 @@ class GithubPrTrigger(Strict):
     match: list[GithubPrMatch] = Field(min_length=1)
 
 
-Trigger = Annotated[Union[GithubPrTrigger], Field(discriminator="trigger_type")]
+class JiraStatuses(Strict):
+    """Workflow status names. DocForge reacts only to `plan` and `draft`, and only writes the others,
+    so its own ticket moves can never trigger it again (except the deliberate pull-back to `plan`)."""
+
+    plan: str = Field(min_length=1)
+    draft: str = Field(min_length=1)
+    bounce: str = Field(min_length=1)
+    planned: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _distinct(self):
+        names = [self.plan, self.draft, self.bounce, self.planned]
+        if len({n.casefold() for n in names}) != 4:
+            raise ValueError("the four Jira status names must be different")
+        return self
+
+
+class JiraWorkTypes(Strict):
+    net_new: list[str] = Field(default_factory=list)
+    enhancement: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _some(self):
+        if not self.net_new and not self.enhancement:
+            raise ValueError("work_types needs at least one Work Type name")
+        if {w.casefold() for w in self.net_new} & {w.casefold() for w in self.enhancement}:
+            raise ValueError("a Work Type cannot be both net_new and enhancement")
+        return self
+
+
+class JiraAttachments(Strict):
+    max_bytes: int = Field(default=10 * 1024 * 1024, gt=0, le=100 * 1024 * 1024)
+    max_pages: int = Field(default=300, gt=0)
+    types: list[Literal["pdf", "md"]] = Field(default_factory=lambda: ["pdf", "md"], min_length=1)
+
+
+class JiraProduct(Strict):
+    """Which pack product a ticket is about: a label (or component) mapped to a product key, else the default."""
+
+    labels: dict[str, str] = Field(default_factory=dict)
+    components: dict[str, str] = Field(default_factory=dict)
+    default: str | None = None
+
+
+class JiraTicketTrigger(Strict):
+    """A Jira board as the front door: ticket status moves start planning and drafting."""
+
+    trigger_type: Literal["jira_ticket"]
+    source: str  # a jira entry in context_sources (site, credentials, project_keys)
+    statuses: JiraStatuses
+    work_types: JiraWorkTypes
+    bot_account_env: str
+    webhook_secret_env: str
+    attachments: JiraAttachments = Field(default_factory=JiraAttachments)
+    pack: str | None = None
+    product: JiraProduct = Field(default_factory=JiraProduct)
+
+    @field_validator("bot_account_env", "webhook_secret_env")
+    @classmethod
+    def _env(cls, value):
+        return check_env_name(value)
+
+
+Trigger = Annotated[Union[GithubPrTrigger, JiraTicketTrigger], Field(discriminator="trigger_type")]
 
 
 # --- policies --------------------------------------------------------------
@@ -241,6 +304,10 @@ class Publishing(Strict):
     auto_create_pr: bool | None = None
     auto_merge: bool | None = None
     suppress_source_pr_comments: bool | None = None
+    # Jira front door: post comments on tickets, and move tickets between statuses.
+    # Off by default: DocForge then records what it would post in the ticket's outbox.
+    jira_comments: bool | None = None
+    jira_transitions: bool | None = None
 
 
 class Notification(Strict):
@@ -294,6 +361,8 @@ DEFAULT_POLICY = {
         "auto_create_pr": False,
         "auto_merge": False,
         "suppress_source_pr_comments": False,
+        "jira_comments": False,
+        "jira_transitions": False,
     },
     "notification": {"slack_channel": None, "slack_webhook_env": None},
     "archiving": {"enabled": True, "stale_after_days": 30},
@@ -395,6 +464,17 @@ class DocForgeConfig(Strict):
                     f"key must be a lowercase slug (letters, digits, hyphens; max 64): {key!r}"
                 )
         return value
+
+    @model_validator(mode="after")
+    def _jira_triggers_reference_sources(self):
+        for name, trigger in self.triggers.items():
+            if isinstance(trigger, JiraTicketTrigger):
+                source = self.context_sources.get(trigger.source)
+                if not isinstance(source, JiraSource):
+                    raise ValueError(f"triggers.{name}: source {trigger.source!r} is not a jira context source")
+                if trigger.pack is not None and trigger.pack not in self.packs:
+                    raise ValueError(f"triggers.{name}: pack {trigger.pack!r} is not in packs")
+        return self
 
     @model_validator(mode="after")
     def _rules_reference_known_names(self):

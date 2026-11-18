@@ -46,11 +46,31 @@ triggers:
         trigger_on: [opened, merge]
         trigger_directories: [src/]
 
+  docs-tickets:                     # a Jira board as the front door (see README)
+    trigger_type: jira_ticket
+    source: product-jira
+    statuses:                       # DocForge reacts only to plan and draft
+      plan: In Draft
+      draft: For review
+      bounce: To Do
+      planned: Peer review
+    work_types:
+      net_new: [Docs New]
+      enhancement: [Docs Update]
+    bot_account_env: DOCFORGE_JIRA_BOT_ACCOUNT
+    webhook_secret_env: DOCFORGE_JIRA_WEBHOOK_SECRET
+    pack: house
+    product:
+      labels: {}
+      default: null
+
 policies:
   default:
     publishing:
       auto_create_pr: false         # drafts wait for review in the app
       auto_merge: false
+      jira_comments: false          # off: replies go to the ticket's outbox only
+      jira_transitions: false
     notification:
       slack_channel: null           # set with slack_webhook_env to allow `notify slack --send`
     archiving:

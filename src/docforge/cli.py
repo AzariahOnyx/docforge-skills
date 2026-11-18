@@ -700,6 +700,42 @@ def _cleanup(args: argparse.Namespace) -> int:
     return 0
 
 
+def _jira(args: argparse.Namespace) -> int:
+    from docforge.jira import HandleError, StateError, handle, load_state
+
+    try:
+        if args.jira_command == "handle":
+            config = load_config(args.config)
+            if not args.unsigned and not args.signature:
+                raise HandleError("give --signature (the X-Hub-Signature header) or --unsigned for a local recording")
+            result = handle(args.payload.read_bytes(), config=config, trigger_name=args.trigger, state_root=args.state,
+                            signature=args.signature, verify=not args.unsigned, delivery_id=args.delivery_id,
+                            client_factory=_jira_client_factory(config, args.trigger))
+            print(json.dumps(result, indent=2))
+            return 0
+        state = load_state(args.state, args.key)
+        if state is None:
+            print(f"no state for {args.key} in {args.state}", file=sys.stderr)
+            return 1
+        print(f"{state.key}: phase {state.phase}, mode {state.mode}, revision {state.revision}, run {state.run or '-'}"
+              + (f", pending {state.pending.action}" if state.pending else ""))
+        for entry in state.outbox:
+            print(f"  {entry.at} {entry.kind} {entry.message}: {'sent' if entry.sent else entry.note}")
+        return 0
+    except (ConfigError, HandleError, StateError, OSError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+
+def _jira_client_factory(config, trigger_name: str):
+    def factory():
+        from docforge.sources.atlassian import AtlassianClient
+
+        return AtlassianClient(config.context_sources[config.triggers[trigger_name].source])
+
+    return factory
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="docforge")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -941,6 +977,22 @@ def main(argv: list[str] | None = None) -> int:
     clean.add_argument("run", type=Path)
     clean.add_argument("--apply", action="store_true", help="write the changes and qa/CLEANUP-REPORT.md")
     clean.set_defaults(func=_cleanup)
+
+    jira = sub.add_parser("jira", help="the Jira front door: handle ticket webhooks, show ticket state")
+    jira_sub = jira.add_subparsers(dest="jira_command", required=True)
+    jhandle = jira_sub.add_parser("handle", help="handle one webhook delivery (a saved payload)")
+    jhandle.add_argument("payload", type=Path)
+    jhandle.add_argument("--trigger", required=True, help="jira_ticket trigger name in docforge.yaml")
+    jhandle.add_argument("--config", default="docforge.yaml")
+    jhandle.add_argument("--state", type=Path, default=Path(".docforge/jira"), help="ticket state folder")
+    jhandle.add_argument("--signature", help="the delivery's X-Hub-Signature header")
+    jhandle.add_argument("--unsigned", action="store_true", help="skip the signature check (local recordings only)")
+    jhandle.add_argument("--delivery-id", help="the delivery's X-Atlassian-Webhook-Identifier header")
+    jhandle.set_defaults(func=_jira)
+    jstate = jira_sub.add_parser("state", help="show a ticket's phase, pending work and outbox")
+    jstate.add_argument("key")
+    jstate.add_argument("--state", type=Path, default=Path(".docforge/jira"))
+    jstate.set_defaults(func=_jira)
 
     run = sub.add_parser("run", help="start, track and check a documentation run")
     run_sub = run.add_subparsers(dest="run_command", required=True)

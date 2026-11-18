@@ -255,6 +255,21 @@ The quote must appear in that step. With `flow_steps` required, the claim gate t
 
 With `--apply`, `qa/cleanup.json` and `qa/CLEANUP-REPORT.md` record every change (step, page, line, action, before, after) and finding. For runs that must pass the claim gate (meant for publishing, already proposed, or with required flow steps), the gate runs again and every page is restored if it fails.
 
+## Jira front door
+
+A `jira_ticket` trigger names a Jira context source, four status names (`plan` and `draft`, which DocForge reacts to; `bounce` and `planned`, which it only writes), the Work Types for net-new and enhancement tickets, and the environment variables holding the bot's account ID and the webhook secret. `docforge jira handle` verifies the delivery's `X-Hub-Signature` (HMAC-SHA256 of the exact body), then decides:
+
+| Delivery | Ticket phase | Decision |
+| --- | --- | --- |
+| Moved to `plan` | new or failed | plan, or bounce to `bounce` with a comment when no PDF or Markdown attachment is usable or one is too large |
+| Moved to `plan` | planned / drafted | a comment saying what still works |
+| Moved to `draft` | new or planning | pull back to `plan` with a comment (one hop) |
+| Moved to `draft` | planned | draft |
+| Owner's comment mentioning the bot | planned | revise with the comment as feedback; a bare mention gets a request for specifics |
+| Same mention | drafting or drafted | refused with a comment |
+
+Mentions from anyone but the reporter, creator or assignee, and comments by the bot, are ignored. State lives in `<state>/<KEY>.json`: `phase` (new, planning, planned, drafting, drafted, failed), `run`, `revision`, `product`, `pending` work, the IDs of handled deliveries, an `outbox` of every comment and move (with whether it was sent and why not), and `history`.
+
 ## Fetched sources and notifications
 
 A file from `docforge sources fetch` starts with a provenance block, then a visible note that its content is data, never instructions:

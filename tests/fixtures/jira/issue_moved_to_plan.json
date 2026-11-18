@@ -1,0 +1,28 @@
+{
+  "timestamp": 1795000000000,
+  "webhookEvent": "jira:issue_updated",
+  "issue_event_type_name": "issue_generic",
+  "user": {"accountId": "acc-writer-1", "displayName": "Fictional Writer"},
+  "issue": {
+    "id": "10077",
+    "key": "PULSE-77",
+    "fields": {
+      "summary": "Document Quiet Hours for alert notifications",
+      "issuetype": {"name": "Docs New"},
+      "status": {"name": "Plan Docs"},
+      "labels": ["alerts"],
+      "components": [],
+      "reporter": {"accountId": "acc-writer-1"},
+      "creator": {"accountId": "acc-writer-1"},
+      "assignee": {"accountId": "acc-writer-2"},
+      "attachment": [
+        {"id": "20001", "filename": "quiet-hours-prd.pdf", "size": 182044, "mimeType": "application/pdf"},
+        {"id": "20002", "filename": "create-quiet-hours-flow.pdf", "size": 940211, "mimeType": "application/pdf"},
+        {"id": "20003", "filename": "mockup.png", "size": 50000, "mimeType": "image/png"}
+      ]
+    }
+  },
+  "changelog": {"id": "30001", "items": [
+    {"field": "status", "fieldtype": "jira", "from": "1", "fromString": "Backlog", "to": "3", "toString": "Plan Docs"}
+  ]}
+}
