@@ -97,7 +97,7 @@ def _record(run: Path, entry: dict) -> None:
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_files(run: Path, request: StageRequest, data: dict) -> list[str]:
+def _write_files(run: Path, request: StageRequest, data: dict, *, require_all: bool = True) -> list[str]:
     seen: dict[str, str] = {}
     for item in data.get("files", []):
         if not isinstance(item, dict) or not isinstance(item.get("path"), str) or not isinstance(item.get("content"), str):
@@ -109,7 +109,7 @@ def _write_files(run: Path, request: StageRequest, data: dict) -> list[str]:
         if not item["content"].strip():
             raise BackendError(f"the answer left {item['path']} empty")
         seen[item["path"]] = item["content"]
-    missing = [p for p in request.outputs if p not in seen]
+    missing = [p for p in request.outputs if p not in seen] if require_all else ([] if seen else ["any file"])
     if missing:
         raise BackendError(f"the answer is missing: {', '.join(missing)}")
     root = run.resolve()
@@ -125,7 +125,7 @@ def _write_files(run: Path, request: StageRequest, data: dict) -> list[str]:
 def _checks(run: Path, repo: Path, stage: Stage, manifest: dict) -> list[str]:
     """Problems the engine finds after a stage; empty means the stage passed its checks."""
     problems: list[str] = []
-    if stage.key == "drafter" and manifest.get("publish"):
+    if (stage.key == "drafter" and manifest.get("publish")) or stage.key == "revise":
         from docforge.publish.gate import gate_run
 
         result = gate_run(run)
@@ -171,6 +171,63 @@ def _dry_run(run: Path, request: StageRequest, params: dict, estimate: float | N
     shown["worst_case_cost_usd"] = None if estimate is None else round(estimate, 4)
     (folder / f"{stem}.json").write_text(json.dumps(shown, indent=2) + "\n", encoding="utf-8")
     return [prompt.relative_to(run).as_posix(), (folder / f"{stem}.json").relative_to(run).as_posix()]
+
+
+def _attempts(run: Path, repo: Path, manifest: dict, request: StageRequest, backend: Backend, outcome: StageOutcome,
+              *, repair: int, client, model: str, effort: str, max_tokens: int, messages: list[dict], params: dict,
+              require_all: bool = True) -> None:
+    """Call, write, check and repair one request; fills `outcome`."""
+    stage = request.stage
+    attempts = 1 + repair
+    for attempt in range(1, attempts + 1):
+        worst = estimate_upper_bound(request.estimated_input_tokens + sum(len(str(m["content"])) // 4
+                                                                          for m in messages[1:]),
+                                     max_tokens, model, backend.prices) or 0.0
+        if spent(run) + worst > backend.max_cost_usd:
+            outcome.status = "failed"
+            outcome.message = (f"stopped before the call: recorded spend ${spent(run):.2f} plus this call's "
+                               f"worst case ${worst:.2f} exceeds max_cost_usd ${backend.max_cost_usd:.2f}")
+            break
+        entry = {"at": _now(), "stage": stage.key, "attempt": attempt, "model_requested": model,
+                 "effort": effort, "max_tokens": max_tokens, "fallbacks": "fallbacks" in params,
+                 "prompt_sha256": request.sha256}
+        try:
+            result = call(client, backend, params)
+        except BackendError as exc:
+            _record(run, {**entry, "error": str(exc), "cost_usd": None})
+            outcome.status, outcome.message = "failed", str(exc)
+            break
+        cost = _cost(result, backend)
+        _record(run, {**entry, "model_served": result.model_served, "request_id": result.request_id,
+                      "stop_reason": result.stop_reason, "duration_s": result.duration_s,
+                      "usage": {k: v for k, v in result.usage.items() if k != "iterations"},
+                      "iterations": result.iterations, "cost_usd": None if cost is None else round(cost, 6)})
+        outcome.calls += 1
+        outcome.cost_usd += cost or 0.0
+        outcome.notes = str(result.data.get("notes", ""))
+        try:
+            outcome.files = _write_files(run, request, result.data, require_all=require_all)
+        except BackendError as exc:
+            problems = [str(exc)]
+        else:
+            problems = _checks(run, repo, stage, manifest)
+        if not problems and stage.key in ("drafter", "revise"):
+            problems = _cleanup(run)
+        if not problems:
+            outcome.status, outcome.message = "done", ""
+            if stage.key == "proofreader":
+                _mark_independent_review(run)
+            break
+        outcome.status = "failed"
+        outcome.message = "; ".join(problems[:10]) + (f" (and {len(problems) - 10} more)" if len(problems) > 10 else "")
+        if attempt == attempts:
+            break
+        # Repair turn: replay the answer unchanged, then the problems found.
+        messages += [{"role": "assistant", "content": result.content},
+                     {"role": "user", "content": "The engine's checks found these problems:\n"
+                      + "\n".join(f"- {p}" for p in problems)
+                      + "\n\nReturn every file again, corrected, in the same JSON format."}]
+        params = {**params, "messages": messages}
 
 
 def exec_run(run: Path, repo: Path, config: DocForgeConfig | None, *, only: int | None = None,
@@ -228,58 +285,48 @@ def exec_run(run: Path, repo: Path, config: DocForgeConfig | None, *, only: int 
             break
 
         client = client or make_client(backend)
-        attempts = 1 + repair
-        for attempt in range(1, attempts + 1):
-            worst = estimate_upper_bound(request.estimated_input_tokens + sum(len(str(m["content"])) // 4
-                                                                              for m in messages[1:]),
-                                         max_tokens, model, backend.prices) or 0.0
-            if spent(run) + worst > backend.max_cost_usd:
-                outcome.status = "failed"
-                outcome.message = (f"stopped before the call: recorded spend ${spent(run):.2f} plus this call's "
-                                   f"worst case ${worst:.2f} exceeds max_cost_usd ${backend.max_cost_usd:.2f}")
-                break
-            entry = {"at": _now(), "stage": stage.key, "attempt": attempt, "model_requested": model,
-                     "effort": effort, "max_tokens": max_tokens, "fallbacks": "fallbacks" in params,
-                     "prompt_sha256": request.sha256}
-            try:
-                result = call(client, backend, params)
-            except BackendError as exc:
-                _record(run, {**entry, "error": str(exc), "cost_usd": None})
-                outcome.status, outcome.message = "failed", str(exc)
-                break
-            cost = _cost(result, backend)
-            _record(run, {**entry, "model_served": result.model_served, "request_id": result.request_id,
-                          "stop_reason": result.stop_reason, "duration_s": result.duration_s,
-                          "usage": {k: v for k, v in result.usage.items() if k != "iterations"},
-                          "iterations": result.iterations, "cost_usd": None if cost is None else round(cost, 6)})
-            outcome.calls += 1
-            outcome.cost_usd += cost or 0.0
-            outcome.notes = str(result.data.get("notes", ""))
-            try:
-                outcome.files = _write_files(run, request, result.data)
-            except BackendError as exc:
-                problems = [str(exc)]
-            else:
-                problems = _checks(run, repo, stage, manifest)
-            if not problems and stage.key == "drafter":
-                problems = _cleanup(run)
-            if not problems:
-                outcome.status, outcome.message = "done", ""
-                if stage.key == "proofreader":
-                    _mark_independent_review(run)
-                break
-            outcome.status = "failed"
-            outcome.message = "; ".join(problems[:10]) + (f" (and {len(problems) - 10} more)" if len(problems) > 10 else "")
-            if attempt == attempts:
-                break
-            # Repair turn: replay the answer unchanged, then the problems found.
-            messages += [{"role": "assistant", "content": result.content},
-                         {"role": "user", "content": "The engine's checks found these problems:\n"
-                          + "\n".join(f"- {p}" for p in problems)
-                          + "\n\nReturn every file again, corrected, in the same JSON format."}]
-            params = {**params, "messages": messages}
+        _attempts(run, repo, manifest, request, backend, outcome, repair=repair, client=client,
+                  model=model, effort=effort, max_tokens=max_tokens, messages=messages, params=params)
         outcome.cost_usd = round(outcome.cost_usd, 6)
         outcomes.append(outcome)
         if outcome.status != "done":
             break
     return outcomes
+
+
+def exec_revision(run: Path, repo: Path, config: DocForgeConfig, order: str, pages: list[str], *,
+                  repair: int = 1, client=None) -> StageOutcome:
+    """Run one revision order through the API. The answer may change only the pull request's pages, the
+    coverage ledger and the QA report; the claim gate and the pack's clean-up must pass. On failure every
+    file is put back as it was."""
+    from .context import build_revision_request
+
+    backend = config.backend if config and config.backend else None
+    if backend is None:
+        raise BackendError("docforge.yaml has no backend section, so no API call is made")
+    manifest = json.loads((run / "run.json").read_text(encoding="utf-8"))
+    try:
+        request = build_revision_request(run, repo, order, pages)
+    except ContextError as exc:
+        return StageOutcome("Reviser", "failed", message=str(exc))
+    before = {rel: (run / rel).read_text(encoding="utf-8") if (run / rel).is_file() else None
+              for rel in request.outputs}
+    model, effort, max_tokens = _settings(backend, request.stage)
+    messages: list[dict] = [{"role": "user", "content": request.user}]
+    params = request_params(backend, model=model, effort=effort, max_tokens=max_tokens,
+                            system=request.system, messages=messages, schema=request.schema)
+    estimate = estimate_upper_bound(request.estimated_input_tokens, max_tokens, model, backend.prices)
+    if estimate is None:
+        return StageOutcome("Reviser", "failed", message=f"no price for {model}; add it to backend.prices")
+    outcome = StageOutcome("Reviser", "done", estimate_usd=round(estimate, 4))
+    _attempts(run, repo, manifest, request, backend, outcome, repair=repair, client=client or make_client(backend),
+              model=model, effort=effort, max_tokens=max_tokens, messages=messages, params=params,
+              require_all=False)
+    if outcome.status != "done":
+        for rel, text in before.items():
+            if text is None:
+                (run / rel).unlink(missing_ok=True)
+            else:
+                (run / rel).write_text(text, encoding="utf-8")
+    outcome.cost_usd = round(outcome.cost_usd, 6)
+    return outcome

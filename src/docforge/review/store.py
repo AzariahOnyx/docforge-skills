@@ -51,6 +51,8 @@ class Feedback(BaseModel):
     line: int | None = None
     commit: str
     revision: int
+    origin: str = "local"  # local (CLI or web UI) or github (a review or comment on the pull request)
+    github_id: int | None = None
 
 
 def _clean(text: str, field: str, *, required: bool) -> str:
@@ -87,7 +89,8 @@ def _plan(run: Path) -> PrPlan:
 
 
 def request_changes(run: Path, *, comment: str, reviewer: str, page: str | None = None,
-                    line: int | None = None) -> tuple[Feedback, Path, list[str]]:
+                    line: int | None = None, origin: str = "local",
+                    github_id: int | None = None) -> tuple[Feedback, Path, list[str]]:
     """Record a change request and write the revision work order. Returns (feedback, work order, commands)."""
     from .revise import write_revision_order
 
@@ -102,7 +105,7 @@ def request_changes(run: Path, *, comment: str, reviewer: str, page: str | None 
     if line is not None and line < 1:
         raise ReviewError("line must be 1 or more")
     feedback = Feedback(run=run.name, action="request_changes", reviewer=reviewer, comment=comment, page=page,
-                        line=line, commit=plan.commit, revision=plan.revision)
+                        line=line, commit=plan.commit, revision=plan.revision, origin=origin, github_id=github_id)
     _append(run, feedback)
     plan.status = "changes_requested"
     plan.history.append({"at": feedback.at, "event": "changes_requested", "feedback_id": feedback.feedback_id})

@@ -9,6 +9,10 @@ doc_collections:
       - docs/                       # the agent may only change files under docs/
     api_url: https://api.github.com # used only by `publish open` and `publish ready --apply`
     token_env: GITHUB_TOKEN         # name of the environment variable, never the token
+    checkout: ../docs               # local clone used to commit revisions
+    bot_login: example-docforge-bot # DocForge's GitHub account: mentions start revisions
+    max_revisions: 5                # automatic revisions per pull request
+    revision_delay_seconds: 120     # wait this long after the last review comment
 
 context_sources:                    # read-only; fetched with `docforge sources fetch`
   product-jira:

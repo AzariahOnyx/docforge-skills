@@ -195,6 +195,8 @@ uv run docforge review close output/my-run --reason already_documented --reviewe
 
 The page shows each suggestion's diff, analysis, and history. Closing needs one of six reasons, and every action is stored as structured feedback in the run's `review/feedback.jsonl`.
 
+Review on GitHub works the same way. With `docforge serve --docs-runs output` (or `docforge pr handle` for a saved delivery), a review that requests changes, a comment on a line, or a comment that mentions DocForge's GitHub account (`bot_login` on the doc collection) becomes a change request. Only reviewers with write access count. Lines such as `Q3: ...` answer the run's open questions and `X2: ...` answers a question from `docforge research check`; answers become sources the revision can cite, and an answered cross-source conflict no longer blocks its claim. After a quiet period (`revision_delay_seconds`, default 120), `docforge pr run` (or the server's worker) carries out the revision through the API backend, or waits for a Claude Code session, then commits it to the same branch. With the `auto_create_pr` policy on, DocForge pushes the revision and replies on the pull request; otherwise the reply waits in `publish/pr.json`. At most `max_revisions` (default 5) revisions run on their own. When a run's source pull request is merged, its docs pull request may leave draft.
+
 Check a run's changed prose against DocForge's Vale house style, and apply the safe fixes:
 
 ```bash

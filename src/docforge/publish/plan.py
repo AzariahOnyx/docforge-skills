@@ -70,6 +70,16 @@ class PrPlan(BaseModel):
     pr_node_id: str | None = None
     pushed_commit: str | None = None
     ready_applied: bool = False
+    # Review on GitHub (B7b): handled delivery IDs, line comments waiting for their review, reviews that
+    # requested changes, when the last request arrived, replies DocForge posted or would have posted,
+    # GitHub's own state (merged, closed), and how many revisions ran automatically.
+    processed: list[str] = Field(default_factory=list)
+    line_comments: list[dict] = Field(default_factory=list)
+    requested_reviews: list[int] = Field(default_factory=list)
+    last_request_at: str | None = None
+    replies: list[dict] = Field(default_factory=list)
+    github_state: str | None = None
+    automatic_revisions: int = 0
 
 
 def load_plan(run: Path) -> PrPlan:

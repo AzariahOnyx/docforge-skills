@@ -2,6 +2,7 @@
 
 from .client import BackendError
 from .context import ContextError, build_request
-from .runner import StageOutcome, exec_run, recorded_calls, spent
+from .runner import StageOutcome, exec_revision, exec_run, recorded_calls, spent
 
-__all__ = ["BackendError", "ContextError", "StageOutcome", "build_request", "exec_run", "recorded_calls", "spent"]
+__all__ = ["BackendError", "ContextError", "StageOutcome", "build_request", "exec_revision", "exec_run",
+           "recorded_calls", "spent"]

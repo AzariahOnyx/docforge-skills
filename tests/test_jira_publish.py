@@ -176,3 +176,32 @@ def test_config_checks_publish_and_shipped():
         jira_config("http://127.0.0.1:1", Path("ws"), {"statuses": {
             "plan": "A", "draft": "B", "bounce": "C", "planned": "D", "shipped": ["a"]}})
     assert isinstance(jira_config("http://127.0.0.1:1", Path("ws")), DocForgeConfig)
+
+
+def test_webhook_worker_runs_ship_work(tmp_path, monkeypatch):
+    """A shipped status arriving by webhook is queued for the worker (it was dropped before B7b)."""
+    import threading
+
+    from test_jira_front_door import MOVE, SECRET, config
+
+    from docforge.jira import sign
+    from docforge.jira.state import TicketState
+    from docforge.webhook import JiraEndpoint
+
+    monkeypatch.setenv("TEST_JIRA_SECRET", SECRET)
+    monkeypatch.setenv("TEST_JIRA_BOT", "bot")
+    ran = threading.Event()
+    monkeypatch.setattr("docforge.jira.work.process", lambda key, **kw: ran.set())
+    cfg = config()
+    trigger = cfg.triggers["docs-tickets"]
+    cfg.triggers["docs-tickets"] = trigger.model_copy(update={
+        "statuses": trigger.statuses.model_copy(update={"shipped": ["Released"]})})
+    save_state(tmp_path / "state", TicketState(key="PULSE-77", trigger="docs-tickets", mode="net_new", phase="drafted"))
+    payload = json.loads(json.dumps(MOVE))
+    payload["changelog"]["items"][0].update(fromString="Plan Review", toString="Released")
+    body = json.dumps(payload).encode()
+    endpoint = JiraEndpoint(config=cfg, config_path=tmp_path / "docforge.yaml", trigger="docs-tickets",
+                            state_root=tmp_path / "state")
+    status, result = endpoint.handle({"X-Hub-Signature": sign(SECRET, body)}, body)
+    assert status == 202 and result["action"] == "ship" and result["queued"]
+    assert ran.wait(5)

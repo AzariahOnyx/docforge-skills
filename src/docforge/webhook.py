@@ -1,7 +1,9 @@
 """Receive GitHub webhooks, check their signature, and log a docs decision.
 
-The receiver only records decisions. It never comments on, opens, or merges
-anything. The shared secret comes from the DOCFORGE_WEBHOOK_SECRET environment
+For source pull requests the receiver only records decisions. With --docs-runs it
+also handles review on DocForge's own docs pull requests (see docforge.github.docs_pr):
+revisions are pushed and replies posted only when the auto_create_pr policy allows.
+It never merges anything. The shared secret comes from the DOCFORGE_WEBHOOK_SECRET environment
 variable and is never logged. By default it listens on 127.0.0.1 only.
 """
 
@@ -44,6 +46,8 @@ class Receiver:
     log: Path
     # Local checkouts used to diff a PR's base and head commits, keyed by owner/repo.
     checkouts: dict[str, Path] = field(default_factory=dict)
+    # Review on DocForge's own docs pull requests, when serve is given --docs-runs.
+    docs: "DocsPrEndpoint | None" = None
 
     def handle(self, headers: Mapping[str, str], body: bytes) -> tuple[int, dict]:
         """Process one delivery. Returns (HTTP status, JSON response)."""
@@ -53,6 +57,10 @@ class Receiver:
         github_event = lower.get("x-github-event", "")
         if github_event == "ping":
             return 200, {"ok": True, "pong": True}
+        if self.docs is not None:
+            handled = self.docs.handle(github_event, body, lower.get("x-github-delivery"))
+            if handled is not None:
+                return handled
         if github_event not in SUPPORTED_EVENTS:
             return 202, {"ignored": f"event {github_event!r} is not handled"}
         try:
@@ -72,6 +80,8 @@ class Receiver:
                 source, error = f"local checkout of {event.repo}", str(exc)
         decision = decide(self.config, event, changed, diff_source=source, diff_error=error)
         append_decision(self.log, decision)
+        if self.docs is not None and event.kind == "merge":
+            self.docs.source_merged(event.repo, event.number)
         return 200, {"decision_id": decision.decision_id, "docs_needed": decision.docs_needed,
                      "summary": decision.summary}
 
@@ -107,7 +117,7 @@ class JiraEndpoint:
         except HandleError as exc:
             status = 401 if "signature" in str(exc) or "not set" in str(exc) else 400
             return status, {"error": str(exc)}
-        if self.run_work and result.get("action") in ("plan", "draft", "revise"):
+        if self.run_work and result.get("action") in ("plan", "draft", "revise", "ship"):
             self.queue.put(result["issue"])
             result["queued"] = True
         return 202, result
@@ -124,6 +134,80 @@ class JiraEndpoint:
                 sys.stderr.write(f"jira worker: {key}: {type(exc).__name__}: {exc}\n")
             finally:
                 self.queue.task_done()
+
+
+@dataclass
+class DocsPrEndpoint:
+    """Review on DocForge's own docs pull requests: record each delivery at once; revisions run on one
+    background worker after the quiet period."""
+
+    config: DocForgeConfig
+    config_path: Path
+    roots: list[Path]
+    checkout: Path | None = None  # overrides each doc collection's checkout
+    run_work: bool = True
+    poll_seconds: float = 15.0
+
+    def __post_init__(self):
+        import queue
+        import threading
+
+        self.wake = threading.Event()
+        self.merged: "queue.Queue[tuple[str, int]]" = queue.Queue()
+        if self.run_work:
+            threading.Thread(target=self._work, daemon=True).start()
+
+    def checkout_for(self, repo: str) -> Path | None:
+        if self.checkout is not None:
+            return self.checkout
+        collection = self.config.doc_collections.get(repo)
+        return (self.config_path.parent / collection.checkout).resolve() if collection and collection.checkout else None
+
+    def handle(self, github_event: str, body: bytes, delivery_id: str | None) -> tuple[int, dict] | None:
+        """(status, response) for an event about one of DocForge's pull requests; None for any other event."""
+        from docforge.github.docs_pr import DocsPrError, find_run, handle_docs_event
+        from docforge.github.events import parse_docs_event
+
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return None
+        event = parse_docs_event(github_event, payload)
+        if event is None:
+            return None
+        found = find_run(self.roots, event.repo, event.number, event.branch)
+        if found is None:
+            return None if github_event in SUPPORTED_EVENTS else (202, {"ignored": "not a DocForge pull request"})
+        try:
+            result = handle_docs_event(event, run=found[0], config=self.config, delivery_id=delivery_id)
+        except (DocsPrError, OSError, ValueError) as exc:
+            return 400, {"error": str(exc)}
+        self.wake.set()
+        return 202, result
+
+    def source_merged(self, repo: str, number: int) -> None:
+        self.merged.put((repo, number))
+        self.wake.set()
+
+    def _work(self) -> None:
+        from docforge.github.docs_pr import find_runs, process_revision, source_merged
+
+        while True:
+            self.wake.wait(timeout=self.poll_seconds)
+            self.wake.clear()
+            while not self.merged.empty():
+                repo, number = self.merged.get()
+                try:
+                    source_merged(self.roots, repo, number, config=self.config)
+                except Exception as exc:  # the worker must survive one failure
+                    sys.stderr.write(f"docs pr worker: {repo}#{number}: {type(exc).__name__}: {exc}\n")
+            for run, plan in find_runs(self.roots):
+                if plan.status not in ("changes_requested", "revised") or plan.github_state:
+                    continue
+                try:
+                    process_revision(run, config=self.config, checkout=self.checkout_for(plan.repo))
+                except Exception as exc:
+                    sys.stderr.write(f"docs pr worker: {run.name}: {type(exc).__name__}: {exc}\n")
 
 
 def make_handler(receiver: Receiver | None, jira: JiraEndpoint | None = None):

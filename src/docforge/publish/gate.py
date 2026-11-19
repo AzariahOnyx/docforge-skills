@@ -4,7 +4,8 @@ A statement fails the gate when it has no evidence marker, when a marker is
 malformed, when it cites a claim the run does not know, when the claim is not
 INCLUDED for that page in the coverage ledger (default profile) or the
 evidence ledger (custom profile), or when the claim's cross-source status is
-conflicting, unknown or needs_engineering. Exemptions (`evidence: none
+conflicting, unknown or needs_engineering (unless an answer on the pull request resolved it:
+analysis/resolutions.json). Exemptions (`evidence: none
 (reason)`) pass but are listed for reviewers.
 
 The gate runs on a run folder (`gate_run`) or on published pages with the
@@ -118,6 +119,18 @@ def rules_for_run(run: Path) -> EvidenceRules:
                     blocked[result["claim_id"]] = result["status"]
         except (ValueError, KeyError, TypeError) as exc:
             raise GateError(f"cannot read analysis/cross-source.json: {exc}") from None
+    resolutions = run / "analysis" / "resolutions.json"
+    if blocked and resolutions.is_file():
+        # A cross-source question answered on the pull request: the claim may be used again, backed by the
+        # answer source, which must be in run.json with the hash recorded when the answer was saved.
+        sources = {s.get("id"): s for s in manifest.get("sources", []) if isinstance(s, dict)}
+        try:
+            for item in json.loads(resolutions.read_text(encoding="utf-8")):
+                source = sources.get(item["source_id"])
+                if source and source.get("sha256") == item["sha256"] and item["claim_id"] in blocked:
+                    del blocked[item["claim_id"]]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise GateError(f"cannot read analysis/resolutions.json: {exc}") from None
 
     flow_backed = _flow_backed(run, manifest) if manifest.get("flow_steps") == "required" else None
     return EvidenceRules(known=sorted(known), allowed={k: sorted(v) for k, v in allowed.items()}, blocked=blocked,

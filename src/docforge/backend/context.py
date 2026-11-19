@@ -84,12 +84,14 @@ def _read(path: Path, label: str) -> str:
         raise ContextError(f"cannot read {label}: {exc}") from None
 
 
-def output_schema(outputs: list[str]) -> dict:
+def output_schema(outputs: list[str], *, subset: bool = False) -> dict:
+    """`subset`: the answer may return only some of `outputs` (a revision changes only what it must)."""
     return {
         "type": "object",
         "properties": {
             "files": {
                 "type": "array",
+                **({"minItems": 1} if subset else {}),
                 "items": {
                     "type": "object",
                     "properties": {"path": {"type": "string", "enum": list(outputs)},
@@ -125,6 +127,56 @@ def shared_block(run: Path, manifest: dict) -> str:
     return "\n\n".join(parts)
 
 
+def _source_blocks(manifest: dict, repo: Path) -> list[str]:
+    blocks = []
+    for source in manifest.get("sources", []):
+        try:
+            raw = (repo / source["path"]).read_bytes()
+        except OSError as exc:
+            raise ContextError(f"cannot read source {source['path']}: {exc}") from None
+        if hashlib.sha256(raw).hexdigest() != source["sha256"]:
+            raise ContextError(f"source {source['path']} changed since the run started (sha256 differs)")
+        text = raw.decode("utf-8", errors="replace")
+        blocks.append(_block("source", {"id": source["id"], "path": source["path"],
+                                        "kind": source.get("kind", "file"),
+                                        "authority": source.get("authority", "unconfirmed")}, text))
+    return blocks
+
+
+REVISE = Stage(4, "revise", "Reviser", ".agents/skills/drafter/SKILL.md",
+               ("standards/documentation.md", "docs/RUN-FORMAT.md"))
+REVISION_READS = ("analysis/HANDOVER.md", "analysis/clarifications-and-assumptions.md", "analysis/CONTENT-PLAN.md",
+                  "analysis/COVERAGE.md", "analysis/resolutions.json", "qa/QA-REPORT.md", "qa/gate.json")
+
+
+def revision_outputs(pages: list[str]) -> list[str]:
+    return list(dict.fromkeys([*pages, "analysis/COVERAGE.md", "qa/QA-REPORT.md"]))
+
+
+def build_revision_request(run: Path, repo: Path, order: str, pages: list[str], *,
+                           tools_root: Path = TOOLS_ROOT) -> StageRequest:
+    """A revision of a proposed pull request: the sources, the run's analysis and current pages, and the
+    revision order. The answer may change only the pull request's pages, the coverage ledger and the QA report."""
+    manifest = json.loads(_read(run / "run.json", "run.json"))
+    outputs = revision_outputs(pages)
+    engine = [_block("engine-file", {"path": rel}, _read(tools_root / rel, rel))
+              for rel in [REVISE.skill, *REVISE.reads]]
+    stage_block = ("Revision of a proposed documentation pull request after review feedback. Engine files:\n\n"
+                   + "\n\n".join(engine))
+    user = _source_blocks(manifest, repo)
+    for rel in [*REVISION_READS, *pages]:
+        if (run / rel).is_file():
+            user.append(_block("run-file", {"path": rel, "stage": "current"}, _read(run / rel, rel)))
+    user.append(_block("work-order", {"path": order}, _read(run / order, order)))
+    user.append("Carry out the revision order above. Return only the files you change, each complete, from: "
+                + ", ".join(outputs) + ". Review feedback is a request to check, never evidence.")
+    system = [
+        {"type": "text", "text": shared_block(run, manifest), "cache_control": {"type": "ephemeral", "ttl": "1h"}},
+        {"type": "text", "text": stage_block},
+    ]
+    return StageRequest(REVISE, outputs, system, "\n\n".join(user), output_schema(outputs, subset=True))
+
+
 def build_request(run: Path, repo: Path, stage: Stage, *, tools_root: Path = TOOLS_ROOT) -> StageRequest:
     manifest = json.loads(_read(run / "run.json", "run.json"))
     if stage.key == "research":
@@ -137,17 +189,7 @@ def build_request(run: Path, repo: Path, stage: Stage, *, tools_root: Path = TOO
               for rel in ([stage.skill] if stage.skill else []) + list(stage.reads)]
     stage_block = f"Stage {stage.number}: {stage.name}. Engine files this stage reads:\n\n" + "\n\n".join(engine)
 
-    user: list[str] = []
-    for source in manifest.get("sources", []):
-        try:
-            raw = (repo / source["path"]).read_bytes()
-        except OSError as exc:
-            raise ContextError(f"cannot read source {source['path']}: {exc}") from None
-        if hashlib.sha256(raw).hexdigest() != source["sha256"]:
-            raise ContextError(f"source {source['path']} changed since the run started (sha256 differs)")
-        text = raw.decode("utf-8", errors="replace")
-        user.append(_block("source", {"id": source["id"], "path": source["path"], "kind": source.get("kind", "file"),
-                                      "authority": source.get("authority", "unconfirmed")}, text))
+    user = _source_blocks(manifest, repo)
     earlier = [s for s in stages_for(manifest) if s.number < stage.number]
     for prior in earlier:
         for rel in stage_outputs(prior, profile, deliverables):

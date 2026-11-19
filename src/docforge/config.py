@@ -64,6 +64,15 @@ class DocCollection(Strict):
     # Where the docs branch is pushed. Default: https://<web host>/<owner>/<repo>.git. A file:// URL
     # (a local bare repository) is allowed for tests and demos.
     git_url: str | None = None
+    # A local clone of the docs repository (relative to docforge.yaml), used to commit revisions.
+    checkout: str | None = None
+    # Review on DocForge's own pull requests (B7b). bot_login: DocForge's GitHub account, so mentions are
+    # recognised and its own comments ignored. Only reviewers whose association is listed can ask for a revision.
+    bot_login: str | None = Field(default=None, pattern=r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})(?:\[bot\])?$")
+    reviewer_associations: list[Literal["OWNER", "MEMBER", "COLLABORATOR"]] = Field(
+        default_factory=lambda: ["OWNER", "MEMBER", "COLLABORATOR"], min_length=1)
+    max_revisions: int = Field(default=5, ge=0, le=20)
+    revision_delay_seconds: int = Field(default=120, ge=0, le=3600)
 
     @field_validator("api_url")
     @classmethod

@@ -230,8 +230,17 @@ def _serve(args: argparse.Namespace) -> int:
     except ConfigError as exc:
         print(exc, file=sys.stderr)
         return 1
-    receiver = (Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout))
-                if secret else None)
+    docs = None
+    if args.docs_runs:
+        if not secret:
+            print(f"--docs-runs needs {SECRET_ENV}: GitHub deliveries must be signed", file=sys.stderr)
+            return 1
+        from docforge.webhook import DocsPrEndpoint
+
+        docs = DocsPrEndpoint(config=config, config_path=Path(args.config), roots=list(args.docs_runs),
+                              checkout=args.docs_checkout)
+    receiver = (Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout),
+                         docs=docs) if secret else None)
     jira = None
     if args.jira_trigger:
         if args.jira_trigger not in config.triggers:
@@ -241,6 +250,60 @@ def _serve(args: argparse.Namespace) -> int:
                             state_root=args.jira_state, client_factory=_jira_client_factory(config, args.jira_trigger))
     serve(receiver, host=args.host, port=args.port, jira=jira)
     return 0
+
+
+def _pr_handle(args: argparse.Namespace) -> int:
+    from docforge.github.docs_pr import DocsPrError, find_run, handle_docs_event, source_merged
+    from docforge.github.events import parse_docs_event
+
+    try:
+        config = load_config(args.config)
+        payload = json.loads(args.payload.read_text(encoding="utf-8"))
+        event = parse_docs_event(args.event, payload)
+        if event is None:
+            raise DocsPrError(f"{args.payload} is not a pull request event")
+        found = find_run(args.runs, event.repo, event.number, event.branch)
+        if found is None:
+            if event.kind == "merged":
+                print(json.dumps(source_merged(args.runs, event.repo, event.number, config=config), indent=2))
+                return 0
+            raise DocsPrError(f"no DocForge pull request {event.repo}#{event.number} under the given runs")
+        result = handle_docs_event(event, run=found[0], config=config, delivery_id=args.delivery_id)
+    except (ConfigError, DocsPrError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def _pr_run(args: argparse.Namespace) -> int:
+    from datetime import datetime, timezone
+
+    from docforge.github.docs_pr import DocsPrError, find_runs, process_revision
+    from docforge.publish import PublishError, load_plan
+
+    if bool(args.run) == bool(args.all):
+        print("give one run folder, or --all with --runs", file=sys.stderr)
+        return 2
+    try:
+        config = load_config(args.config)
+        if args.all:
+            runs = [r for r, p in find_runs(args.runs) if p.status in ("changes_requested", "revised")]
+        else:
+            runs = [args.run]
+        results = []
+        for run in runs:
+            plan = load_plan(run)
+            collection = config.doc_collections.get(plan.repo)
+            checkout = args.docs_checkout or (
+                (Path(args.config).parent / collection.checkout).resolve() if collection and collection.checkout else None)
+            now = datetime.max.replace(tzinfo=timezone.utc) if args.no_wait else None
+            results.append(process_revision(run, config=config, checkout=checkout, now=now))
+    except (ConfigError, DocsPrError, PublishError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(json.dumps(results, indent=2))
+    return 0 if all(r.get("result") != "failed" for r in results) else 1
 
 
 def _research_packet(args: argparse.Namespace) -> int:
@@ -828,7 +891,7 @@ def main(argv: list[str] | None = None) -> int:
     tcheck.add_argument("--no-log", action="store_true", help="print the decision without logging it")
     tcheck.set_defaults(func=_trigger_check)
 
-    serve_cmd = sub.add_parser("serve", help="receive GitHub webhooks and log decisions (records only)")
+    serve_cmd = sub.add_parser("serve", help="receive GitHub (and Jira) webhooks; --docs-runs handles review on DocForge PRs")
     serve_cmd.add_argument("--host", default="127.0.0.1")
     serve_cmd.add_argument("--port", type=int, default=8787)
     serve_cmd.add_argument("--config", default="docforge.yaml")
@@ -837,7 +900,28 @@ def main(argv: list[str] | None = None) -> int:
     serve_cmd.add_argument("--jira-state", type=Path, default=Path(".docforge/jira"))
     serve_cmd.add_argument("--checkout", type=_checkout_arg, action="append", default=[],
                            metavar="OWNER/REPO=PATH", help="local checkout used to diff that repo's PRs")
+    serve_cmd.add_argument("--docs-runs", type=Path, action="append", default=[], metavar="FOLDER",
+                           help="handle review on DocForge's own docs pull requests whose runs are under FOLDER")
+    serve_cmd.add_argument("--docs-checkout", type=Path, help="docs clone for revisions (default: the collection's)")
     serve_cmd.set_defaults(func=_serve)
+
+    prc = sub.add_parser("pr", help="review on DocForge's own docs pull requests: comments become revisions")
+    prc_sub = prc.add_subparsers(dest="pr_command", required=True)
+    phandle = prc_sub.add_parser("handle", help="record one saved GitHub delivery about a DocForge pull request")
+    phandle.add_argument("payload", type=Path)
+    phandle.add_argument("--event", required=True, help="the X-GitHub-Event name, for example issue_comment")
+    phandle.add_argument("--runs", type=Path, action="append", required=True, metavar="FOLDER")
+    phandle.add_argument("--delivery-id")
+    phandle.add_argument("--config", default="docforge.yaml")
+    phandle.set_defaults(func=_pr_handle)
+    prun = prc_sub.add_parser("run", help="run pending revisions: backend or session, then push and reply")
+    prun.add_argument("run", type=Path, nargs="?")
+    prun.add_argument("--all", action="store_true", help="every DocForge pull request under --runs")
+    prun.add_argument("--runs", type=Path, action="append", default=[], metavar="FOLDER")
+    prun.add_argument("--docs-checkout", type=Path, help="docs clone (default: the doc collection's checkout)")
+    prun.add_argument("--no-wait", action="store_true", help="do not wait for the review's quiet period")
+    prun.add_argument("--config", default="docforge.yaml")
+    prun.set_defaults(func=_pr_run)
 
     research = sub.add_parser("research", help="compare a run's PRD claims with product code")
     research_sub = research.add_subparsers(dest="research_command", required=True)
