@@ -265,6 +265,17 @@ class JiraAttachments(Strict):
     max_bytes: int = Field(default=10 * 1024 * 1024, gt=0, le=100 * 1024 * 1024)
     max_pages: int = Field(default=300, gt=0)
     types: list[Literal["pdf", "md"]] = Field(default_factory=lambda: ["pdf", "md"], min_length=1)
+    # Jira Cloud serves attachment content through a redirect to its media host. Only these hosts
+    # (HTTPS) may be followed; credentials are never sent on a redirect.
+    redirect_hosts: list[str] = Field(default_factory=lambda: ["api.media.atlassian.com"])
+
+    @field_validator("redirect_hosts")
+    @classmethod
+    def _hosts(cls, value):
+        for host in value:
+            if not re.fullmatch(r"[a-z0-9.-]+\.[a-z]{2,}", host):
+                raise ValueError(f"not a host name: {host!r}")
+        return value
 
 
 class JiraProduct(Strict):
@@ -287,6 +298,10 @@ class JiraTicketTrigger(Strict):
     attachments: JiraAttachments = Field(default_factory=JiraAttachments)
     pack: str | None = None
     product: JiraProduct = Field(default_factory=JiraProduct)
+    # Folder (relative to docforge.yaml) where each ticket's sources and run are written:
+    # <workspace>/tickets/<KEY>/. Keep it in a private repository.
+    workspace: str | None = None
+    audience: str = "readers of the product documentation"
 
     @field_validator("bot_account_env", "webhook_secret_env")
     @classmethod

@@ -76,7 +76,57 @@ class Receiver:
                      "summary": decision.summary}
 
 
-def make_handler(receiver: Receiver):
+@dataclass
+class JiraEndpoint:
+    """POST /jira/webhook: verify and decide at once; pending work runs on one background worker."""
+
+    config: DocForgeConfig
+    config_path: Path
+    trigger: str
+    state_root: Path
+    client_factory: object = None
+    run_work: bool = True
+
+    def __post_init__(self):
+        import queue
+        import threading
+
+        self.queue: "queue.Queue[str]" = queue.Queue()
+        self._worker = threading.Thread(target=self._work, daemon=True)
+        self._worker.start()
+
+    def handle(self, headers: Mapping[str, str], body: bytes) -> tuple[int, dict]:
+        from docforge.jira import HandleError, handle
+
+        lower = {k.lower(): v for k, v in headers.items()}
+        try:
+            result = handle(body, config=self.config, trigger_name=self.trigger, state_root=self.state_root,
+                            signature=lower.get("x-hub-signature"),
+                            delivery_id=lower.get("x-atlassian-webhook-identifier"),
+                            client_factory=self.client_factory)
+        except HandleError as exc:
+            status = 401 if "signature" in str(exc) or "not set" in str(exc) else 400
+            return status, {"error": str(exc)}
+        if self.run_work and result.get("action") in ("plan", "draft", "revise"):
+            self.queue.put(result["issue"])
+            result["queued"] = True
+        return 202, result
+
+    def _work(self) -> None:
+        from docforge.jira.work import process
+
+        while True:
+            key = self.queue.get()
+            try:
+                process(key, config=self.config, config_path=self.config_path, trigger_name=self.trigger,
+                        state_root=self.state_root, client_factory=self.client_factory)
+            except Exception as exc:  # the worker must survive one ticket's failure
+                sys.stderr.write(f"jira worker: {key}: {type(exc).__name__}: {exc}\n")
+            finally:
+                self.queue.task_done()
+
+
+def make_handler(receiver: Receiver | None, jira: JiraEndpoint | None = None):
     class Handler(BaseHTTPRequestHandler):
         server_version = "docforge-webhook"
 
@@ -89,7 +139,9 @@ def make_handler(receiver: Receiver):
             self.wfile.write(body)
 
         def do_POST(self):  # noqa: N802 (http.server naming)
-            if self.path.split("?", 1)[0] not in PATHS:
+            path = self.path.split("?", 1)[0]
+            target = jira if path == "/jira/webhook" else (receiver if path in PATHS else None)
+            if target is None:
                 return self._reply(404, {"error": "not found"})
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -97,11 +149,11 @@ def make_handler(receiver: Receiver):
                 return self._reply(400, {"error": "invalid Content-Length"})
             if length < 0 or length > MAX_BODY_BYTES:
                 return self._reply(413, {"error": "body too large"})
-            status, data = receiver.handle(dict(self.headers.items()), self.rfile.read(length))
+            status, data = target.handle(dict(self.headers.items()), self.rfile.read(length))
             self._reply(status, data)
 
         def do_GET(self):  # noqa: N802
-            self._reply(405, {"error": "POST GitHub webhooks to this address"})
+            self._reply(405, {"error": "POST webhooks to this address"})
 
         def log_message(self, fmt, *args):
             # One line per request; never the body, headers or secret.
@@ -110,10 +162,14 @@ def make_handler(receiver: Receiver):
     return Handler
 
 
-def serve(receiver: Receiver, host: str = "127.0.0.1", port: int = 8787) -> None:
-    server = ThreadingHTTPServer((host, port), make_handler(receiver))
-    print(f"Listening for GitHub webhooks on http://{host}:{port}/webhook; decisions go to {receiver.log}",
-          file=sys.stderr)
+def serve(receiver: Receiver | None, host: str = "127.0.0.1", port: int = 8787, jira: JiraEndpoint | None = None) -> None:
+    server = ThreadingHTTPServer((host, port), make_handler(receiver, jira))
+    if receiver:
+        print(f"Listening for GitHub webhooks on http://{host}:{port}/webhook; decisions go to {receiver.log}",
+              file=sys.stderr)
+    if jira:
+        print(f"Listening for Jira webhooks on http://{host}:{port}/jira/webhook (trigger {jira.trigger}); "
+              f"ticket state in {jira.state_root}", file=sys.stderr)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

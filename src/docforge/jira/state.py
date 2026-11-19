@@ -50,6 +50,7 @@ class TicketState(BaseModel):
     run: str | None = None
     revision: int = 0
     product: str | None = None
+    notes: list[str] = Field(default_factory=list)  # about the ticket's sources, repeated in the plan comment
     pending: Pending | None = None
     processed: list[str] = Field(default_factory=list)
     outbox: list[OutboxEntry] = Field(default_factory=list)

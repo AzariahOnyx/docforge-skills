@@ -63,6 +63,8 @@ triggers:
     product:
       labels: {}
       default: null
+    workspace: ../docs-work           # each ticket's sources and run: <workspace>/tickets/<KEY>/
+    audience: workspace admins
 
 policies:
   default:

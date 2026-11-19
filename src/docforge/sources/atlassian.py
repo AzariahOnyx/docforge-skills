@@ -34,10 +34,14 @@ def _origin(url: str) -> tuple[str, str]:
 
 
 class _PinnedRedirects(HTTPRedirectHandler):
-    def __init__(self, origin: tuple[str, str]):
+    def __init__(self, origin: tuple[str, str], extra_hosts: frozenset[str] = frozenset()):
         self.origin = origin
+        self.extra_hosts = extra_hosts
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        target = urlsplit(newurl)
+        if target.scheme == "https" and (target.hostname or "") in self.extra_hosts:
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
         if _origin(newurl) != self.origin:
             raise SourceFetchError(f"refused a redirect to another host ({urlsplit(newurl).netloc or 'unknown'})")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
@@ -131,6 +135,33 @@ def post_json(client: "AtlassianClient", path: str, body: dict) -> dict:
     except (UnicodeDecodeError, ValueError):
         raise SourceFetchError(f"POST {where} did not return JSON") from None
     return result if isinstance(result, dict) else {"result": result}
+
+
+def get_bytes(client: "AtlassianClient", path: str, *, max_bytes: int, redirect_hosts: list[str]) -> bytes:
+    """GET raw bytes (an attachment). Redirects may go to the configured host or to `redirect_hosts`
+    over HTTPS; the Authorization header is never sent on a redirect."""
+    url = client.url(path)
+    request = Request(url, method="GET", headers={"User-Agent": USER_AGENT})
+    if client._auth:
+        request.add_unredirected_header("Authorization", client._auth)
+    where = urlsplit(url).path
+    opener = build_opener(_PinnedRedirects(client.origin, frozenset(redirect_hosts)))
+    try:
+        with opener.open(request, timeout=TIMEOUT_SECONDS) as response:
+            final = urlsplit(response.geturl())
+            if _origin(response.geturl()) != client.origin and not (
+                    final.scheme == "https" and (final.hostname or "") in redirect_hosts):
+                raise SourceFetchError("response came from a host that is not allowed")
+            data = response.read(max_bytes + 1)
+    except SourceFetchError:
+        raise
+    except HTTPError as exc:
+        raise SourceFetchError(f"GET {where} returned HTTP {exc.code}") from None
+    except (URLError, OSError) as exc:
+        raise SourceFetchError(f"GET {where} failed: {type(getattr(exc, 'reason', exc)).__name__}") from None
+    if len(data) > max_bytes:
+        raise SourceFetchError(f"GET {where} returned more than {max_bytes} bytes; refused")
+    return data
 
 
 def segment(value: str) -> str:

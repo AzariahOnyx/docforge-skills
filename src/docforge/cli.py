@@ -218,17 +218,28 @@ def _serve(args: argparse.Namespace) -> int:
 
     from docforge.webhook import SECRET_ENV, Receiver, serve
 
+    from docforge.webhook import JiraEndpoint
+
     secret = os.environ.get(SECRET_ENV, "")
-    if not secret:
-        print(f"set {SECRET_ENV} to the webhook secret; unsigned deliveries are never accepted", file=sys.stderr)
+    if not secret and not args.jira_trigger:
+        print(f"set {SECRET_ENV} to the GitHub webhook secret, or give --jira-trigger; unsigned deliveries are "
+              "never accepted", file=sys.stderr)
         return 1
     try:
         config = load_config(args.config)
     except ConfigError as exc:
         print(exc, file=sys.stderr)
         return 1
-    receiver = Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout))
-    serve(receiver, host=args.host, port=args.port)
+    receiver = (Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout))
+                if secret else None)
+    jira = None
+    if args.jira_trigger:
+        if args.jira_trigger not in config.triggers:
+            print(f"no trigger {args.jira_trigger!r} in {args.config}", file=sys.stderr)
+            return 1
+        jira = JiraEndpoint(config=config, config_path=Path(args.config), trigger=args.jira_trigger,
+                            state_root=args.jira_state, client_factory=_jira_client_factory(config, args.jira_trigger))
+    serve(receiver, host=args.host, port=args.port, jira=jira)
     return 0
 
 
@@ -713,6 +724,22 @@ def _jira(args: argparse.Namespace) -> int:
                             client_factory=_jira_client_factory(config, args.trigger))
             print(json.dumps(result, indent=2))
             return 0
+        if args.jira_command == "run":
+            from docforge.jira.work import WorkError, process, process_all
+
+            if bool(args.key) == bool(args.all):
+                raise HandleError("give one ticket key or --all")
+
+            config = load_config(args.config)
+            kw = dict(config=config, config_path=Path(args.config), trigger_name=args.trigger,
+                      client_factory=_jira_client_factory(config, args.trigger))
+            try:
+                results = (process_all(args.state, **kw) if args.all else
+                           [process(args.key, state_root=args.state, **kw)])
+            except WorkError as exc:
+                raise HandleError(str(exc)) from None
+            print(json.dumps(results, indent=2))
+            return 0
         state = load_state(args.state, args.key)
         if state is None:
             print(f"no state for {args.key} in {args.state}", file=sys.stderr)
@@ -785,6 +812,8 @@ def main(argv: list[str] | None = None) -> int:
     serve_cmd.add_argument("--port", type=int, default=8787)
     serve_cmd.add_argument("--config", default="docforge.yaml")
     serve_cmd.add_argument("--log", type=Path, default=DEFAULT_LOG)
+    serve_cmd.add_argument("--jira-trigger", help="also receive Jira webhooks at /jira/webhook for this jira_ticket trigger")
+    serve_cmd.add_argument("--jira-state", type=Path, default=Path(".docforge/jira"))
     serve_cmd.add_argument("--checkout", type=_checkout_arg, action="append", default=[],
                            metavar="OWNER/REPO=PATH", help="local checkout used to diff that repo's PRs")
     serve_cmd.set_defaults(func=_serve)
@@ -989,6 +1018,13 @@ def main(argv: list[str] | None = None) -> int:
     jhandle.add_argument("--unsigned", action="store_true", help="skip the signature check (local recordings only)")
     jhandle.add_argument("--delivery-id", help="the delivery's X-Atlassian-Webhook-Identifier header")
     jhandle.set_defaults(func=_jira)
+    jrun = jira_sub.add_parser("run", help="run a ticket's pending work (plan, revise, draft) as far as it can go")
+    jrun.add_argument("key", nargs="?")
+    jrun.add_argument("--all", action="store_true", help="every ticket with pending work")
+    jrun.add_argument("--trigger", required=True)
+    jrun.add_argument("--config", default="docforge.yaml")
+    jrun.add_argument("--state", type=Path, default=Path(".docforge/jira"))
+    jrun.set_defaults(func=_jira)
     jstate = jira_sub.add_parser("state", help="show a ticket's phase, pending work and outbox")
     jstate.add_argument("key")
     jstate.add_argument("--state", type=Path, default=Path(".docforge/jira"))

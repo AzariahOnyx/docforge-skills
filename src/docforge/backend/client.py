@@ -143,6 +143,9 @@ def call(client, backend: Backend, params: dict, *, sleep=time.sleep) -> CallRes
         except Exception as exc:  # SDK errors: translate without echoing request contents
             if _is_sdk_error(exc):
                 raise _translate(exc, backend) from None
+            if isinstance(exc, TypeError) and "authentication" in str(exc).lower():
+                # The SDK raises TypeError when it finds no credentials at all.
+                raise BackendError(f"no valid API credentials: set {backend.api_key_env} or run `ant auth login`") from None
             raise
     duration = time.monotonic() - started
 

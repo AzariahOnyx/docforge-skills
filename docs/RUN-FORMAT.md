@@ -268,7 +268,9 @@ A `jira_ticket` trigger names a Jira context source, four status names (`plan` a
 | Owner's comment mentioning the bot | planned | revise with the comment as feedback; a bare mention gets a request for specifics |
 | Same mention | drafting or drafted | refused with a comment |
 
-Mentions from anyone but the reporter, creator or assignee, and comments by the bot, are ignored. State lives in `<state>/<KEY>.json`: `phase` (new, planning, planned, drafting, drafted, failed), `run`, `revision`, `product`, `pending` work, the IDs of handled deliveries, an `outbox` of every comment and move (with whether it was sent and why not), and `history`.
+Mentions from anyone but the reporter, creator or assignee, and comments by the bot, are ignored.
+
+`docforge jira run <KEY>` (or the `serve` worker) carries out pending work. Planning writes `<workspace>/tickets/<KEY>/sources/`: `issue.md` (the issue, with a provenance header), the attachments, a Markdown text file for each PRD PDF, and `F<n>.md` for each PDF that is mostly step pages. Attachments are downloaded only from the Jira host, or by HTTPS redirect to a host in `attachments.redirect_hosts` (the Authorization header is never sent on a redirect). The run is `<workspace>/tickets/<KEY>/run`. A revision moves the plan files to `analysis/revisions/r<N>/` and appends the feedback to `prompts/1-analyzer.md`; if the revision fails, the earlier plan is restored. A failed plan leaves the ticket `failed`; a failed draft leaves it `planned`, so moving it to the draft status again retries. State lives in `<state>/<KEY>.json`: `phase` (new, planning, planned, drafting, drafted, failed), `run`, `revision`, `product`, `pending` work, the IDs of handled deliveries, an `outbox` of every comment and move (with whether it was sent and why not), and `history`.
 
 ## Fetched sources and notifications
 
