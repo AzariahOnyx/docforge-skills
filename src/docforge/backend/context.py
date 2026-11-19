@@ -183,16 +183,18 @@ def build_request(run: Path, repo: Path, stage: Stage, *, tools_root: Path = TOO
         raise ContextError("the Research stage needs a product checkout and commands; "
                            "run it in a Claude Code session (see its work order)")
     profile, deliverables = manifest["profile"], manifest["deliverables"]
-    outputs = stage_outputs(stage, profile, deliverables)
+    outputs = stage_outputs(stage, profile, deliverables, ia_plan=bool(manifest.get("ia_plan")))
 
-    engine = [_block("engine-file", {"path": rel}, _read(tools_root / rel, rel))
-              for rel in ([stage.skill] if stage.skill else []) + list(stage.reads)]
+    reads = ([stage.skill] if stage.skill else []) + list(stage.reads)
+    if stage.key == "analyzer" and manifest.get("ia_plan"):
+        reads.append("templates/ia-plan.md")
+    engine = [_block("engine-file", {"path": rel}, _read(tools_root / rel, rel)) for rel in reads]
     stage_block = f"Stage {stage.number}: {stage.name}. Engine files this stage reads:\n\n" + "\n\n".join(engine)
 
     user = _source_blocks(manifest, repo)
     earlier = [s for s in stages_for(manifest) if s.number < stage.number]
     for prior in earlier:
-        for rel in stage_outputs(prior, profile, deliverables):
+        for rel in stage_outputs(prior, profile, deliverables, ia_plan=bool(manifest.get("ia_plan"))):
             path = run / rel
             if not path.is_file():
                 raise ContextError(f"stage {prior.number} ({prior.name}) is not finished: {rel} is missing")

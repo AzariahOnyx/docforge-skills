@@ -11,6 +11,7 @@ doc_collections:
     token_env: GITHUB_TOKEN         # name of the environment variable, never the token
     checkout: ../docs               # local clone used to commit revisions
     bot_login: example-docforge-bot # DocForge's GitHub account: mentions start revisions
+    plan_path: plans/{slug}/ia-plan.md  # where plan pull requests put ia-plan.md
     max_revisions: 5                # automatic revisions per pull request
     revision_delay_seconds: 120     # wait this long after the last review comment
 
@@ -76,6 +77,7 @@ triggers:
       collection: example-org/docs
       checkout: ../docs               # local clone of the docs repo
       base: main
+      plan_pr: true                   # propose the plan as ia-plan.md in a pull request; approving it approves the plan
 
 policies:
   default:

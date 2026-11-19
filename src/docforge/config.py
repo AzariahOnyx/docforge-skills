@@ -66,6 +66,9 @@ class DocCollection(Strict):
     git_url: str | None = None
     # A local clone of the docs repository (relative to docforge.yaml), used to commit revisions.
     checkout: str | None = None
+    # Where a plan pull request puts ia-plan.md ({slug}: the feature in lowercase with hyphens). The plan is
+    # not a docs page, so this path is allowed even outside `filter`.
+    plan_path: str = "plans/{slug}/ia-plan.md"
     # Review on DocForge's own pull requests (B7b). bot_login: DocForge's GitHub account, so mentions are
     # recognised and its own comments ignored. Only reviewers whose association is listed can ask for a revision.
     bot_login: str | None = Field(default=None, pattern=r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})(?:\[bot\])?$")
@@ -73,6 +76,15 @@ class DocCollection(Strict):
         default_factory=lambda: ["OWNER", "MEMBER", "COLLABORATOR"], min_length=1)
     max_revisions: int = Field(default=5, ge=0, le=20)
     revision_delay_seconds: int = Field(default=120, ge=0, le=3600)
+
+    @field_validator("plan_path")
+    @classmethod
+    def _plan_path(cls, value):
+        rest = value.replace("{slug}", "x")
+        if "{slug}" not in value or "{" in rest or not value.endswith(".md") or value.startswith("/") \
+                or ".." in value.split("/") or "\\" in value:
+            raise ValueError(f"plan_path must be a relative .md path containing {{slug}}: {value!r}")
+        return value
 
     @field_validator("api_url")
     @classmethod
@@ -332,6 +344,8 @@ class JiraPublish(Strict):
     collection: str = Field(pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
     checkout: str = Field(min_length=1)  # relative to docforge.yaml
     base: str = Field(default="main", min_length=1)
+    # Propose the plan as ia-plan.md in a plan pull request; approving that pull request approves the plan.
+    plan_pr: bool = False
 
 
 class JiraTicketTrigger(Strict):

@@ -195,11 +195,11 @@ def _record_answers(state: TicketState, run: Path, workspace: Path, folder: Path
 
 def _archive_plan(run: Path, revision: int, feedback: str, by: str | None) -> None:
     """Keep the plan being replaced, and add the owner's feedback to the Analyzer work order."""
-    from docforge.run.stages import ANALYSIS_FILES
+    from docforge.run.stages import ANALYSIS_FILES, IA_PLAN
 
     target = run / "analysis" / "revisions" / f"r{revision}"
     target.mkdir(parents=True, exist_ok=True)
-    for rel in ANALYSIS_FILES:
+    for rel in ANALYSIS_FILES + (IA_PLAN,):
         if (run / rel).is_file():
             shutil.move(str(run / rel), target / Path(rel).name)
     order = run / "prompts" / "1-analyzer.md"
@@ -219,10 +219,10 @@ def _archive_plan(run: Path, revision: int, feedback: str, by: str | None) -> No
 
 
 def _restore_plan(run: Path, revision: int) -> None:
-    from docforge.run.stages import ANALYSIS_FILES
+    from docforge.run.stages import ANALYSIS_FILES, IA_PLAN
 
     source = run / "analysis" / "revisions" / f"r{revision}"
-    for rel in ANALYSIS_FILES:
+    for rel in ANALYSIS_FILES + (IA_PLAN,):
         if (source / Path(rel).name).is_file():
             shutil.move(str(source / Path(rel).name), run / rel)
     if not any(source.iterdir()):
@@ -235,6 +235,45 @@ def _plan_comment(state: TicketState, run: Path, trigger: JiraTicketTrigger, not
     if notes:
         body["content"][-1:-1] = [comments.heading("Notes"), comments.bullets(notes)]
     return body
+
+
+def _uses_plan_pr(run: Path) -> bool:
+    return bool(json.loads((run / "run.json").read_text(encoding="utf-8")).get("ia_plan"))
+
+
+def _plan_pr_comment(state: TicketState, run: Path, trigger: JiraTicketTrigger, trigger_name: str,
+                     config: DocForgeConfig, config_path: Path, github_client) -> dict:
+    """Check ia-plan.md, prepare the plan pull request (and open it when the policy allows). Raises WorkError
+    when the plan file has problems, so the ticket gets a failure comment instead of a broken plan."""
+    from docforge.plan import check_run_plan
+    from docforge.plan.pr import prepare_plan_pr
+    from docforge.publish import PublishError, load_plan, open_pr
+
+    plan, errors = check_run_plan(run, config)
+    if errors:
+        raise WorkError("ia-plan.md has problems: " + "; ".join(errors[:5]))
+    checkout = (config_path.parent / trigger.publish.checkout).resolve()
+    command = f"docforge plan open {state.run} --docs-checkout <docs checkout>"
+    try:
+        if (run / "publish" / "plan-pr.json").is_file():
+            record = load_plan(run, "plan-pr")
+        else:
+            record = prepare_plan_pr(run=run, checkout=checkout, config=config, collection=trigger.publish.collection,
+                                     base=trigger.publish.base)
+            state.note("plan pull request prepared", branch=record.branch, commit=record.commit[:12])
+        state.plan_pr = record.pr_url or record.branch
+        policy = config.resolve_policy(trigger=trigger_name, doc_collection=trigger.publish.collection)["publishing"]
+        if policy.get("auto_create_pr") and record.pr_number is None:
+            record = open_pr(run=run, checkout=checkout, config=config, client=github_client, kind="plan-pr")
+            state.plan_pr = record.pr_url
+            state.note("plan pull request opened", number=record.pr_number, url=record.pr_url)
+    except PublishError as exc:
+        raise WorkError(f"the plan pull request could not be prepared: {exc}") from None
+    articles = [{"title": a["title"], "type": a["type"] or "existing article", "action": a["change"]}
+                for a in plan.articles()]
+    questions = [f"{q['ID']}: {q['Question']}" for q in plan.questions]
+    return comments.plan_pr(articles, questions, link=record.pr_url, command=None if record.pr_url else command,
+                            notes=state.notes)
 
 
 def _publish_lines(state: TicketState, run: Path, trigger: JiraTicketTrigger, trigger_name: str,
@@ -375,9 +414,14 @@ def process(key: str, *, config: DocForgeConfig, config_path: Path, trigger_name
 
                 pack = resolve_pack(config, config_path, trigger.pack) if trigger.pack else None
                 try:
+                    plan_pr = trigger.publish is not None and trigger.publish.plan_pr
+                    ia_plan = ({"mode": "Net-New" if state.mode == "net_new" else "Enhancement",
+                                "product": state.product, "jira": key, "docforge_run": key.lower()}
+                               if plan_pr else None)
                     start_run(repo=workspace, prds=[str(p.relative_to(workspace)) for p in prds],
                               flows=[str(p.relative_to(workspace)) for p in flows], out=run,
-                              audience=trigger.audience, pack=pack, product=state.product if pack else None)
+                              audience=trigger.audience, pack=pack, product=state.product if pack else None,
+                              publish_to=trigger.publish.collection if plan_pr else None, ia_plan=ia_plan)
                 except RunError as exc:
                     raise WorkError(str(exc)) from None
                 state.run = run.relative_to(workspace).as_posix()
@@ -392,7 +436,11 @@ def process(key: str, *, config: DocForgeConfig, config_path: Path, trigger_name
                     return {**result, "result": "waiting", "work_order": str(run / "prompts" / "1-analyzer.md")}
                 if outcome != "done":
                     return fail(outcome, "plan_failed")
-            writer.comment(state, "plan", _plan_comment(state, run, trigger, state.notes))
+            if _uses_plan_pr(run):
+                writer.comment(state, "plan_pr", _plan_pr_comment(state, run, trigger, trigger_name, config,
+                                                                  config_path, github_client))
+            else:
+                writer.comment(state, "plan", _plan_comment(state, run, trigger, state.notes))
             writer.transition(state, trigger.statuses.planned)
             state.phase, state.pending = "planned", None
             state.note("plan posted", revision=state.revision)

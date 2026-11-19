@@ -56,6 +56,7 @@ class TicketState(BaseModel):
     notes: list[str] = Field(default_factory=list)  # about the ticket's sources, repeated in the plan comment
     answered: dict[str, str] = Field(default_factory=dict)  # question label (Q03) -> answer source ID (A1)
     pull_request: str | None = None  # the docs pull request's link, once opened
+    plan_pr: str | None = None  # the plan pull request's link (or its branch, before it is opened)
     shipped: bool = False
     pending: Pending | None = None
     processed: list[str] = Field(default_factory=list)

@@ -82,15 +82,26 @@ class PrPlan(BaseModel):
     automatic_revisions: int = 0
 
 
-def load_plan(run: Path) -> PrPlan:
-    path = run / PUBLISH_DIR / "pr.json"
+# A run can have two pull requests: the drafts ("pr") and, for runs with ia-plan.md, the plan ("plan-pr").
+KINDS = ("pr", "plan-pr")
+
+
+def _record(kind: str) -> str:
+    if kind not in KINDS:
+        raise PublishError(f"unknown pull request kind {kind!r}")
+    return f"{kind}.json"
+
+
+def load_plan(run: Path, kind: str = "pr") -> PrPlan:
+    path = run / PUBLISH_DIR / _record(kind)
     if not path.is_file():
-        raise PublishError(f"{path} not found; run docforge publish prepare first")
+        hint = "docforge publish prepare" if kind == "pr" else "docforge plan prepare"
+        raise PublishError(f"{path} not found; run {hint} first")
     return PrPlan.model_validate_json(path.read_text(encoding="utf-8"))
 
 
-def save_plan(run: Path, plan: PrPlan) -> None:
-    (run / PUBLISH_DIR / "pr.json").write_text(plan.model_dump_json(indent=2) + "\n", encoding="utf-8")
+def save_plan(run: Path, plan: PrPlan, kind: str = "pr") -> None:
+    (run / PUBLISH_DIR / _record(kind)).write_text(plan.model_dump_json(indent=2) + "\n", encoding="utf-8")
 
 
 def resolve_commands(commands: list[str], *, run: Path, checkout: Path | None = None) -> list[str]:
@@ -334,7 +345,7 @@ def _github(config: DocForgeConfig, plan: PrPlan, client=None):
     return collection, client
 
 
-def open_pr(*, run: Path, checkout: Path, config: DocForgeConfig, client=None) -> PrPlan:
+def open_pr(*, run: Path, checkout: Path, config: DocForgeConfig, client=None, kind: str = "pr") -> PrPlan:
     """Push the suggestion branch and open its pull request, or bring an open one up to date.
 
     Safe to repeat: an existing pull request for the branch is found and updated, never duplicated.
@@ -344,17 +355,17 @@ def open_pr(*, run: Path, checkout: Path, config: DocForgeConfig, client=None) -
     from docforge.github import GithubError, push_branch, web_git_url
 
     run = run.resolve()
-    plan = load_plan(run)
+    plan = load_plan(run, kind)
     if plan.status == "closed":
         raise PublishError("this suggestion is closed; start a new run instead")
     collection, client = _github(config, plan, client)
     git_url = collection.git_url or web_git_url(collection.api_url, plan.repo)
-    body = (run / PUBLISH_DIR / "pr-body.md").read_text(encoding="utf-8")
+    body = (run / PUBLISH_DIR / f"{kind}-body.md").read_text(encoding="utf-8")
     if plan.pushed_commit != plan.commit:
         push_branch(checkout, plan.branch, plan.commit, git_url, os.environ.get(collection.token_env))
         plan.pushed_commit = plan.commit
         plan.history.append({"at": _now(), "event": "pushed", "commit": plan.commit})
-        save_plan(run, plan)
+        save_plan(run, plan, kind)
     try:
         pr = client.get_pr(plan.repo, plan.pr_number) if plan.pr_number else client.find_pr(plan.repo, plan.branch)
         if pr and pr.get("state") == "closed":
@@ -374,7 +385,7 @@ def open_pr(*, run: Path, checkout: Path, config: DocForgeConfig, client=None) -
     plan.action = "opened"
     plan.commands = []
     plan.history.append({"at": _now(), "event": event, "number": plan.pr_number, "draft": bool(pr.get("draft"))})
-    save_plan(run, plan)
+    save_plan(run, plan, kind)
     return plan
 
 

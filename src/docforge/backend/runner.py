@@ -130,6 +130,10 @@ def _checks(run: Path, repo: Path, stage: Stage, manifest: dict) -> list[str]:
 
         result = gate_run(run)
         problems += [f"claim gate: {e.path}:{e.line} {e.message}" for e in result.errors]
+    if stage.key == "analyzer" and manifest.get("ia_plan"):
+        from docforge.plan import check_run_plan
+
+        problems += [f"ia-plan.md: {e}" for e in check_run_plan(run)[1]]
     if stage.key == "proofreader":
         record = run_checks(run, repo)
         problems += [f"structural check: {e}" for e in record["structural"]["errors"]]
@@ -252,7 +256,8 @@ def exec_run(run: Path, repo: Path, config: DocForgeConfig | None, *, only: int 
     for stage in stages:
         if only is not None and stage.number != only:
             continue
-        outputs = stage_outputs(stage, manifest["profile"], manifest["deliverables"])
+        outputs = stage_outputs(stage, manifest["profile"], manifest["deliverables"],
+                                ia_plan=bool(manifest.get("ia_plan")))
         if all((run / o).is_file() for o in outputs):
             outcomes.append(StageOutcome(stage.name, "skipped", message="outputs already exist"))
             continue

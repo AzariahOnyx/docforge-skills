@@ -46,7 +46,8 @@ def run_status(out: Path) -> list[StageStatus]:
     statuses = []
     for stage in stages_for(manifest):
         status = StageStatus(stage)
-        for rel in stage_outputs(stage, manifest["profile"], manifest["deliverables"]):
+        for rel in stage_outputs(stage, manifest["profile"], manifest["deliverables"],
+                                 ia_plan=bool(manifest.get("ia_plan"))):
             path = out / rel
             ok = path.is_file() and len(path.read_text(encoding="utf-8").strip()) >= (
                 1 if rel.endswith(".json") else MIN_CHARS

@@ -98,6 +98,41 @@ def plan_in_progress() -> dict:
     return doc(para("The plan is still being prepared. Mention DocForge again after it is posted."))
 
 
+# --- plan pull requests --------------------------------------------------------------
+
+
+def plan_pr(articles: list[dict], questions: list[str], *, link: str | None, command: str | None,
+            notes: list[str]) -> dict:
+    """The plan is in a pull request: a short summary and the link (or the command that opens it)."""
+    blocks = [heading("Documentation plan")]
+    if link:
+        blocks.append(para("DocForge proposed the documentation plan as a pull request: ", text(link, bold=True)))
+        blocks.append(para("Review it there: approving the pull request approves the plan, and DocForge then drafts "
+                           "the articles. Edit the plan file, or comment on the pull request, to change it."))
+    else:
+        blocks.append(para("DocForge prepared the documentation plan as a branch. The pull request is not opened "
+                           f"automatically; to open it, a person runs: {command}"))
+    if articles:
+        blocks.append(bullets([para(text(a["title"], bold=True), text(f" ({a['type']}, {a['action']})"))
+                               for a in articles]))
+    blocks.append(para(f"Open questions: {len(questions)}. Answer them on the pull request."))
+    if notes:
+        blocks += [heading("Notes"), bullets(notes)]
+    return doc(*blocks)
+
+
+def approve_plan_pr(link: str | None) -> dict:
+    where = f" ({link})" if link else ""
+    return doc(para(f"This ticket's plan is a pull request{where}. Drafting starts when a writer approves that pull "
+                    "request, not when the ticket moves."))
+
+
+def review_on_plan_pr(link: str | None) -> dict:
+    where = f": {link}" if link else ""
+    return doc(para(f"This ticket's plan is reviewed in its pull request{where}. Comment there, mentioning "
+                    "DocForge, to change the plan or answer its questions."))
+
+
 # --- plans --------------------------------------------------------------------------
 
 

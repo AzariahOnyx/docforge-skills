@@ -66,10 +66,13 @@ def stages_for(manifest: dict) -> tuple[Stage, ...]:
     return tuple(replace(stage, number=i) for i, stage in enumerate(stages, start=1))
 
 
-def stage_outputs(stage: Stage, profile: str, deliverables: list[str]) -> list[str]:
-    """Run-relative files a stage must produce."""
+IA_PLAN = "analysis/ia-plan.md"
+
+
+def stage_outputs(stage: Stage, profile: str, deliverables: list[str], *, ia_plan: bool = False) -> list[str]:
+    """Run-relative files a stage must produce. `ia_plan`: the run proposes its plan as ia-plan.md."""
     if stage.key == "analyzer":
-        return list(ANALYSIS_FILES)
+        return list(ANALYSIS_FILES) + ([IA_PLAN] if ia_plan else [])
     if stage.key == "research":
         return ["analysis/claims.json", "analysis/CROSS-SOURCE.md"]
     if stage.key == "drafter":

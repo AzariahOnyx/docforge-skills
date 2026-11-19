@@ -99,6 +99,9 @@ def decide(event: TicketEvent, state: TicketState | None, trigger: JiraTicketTri
                 return Decision("ignore", "drafting in progress")
             return Decision("reply", "already drafted", "drafts_exist", comments.drafts_exist(state.run if state else None))
         if _same(event.status_to, s.draft):
+            if phase == "planned" and state is not None and state.plan_pr:
+                return Decision("reply", "the plan is approved in its pull request", "approve_plan_pr",
+                                comments.approve_plan_pr(state.plan_pr if state.plan_pr.startswith("http") else None))
             if phase in ("new", "failed", "planning"):
                 return Decision("pull_back", "no plan yet", "pulled_back",
                                 comments.pulled_back(s.plan, s.draft, planning=phase == "planning"), move_to=s.plan)
@@ -120,6 +123,9 @@ def decide(event: TicketEvent, state: TicketState | None, trigger: JiraTicketTri
             return Decision("ignore", "comment by DocForge itself")
         if not event.comment_author or event.comment_author not in event.owners:
             return Decision("ignore", "mention by someone who is not the ticket's reporter, creator or assignee")
+        if state is not None and state.plan_pr:
+            return Decision("reply", "the plan is reviewed in its pull request", "review_on_plan_pr",
+                            comments.review_on_plan_pr(state.plan_pr if state.plan_pr.startswith("http") else None))
         if phase in ("new", "failed"):
             return Decision("reply", "no plan to revise", "no_plan_yet", comments.no_plan_yet(s.plan))
         if phase == "planning":

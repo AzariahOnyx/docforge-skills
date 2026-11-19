@@ -688,6 +688,61 @@ def _notify_slack(args: argparse.Namespace) -> int:
     return 0 if outcome.sent or not args.send else 1
 
 
+def _plan_check(args: argparse.Namespace) -> int:
+    from docforge.plan import check_run_plan, read_plan
+
+    try:
+        config = load_config(args.config) if Path(args.config).is_file() else None
+        if args.target.is_dir():
+            plan, errors = check_run_plan(args.target, config)
+        else:
+            plan, errors = read_plan(args.target.read_text(encoding="utf-8"))
+    except (ConfigError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    for error in errors:
+        print(f"FAIL: {error}")
+    if errors:
+        return 1
+    articles = plan.articles()
+    print(f"PASS: {plan.front['feature']}: {sum(a['change'] == 'create' for a in articles)} new and "
+          f"{sum(a['change'] != 'create' for a in articles)} existing article(s), {len(plan.questions)} open "
+          f"question(s), {len(plan.conflicts)} conflict(s).")
+    return 0
+
+
+def _plan_prepare(args: argparse.Namespace) -> int:
+    from docforge.plan.pr import prepare_plan_pr
+    from docforge.publish import PublishError
+
+    try:
+        config = load_config(args.config)
+        manifest = json.loads((args.run / "run.json").read_text(encoding="utf-8"))
+        collection = args.collection or (manifest.get("publish") or {}).get("collection")
+        if not collection:
+            raise PublishError("no docs repo: start the run with --publish-to or pass --collection")
+        record = prepare_plan_pr(run=args.run, checkout=args.docs_checkout, config=config, collection=collection,
+                                 base=args.base)
+    except (ConfigError, PublishError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Created local branch {record.branch} at {record.commit[:12]} with {record.placements[0]['dest']} "
+          "(not pushed). After review, a person runs: docforge plan open")
+    return 0
+
+
+def _plan_open(args: argparse.Namespace) -> int:
+    from docforge.publish import PublishError, open_pr
+
+    try:
+        record = open_pr(run=args.run, checkout=args.docs_checkout, config=load_config(args.config), kind="plan-pr")
+    except (ConfigError, PublishError, OSError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Pushed {record.branch}; plan pull request #{record.pr_number}: {record.pr_url}")
+    return 0
+
+
 def _pack_check(args: argparse.Namespace) -> int:
     from docforge.packs import PackError, load_pack, resolve_pack
 
@@ -1107,6 +1162,25 @@ def main(argv: list[str] | None = None) -> int:
     nslack.add_argument("--pr-url", help="GitHub pull request URL to link")
     nslack.add_argument("--send", action="store_true", help="post the message (otherwise only print it)")
     nslack.set_defaults(func=_notify_slack)
+
+    plan_cmd = sub.add_parser("plan", help="the documentation plan as ia-plan.md and its pull request")
+    plan_sub = plan_cmd.add_subparsers(dest="plan_command", required=True)
+    pcheck_plan = plan_sub.add_parser("check", help="check a run's analysis/ia-plan.md (or an ia-plan.md file)")
+    pcheck_plan.add_argument("target", type=Path, help="a run folder or an ia-plan.md file")
+    pcheck_plan.add_argument("--config", default="docforge.yaml", help="checks docs paths against the collection")
+    pcheck_plan.set_defaults(func=_plan_check)
+    pprep = plan_sub.add_parser("prepare", help="commit the run's ia-plan.md to a local plan branch (never pushes)")
+    pprep.add_argument("run", type=Path)
+    pprep.add_argument("--docs-checkout", type=Path, required=True)
+    pprep.add_argument("--collection", metavar="OWNER/REPO")
+    pprep.add_argument("--base", default="main")
+    pprep.add_argument("--config", default="docforge.yaml")
+    pprep.set_defaults(func=_plan_prepare)
+    popen_plan = plan_sub.add_parser("open", help="push the plan branch and open the plan pull request")
+    popen_plan.add_argument("run", type=Path)
+    popen_plan.add_argument("--docs-checkout", type=Path, required=True)
+    popen_plan.add_argument("--config", default="docforge.yaml")
+    popen_plan.set_defaults(func=_plan_open)
 
     pk = sub.add_parser("pack", help="house packs: conventions, references and article specs")
     pk_sub = pk.add_subparsers(dest="pack_command", required=True)
