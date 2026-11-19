@@ -7,6 +7,8 @@ doc_collections:
     default_branch: main
     filter:
       - docs/                       # the agent may only change files under docs/
+    api_url: https://api.github.com # used only by `publish open` and `publish ready --apply`
+    token_env: GITHUB_TOKEN         # name of the environment variable, never the token
 
 context_sources:                    # read-only; fetched with `docforge sources fetch`
   product-jira:
@@ -54,6 +56,7 @@ triggers:
       draft: For review
       bounce: To Do
       planned: Peer review
+      shipped: [Released]           # the docs pull request may then leave draft
     work_types:
       net_new: [Docs New]
       enhancement: [Docs Update]
@@ -65,11 +68,15 @@ triggers:
       default: null
     workspace: ../docs-work           # each ticket's sources and run: <workspace>/tickets/<KEY>/
     audience: workspace admins
+    publish:                          # after drafting, prepare a docs pull request
+      collection: example-org/docs
+      checkout: ../docs               # local clone of the docs repo
+      base: main
 
 policies:
   default:
     publishing:
-      auto_create_pr: false         # drafts wait for review in the app
+      auto_create_pr: false         # true: DocForge pushes and opens draft PRs itself, and marks them ready when shipped
       auto_merge: false
       jira_comments: false          # off: replies go to the ticket's outbox only
       jira_transitions: false

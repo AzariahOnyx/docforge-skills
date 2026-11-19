@@ -73,6 +73,8 @@ def handle(body: bytes, *, config: DocForgeConfig, trigger_name: str, state_root
     elif decision.action == "draft":
         state.phase = "drafting"
         state.pending = Pending(action="draft", at=now())
+    elif decision.action == "ship":
+        state.pending = Pending(action="ship", at=now())
     elif decision.action == "revise":
         state.pending = Pending(action="revise", at=now(), feedback=decision.feedback, by=event.comment_author,
                                 answers=decision.answers, comment_id=event.comment_id,

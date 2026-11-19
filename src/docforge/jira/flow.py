@@ -1,6 +1,7 @@
 """The front door's decision table: what one webhook delivery means for one ticket.
 
-Status moves: DocForge reacts only to the `plan` and `draft` statuses and only
+Status moves: DocForge reacts only to the `plan` and `draft` statuses (and, once
+drafted, to a `shipped` status, which lets the docs pull request leave draft), and only
 writes `bounce`, `planned` and (as a deliberate one-hop pull-back) `plan`.
 Comments: only an owner's @-mention of the bot can revise a plan or answer its
 open questions (lines such as `Q3: ...`).
@@ -24,7 +25,7 @@ from .state import TicketState
 
 @dataclass
 class Decision:
-    action: str  # ignore, bounce, plan, draft, revise, pull_back, reply
+    action: str  # ignore, bounce, plan, draft, revise, pull_back, reply, ship
     reason: str
     reply: str | None = None  # comment kind to post
     reply_body: dict | None = None
@@ -106,6 +107,10 @@ def decide(event: TicketEvent, state: TicketState | None, trigger: JiraTicketTri
             if phase == "drafting":
                 return Decision("ignore", "drafting in progress")
             return Decision("reply", "already drafted", "drafts_ready", comments.drafts_ready(state.run if state else None, []))
+        if any(_same(event.status_to, shipped) for shipped in s.shipped):
+            if phase == "drafted":
+                return Decision("ship", "the feature shipped")
+            return Decision("ignore", f"shipped before the documentation was drafted (phase {phase})")
         return Decision("ignore", f"status {event.status_to!r} is not watched")
 
     if event.kind == "comment":

@@ -12,10 +12,24 @@ from .gate import (
     rules_for_run,
 )
 from .markers import Statement, read_marker, statements
-from .plan import PrPlan, load_plan, mark_ready, prepare_publish, resolve_commands, save_plan, update_publish
+from .place import pack_placements
+from .plan import (
+    PrPlan,
+    apply_ready,
+    load_plan,
+    mark_ready,
+    open_pr,
+    prepare_publish,
+    resolve_commands,
+    save_plan,
+    update_publish,
+)
 from .pr_body import default_title, render_body
 
 __all__ = [
+    "apply_ready",
+    "open_pr",
+    "pack_placements",
     "BRANCH_PREFIX",
     "BranchResult",
     "EvidenceManifest",

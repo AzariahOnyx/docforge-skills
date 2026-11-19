@@ -144,7 +144,7 @@ def test_policy_rule_can_allow_automatic_creation(tmp_path, docs):
         ([("analysis/HANDOVER.md", "site/handover.md")], "is not a deliverable"),
         ([("feature/feature-guide.md", "site/../secret.md")], "stay inside the repository"),
         ([("feature/feature-guide.md", "site/a.md"), ("how-to/how-to.md", "site/a.md")], "two pages placed"),
-        ([], "at least one --place"),
+        ([], "use --place"),
     ],
 )
 def test_bad_placements(tmp_path, docs, place, message):

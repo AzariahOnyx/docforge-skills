@@ -57,6 +57,33 @@ class DocCollection(Strict):
     # Paths the agent may modify. Empty means any file. Entries ending in "/"
     # match a directory tree; other entries match a single file.
     filter: list[str] = Field(default_factory=list)
+    # GitHub connection, used only by `publish open` / `publish ready --apply` (and the Jira route
+    # when a policy allows it). The token is read from the named environment variable at use time.
+    api_url: str = "https://api.github.com"
+    token_env: str = "GITHUB_TOKEN"
+    # Where the docs branch is pushed. Default: https://<web host>/<owner>/<repo>.git. A file:// URL
+    # (a local bare repository) is allowed for tests and demos.
+    git_url: str | None = None
+
+    @field_validator("api_url")
+    @classmethod
+    def _api_url(cls, value):
+        return check_service_url(value)
+
+    @field_validator("token_env")
+    @classmethod
+    def _token_env(cls, value):
+        return check_env_name(value)
+
+    @field_validator("git_url")
+    @classmethod
+    def _git_url(cls, value):
+        if value is None or value.startswith("file:///"):
+            return value
+        url = check_service_url(value)
+        if not url.endswith(".git"):
+            raise ValueError(f"must end in .git: {value!r}")
+        return url
 
     @field_validator("filter")
     @classmethod
@@ -239,12 +266,16 @@ class JiraStatuses(Strict):
     draft: str = Field(min_length=1)
     bounce: str = Field(min_length=1)
     planned: str = Field(min_length=1)
+    # Statuses that mean the feature has shipped: the docs pull request may then leave draft.
+    shipped: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _distinct(self):
         names = [self.plan, self.draft, self.bounce, self.planned]
         if len({n.casefold() for n in names}) != 4:
             raise ValueError("the four Jira status names must be different")
+        if {n.casefold() for n in names} & {n.casefold() for n in self.shipped}:
+            raise ValueError("a shipped status cannot also be the plan, draft, bounce or planned status")
         return self
 
 
@@ -286,6 +317,14 @@ class JiraProduct(Strict):
     default: str | None = None
 
 
+class JiraPublish(Strict):
+    """Where a ticket's drafts go: a doc collection (owner/repo) and a local checkout of it."""
+
+    collection: str = Field(pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+    checkout: str = Field(min_length=1)  # relative to docforge.yaml
+    base: str = Field(default="main", min_length=1)
+
+
 class JiraTicketTrigger(Strict):
     """A Jira board as the front door: ticket status moves start planning and drafting."""
 
@@ -302,6 +341,8 @@ class JiraTicketTrigger(Strict):
     # <workspace>/tickets/<KEY>/. Keep it in a private repository.
     workspace: str | None = None
     audience: str = "readers of the product documentation"
+    # Prepare a docs pull request after drafting. Opening it needs the auto_create_pr policy or a person.
+    publish: JiraPublish | None = None
 
     @field_validator("bot_account_env", "webhook_secret_env")
     @classmethod
@@ -489,6 +530,9 @@ class DocForgeConfig(Strict):
                     raise ValueError(f"triggers.{name}: source {trigger.source!r} is not a jira context source")
                 if trigger.pack is not None and trigger.pack not in self.packs:
                     raise ValueError(f"triggers.{name}: pack {trigger.pack!r} is not in packs")
+                if trigger.publish is not None and trigger.publish.collection not in self.doc_collections:
+                    raise ValueError(f"triggers.{name}: publish collection {trigger.publish.collection!r} "
+                                     "is not in doc_collections")
         return self
 
     @model_validator(mode="after")

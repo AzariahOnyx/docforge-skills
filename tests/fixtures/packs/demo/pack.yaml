@@ -90,3 +90,8 @@ flow_profile:                     # fictional exporter: "Step 3/7" or a bare "3/
     - '^\d+\s*/\s*\d+$'           # page numbers after the header
     - '^Powered by'
     - '^Next$'
+placement:                        # where drafts go in the docs repo
+  - applies_to: [feature/, how-to/]
+    path: site/{product}/{category}/{slug}.md
+  - applies_to: [release-note/]
+    path: site/release-notes/{month}/{slug}.md

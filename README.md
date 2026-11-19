@@ -175,7 +175,14 @@ uv run docforge publish prepare output/my-run --docs-checkout ../docs-site \
   --place feature/feature-guide.md=docs/quiet-hours.md
 ```
 
-`publish prepare` commits to a new local branch only. It prints the `git push` and `gh pr create --draft` commands for a person to run after review; nothing is pushed or opened automatically. Copy `templates/ci/docforge-gate.yml` into a docs repository to run the gate on its pull requests.
+`publish prepare` commits to a new local branch only; nothing is pushed or opened automatically. Without `--place`, the pack's `placement` templates choose each page's path from its front matter. After review, a person opens the pull request:
+
+```bash
+uv run docforge publish open output/my-run --docs-checkout ../docs-site
+uv run docforge publish ready output/my-run --source-state merged --apply
+```
+
+`publish open` pushes only the `docforge/` branch DocForge recorded, never forced, and opens the pull request as a draft while the source change is unmerged. Running it again updates the same pull request. The token comes from the environment variable named in the doc collection (`token_env`, default `GITHUB_TOKEN`) and never appears in a command, file, or log. `publish ready --apply` marks the pull request ready for review once the source change is recorded as merged. Copy `templates/ci/docforge-gate.yml` into a docs repository to run the gate on its pull requests.
 
 Review suggestions in a local web page, or from the command line:
 
@@ -240,7 +247,7 @@ uv run docforge jira run PROJ-123 --trigger docs-tickets
 uv run docforge jira state PROJ-123
 ```
 
-Planning reads the ticket and downloads its PDF and Markdown attachments into the trigger's `workspace`: PRD PDFs become text, Flow PDFs become flow sources. It starts a run with the trigger's pack and the ticket's product, runs the Analyzer, and posts the planned articles and open questions. A revision keeps the earlier plan and adds the owner's feedback to the Analyzer's work order. To answer an open question, the owner mentions DocForge with each answer on its own line, for example `Q3: only workspace admins`. The answers become a new source in the run (`A1`, `A2`, and so on) that the drafts can cite, and the plan is redone with them. An answer to a question that is not open records nothing. Drafting runs the Drafter, the clean-up, and the Proofreader, checks the claim gate, and reports the result on the ticket. With a `backend` section the stages run through the API; without one, DocForge writes the work orders and `docforge jira run` continues once a session has done the stage. `docforge serve --jira-trigger` answers each delivery at once and runs the work on one background worker.
+Planning reads the ticket and downloads its PDF and Markdown attachments into the trigger's `workspace`: PRD PDFs become text, Flow PDFs become flow sources. It starts a run with the trigger's pack and the ticket's product, runs the Analyzer, and posts the planned articles and open questions. A revision keeps the earlier plan and adds the owner's feedback to the Analyzer's work order. To answer an open question, the owner mentions DocForge with each answer on its own line, for example `Q3: only workspace admins`. The answers become a new source in the run (`A1`, `A2`, and so on) that the drafts can cite, and the plan is redone with them. An answer to a question that is not open records nothing. With a `publish` section on the trigger, drafting also prepares the `docforge/<ticket key>` branch in the docs checkout. With the `auto_create_pr` policy on, DocForge opens it as a draft pull request, links it in the ticket comment, and marks it ready when the ticket reaches a `shipped` status; otherwise the comment gives the command a person runs. Drafting runs the Drafter, the clean-up, and the Proofreader, checks the claim gate, and reports the result on the ticket. With a `backend` section the stages run through the API; without one, DocForge writes the work orders and `docforge jira run` continues once a session has done the stage. `docforge serve --jira-trigger` answers each delivery at once and runs the work on one background worker.
 
 Every delivery must carry Jira's HMAC signature, checked with the secret in the environment variable the trigger names. Tickets without one of the trigger's Work Types are ignored silently. Missing or oversized attachments bounce the ticket with a comment, and moves DocForge cannot act on get a reply rather than silence. Repeated deliveries are ignored. Posting comments and moving tickets are off by default (`jira_comments` and `jira_transitions` in the policy); until a policy turns them on, DocForge records what it would post in the ticket's outbox in `.docforge/jira/`.
 

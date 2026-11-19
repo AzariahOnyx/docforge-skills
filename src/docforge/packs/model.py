@@ -297,6 +297,38 @@ class FlowProfileSpec(Strict):
         return self
 
 
+PLACEMENT_FIELDS = ("product", "category", "slug", "month")
+PLACEMENT_FIELD_RE = re.compile(r"\{([^{}]*)\}")
+
+
+class Placement(Strict):
+    """Where drafts go in the docs repository: a path template filled from the run's product key, the draft's
+    front matter (`category`, `slug`, else a slug of `title`) and `month` (front matter `release_month`, else
+    the month the pull request is prepared, as YYYY-MM)."""
+
+    applies_to: list[str] = Field(min_length=1)
+    path: str
+
+    @field_validator("applies_to")
+    @classmethod
+    def _applies(cls, value):
+        return check_prefixes(value)
+
+    @field_validator("path")
+    @classmethod
+    def _path(cls, value):
+        names = PLACEMENT_FIELD_RE.findall(value)
+        unknown = sorted(set(names) - set(PLACEMENT_FIELDS))
+        if unknown:
+            raise ValueError(f"placement path: unknown field(s) {', '.join(unknown)}; use {', '.join(PLACEMENT_FIELDS)}")
+        if "slug" not in names:
+            raise ValueError(f"placement path needs {{slug}} so pages do not collide: {value!r}")
+        if not value.endswith(".md"):
+            raise ValueError(f"placement path must end in .md: {value!r}")
+        check_relative(PLACEMENT_FIELD_RE.sub("x", value))
+        return value
+
+
 class PackManifest(Strict):
     schema_version: Literal[1]
     name: str
@@ -310,6 +342,7 @@ class PackManifest(Strict):
     vale: ValeStyles | None = None
     capture_profiles: list[CaptureProfile] = Field(default_factory=list)
     flow_profile: FlowProfileSpec | None = None
+    placement: list[Placement] = Field(default_factory=list)
 
     @field_validator("name")
     @classmethod

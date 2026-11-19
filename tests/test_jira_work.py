@@ -42,7 +42,7 @@ FLOW_PAGES = [{"lines": ["Pause Alerts"]},
               {"lines": ["Step 2/2", "Click Pause for 1 hour."]}]
 
 
-def jira_config(stub_url: str, workspace: Path, **extra) -> DocForgeConfig:
+def jira_config(stub_url: str, workspace: Path, trigger_extra: dict | None = None, **extra) -> DocForgeConfig:
     return DocForgeConfig.model_validate({
         "context_sources": {"pulse-jira": {"source_type": "jira", "base_url": stub_url, "project_keys": ["PULSE"]}},
         "packs": {"demo": {"path": str(DEMO_PACK)}},
@@ -51,7 +51,7 @@ def jira_config(stub_url: str, workspace: Path, **extra) -> DocForgeConfig:
             "statuses": {"plan": "Plan Docs", "draft": "Draft Docs", "bounce": "Backlog", "planned": "Plan Review"},
             "work_types": {"net_new": ["Docs New"]}, "bot_account_env": "TEST_JIRA_BOT",
             "webhook_secret_env": "TEST_JIRA_SECRET", "pack": "demo", "product": {"labels": {"alerts": "alerts"}},
-            "workspace": str(workspace), "audience": "workspace admins"}},
+            "workspace": str(workspace), "audience": "workspace admins", **(trigger_extra or {})}},
         **extra,
     })
 
@@ -188,7 +188,7 @@ def test_scanned_pdf_is_noted_in_the_plan(jira, tmp_path):
 # --- revision -------------------------------------------------------------------------
 
 
-def _planned_ticket(jira, tmp_path, **cfg_extra):
+def _planned_ticket(jira, tmp_path, trigger_extra=None, **cfg_extra):
     """A ticket planned by a session (no backend), then a config with `cfg_extra` (for example a backend)."""
     stub, workspace = jira
     session = jira_config(stub.url, workspace)
@@ -196,7 +196,7 @@ def _planned_ticket(jira, tmp_path, **cfg_extra):
     _run(session, tmp_path)
     _copy_stage(workspace / "tickets" / KEY / "run", ANALYSIS)
     _run(session, tmp_path)
-    return jira_config(stub.url, workspace, **cfg_extra), workspace / "tickets" / KEY / "run"
+    return jira_config(stub.url, workspace, trigger_extra, **cfg_extra), workspace / "tickets" / KEY / "run"
 
 
 def test_revision_archives_the_plan_and_adds_feedback(jira, tmp_path):

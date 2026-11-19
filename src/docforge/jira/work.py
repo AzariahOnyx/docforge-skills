@@ -237,8 +237,71 @@ def _plan_comment(state: TicketState, run: Path, trigger: JiraTicketTrigger, not
     return body
 
 
+def _publish_lines(state: TicketState, run: Path, trigger: JiraTicketTrigger, trigger_name: str,
+                   config: DocForgeConfig, config_path: Path, github_client) -> list[str]:
+    """Prepare the docs pull request after drafting; open it when the policy allows. Lines for the comment.
+
+    A failure here never undoes the drafts: it is reported on the ticket, and a person can run the
+    `docforge publish` commands by hand.
+    """
+    from docforge.publish import PublishError, load_plan, open_pr, prepare_publish
+
+    target = trigger.publish
+    checkout = (config_path.parent / target.checkout).resolve()
+    command = f"docforge publish open {state.run} --docs-checkout <docs checkout>"
+    try:
+        if (run / "publish" / "pr.json").is_file():
+            plan = load_plan(run)
+        else:
+            plan = prepare_publish(run=run, checkout=checkout, config=config, collection=target.collection,
+                                   placements=[], base=target.base, slug=state.key.lower())
+            state.note("pull request prepared", branch=plan.branch, commit=plan.commit[:12])
+        lines = [f"Docs branch: {plan.branch} in {plan.repo} ({len(plan.files)} file(s))."]
+        policy = config.resolve_policy(trigger=trigger_name, doc_collection=target.collection)["publishing"]
+        if not policy.get("auto_create_pr"):
+            return lines + [f"The pull request is not opened automatically. To open it as a draft, a person runs: "
+                            f"{command}"]
+        plan = open_pr(run=run, checkout=checkout, config=config, client=github_client)
+    except PublishError as exc:
+        state.note("pull request not opened", reason=str(exc))
+        return [f"The docs pull request could not be opened: {exc}. A person can run {command} after fixing it."]
+    state.pull_request = plan.pr_url
+    state.note("pull request opened", number=plan.pr_number, url=plan.pr_url)
+    return lines + [f"Draft pull request: {plan.pr_url} (stays a draft until the feature ships)."]
+
+
+def _ship(state: TicketState, run: Path, trigger: JiraTicketTrigger, trigger_name: str, config: DocForgeConfig,
+          github_client) -> dict:
+    """The feature shipped: record it, and mark the docs pull request ready when the policy allows."""
+    from docforge.publish import PublishError, apply_ready, load_plan, mark_ready
+
+    state.shipped = True
+    if trigger.publish is None or not (run / "publish" / "pr.json").is_file():
+        state.note("shipped", detail="no docs pull request to mark ready")
+        return comments.doc(comments.para("The feature shipped. This ticket has no docs pull request to mark ready."))
+    try:
+        plan = load_plan(run)
+        if plan.draft:
+            plan = mark_ready(run, "merged")
+        policy = config.resolve_policy(trigger=trigger_name, doc_collection=trigger.publish.collection)["publishing"]
+        if not policy.get("auto_create_pr") or plan.pr_number is None:
+            state.note("shipped", detail="pull request may leave draft")
+            how = ("open it with docforge publish open, then run" if plan.pr_number is None else "a person runs")
+            return comments.doc(comments.para(
+                f"The feature shipped, so the docs pull request may leave draft. To mark it ready for review, {how}: "
+                f"docforge publish ready {state.run} --source-state merged --apply"))
+        plan = apply_ready(run=run, config=config, client=github_client)
+    except PublishError as exc:
+        state.note("shipped", detail=f"pull request not marked ready: {exc}")
+        return comments.doc(comments.para(f"The feature shipped, but the docs pull request could not be marked "
+                                          f"ready: {exc}"))
+    state.note("pull request ready", number=plan.pr_number)
+    return comments.doc(comments.para(f"The feature shipped. The docs pull request is ready for review: "
+                                      f"{plan.pr_url}"))
+
+
 def process(key: str, *, config: DocForgeConfig, config_path: Path, trigger_name: str, state_root: Path,
-            client_factory=None, backend_client=None) -> dict:
+            client_factory=None, backend_client=None, github_client=None) -> dict:
     """Run the ticket's pending work as far as it can go. Returns what happened."""
     state = load_state(state_root, key)
     if state is None or state.pending is None:
@@ -356,11 +419,20 @@ def process(key: str, *, config: DocForgeConfig, config_path: Path, trigger_name
                 if not gate.passed:
                     first = gate.errors[0]
                     return fail(f"the claim gate failed ({first.path}:{first.line} {first.message})", "draft_failed")
-            writer.comment(state, "drafts_ready", comments.drafts_ready(state.run, drafts_summary(run)))
+            summary = drafts_summary(run)
+            if trigger.publish is not None:
+                summary += _publish_lines(state, run, trigger, trigger_name, config, config_path, github_client)
+            writer.comment(state, "drafts_ready", comments.drafts_ready(state.run, summary))
             state.phase, state.pending = "drafted", None
             state.note("drafts ready")
             save_state(state_root, state)
             return {**result, "result": "drafted"}
+        if action == "ship":
+            body = _ship(state, run, trigger, trigger_name, config, github_client)
+            writer.comment(state, "shipped", body)
+            state.pending = None
+            save_state(state_root, state)
+            return {**result, "result": "shipped", "pull_request": state.pull_request}
     except WorkError as exc:
         return fail(str(exc), f"{action}_failed")
     except PackError as exc:

@@ -36,7 +36,7 @@ class OutboxEntry(BaseModel):
 
 
 class Pending(BaseModel):
-    action: Literal["plan", "draft", "revise"]
+    action: Literal["plan", "draft", "revise", "ship"]
     at: str
     feedback: str = ""
     by: str | None = None
@@ -55,6 +55,8 @@ class TicketState(BaseModel):
     product: str | None = None
     notes: list[str] = Field(default_factory=list)  # about the ticket's sources, repeated in the plan comment
     answered: dict[str, str] = Field(default_factory=dict)  # question label (Q03) -> answer source ID (A1)
+    pull_request: str | None = None  # the docs pull request's link, once opened
+    shipped: bool = False
     pending: Pending | None = None
     processed: list[str] = Field(default_factory=list)
     outbox: list[OutboxEntry] = Field(default_factory=list)

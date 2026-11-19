@@ -32,7 +32,12 @@ def source_origin(source: dict) -> str:
     origin = source.get("origin")
     if not origin:
         return "file"
-    label = {"jira": "Jira", "confluence": "Confluence page"}.get(source.get("kind"), source.get("kind", "?"))
+    if source.get("kind") == "flow":
+        text = (f"Flow PDF {origin.get('pdf', 'unknown')}, {origin.get('steps', '?')} steps, "
+                f"fetched {origin.get('fetched_at', 'unknown')}")
+        return text.replace("|", "\\|")
+    label = {"jira": "Jira", "confluence": "Confluence page", "answer": "Ticket owner answers"}.get(
+        source.get("kind"), source.get("kind", "?"))
     text = f"{label} {origin.get('id', '?')}"
     if origin.get("space"):
         text += f" in {origin['space']}"
@@ -61,12 +66,15 @@ def render_body(
     """`placements` holds (run path, docs path, added|modified)."""
     source_pr = manifest.get("source_pr")
     lines = [
-        "> Prepared by DocForge from run `" + run.name + "`. A person must review and approve this pull request; "
+        "> Prepared by DocForge from run `" + branch.split("/", 1)[-1] + "`. A person must review and approve this "
+        "pull request; "
         "nothing here is approved or verified against the live product.",
         "",
     ]
-    if draft:
+    if draft and source_pr:
         lines += ["This pull request stays a **draft** while its source change is not merged.", ""]
+    elif draft:
+        lines += ["This pull request stays a **draft** until the feature ships.", ""]
 
     lines += ["## Source change", ""]
     if source_pr:

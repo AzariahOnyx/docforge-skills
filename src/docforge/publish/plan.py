@@ -10,7 +10,11 @@ same suggestion branch, only if no one else moved it.
 ready: once the source change is merged, records that the pull request may
 leave draft.
 
-None of these push or call GitHub. Stored commands use the placeholders
+open: pushes the branch and opens the pull request (as a draft until the source
+ships), or updates it after `update`. ready with apply: marks it ready on GitHub.
+
+Only `open` and `apply_ready` push or call GitHub, and only when a person runs
+them or a policy (auto_create_pr) allows it. Stored commands use the placeholders
 <docs-checkout> and <run>, so run files never hold local paths;
 `resolve_commands` fills them in for printing.
 """
@@ -60,6 +64,12 @@ class PrPlan(BaseModel):
     # open, changes_requested, revised, closed
     status: str = "open"
     revision: int = 0
+    # Set once the branch is pushed and the pull request exists on GitHub (`publish open`).
+    pr_number: int | None = None
+    pr_url: str | None = None
+    pr_node_id: str | None = None
+    pushed_commit: str | None = None
+    ready_applied: bool = False
 
 
 def load_plan(run: Path) -> PrPlan:
@@ -161,13 +171,13 @@ def _gate_or_fail(run: Path) -> GateResult:
 
 
 def _stage_files(run: Path, checked: list[tuple[str, str]], target: DocCollection,
-                 collection: str) -> tuple[list[tuple[Path, str]], str]:
+                 collection: str, slug: str) -> tuple[list[tuple[Path, str]], str]:
     """Write placed pages and the evidence manifest under publish/; return (files, manifest path)."""
     out_dir = run / PUBLISH_DIR
     run_rules = rules_for_run(run)
     by_dest = {dest: run_rules.allowed.get(src, []) for src, dest in checked}
     evidence = EvidenceManifest(run=run.name, rules=run_rules.model_copy(update={"allowed": by_dest}))
-    evidence_dest = _manifest_path(target.filter, run.name)
+    evidence_dest = _manifest_path(target.filter, slug)
     if not target.allows(evidence_dest):
         raise PublishError(f"evidence manifest path {evidence_dest} is outside the {collection} filter")
     out_dir.mkdir(exist_ok=True)
@@ -199,23 +209,32 @@ def prepare_publish(
     placements: list[tuple[str, str]],
     base: str = "main",
     title: str | None = None,
+    slug: str | None = None,
 ) -> PrPlan:
+    """`slug` names the branch (docforge/<slug>) and the evidence manifest; default: the run folder's name."""
     run = run.resolve()
+    slug = slug or run.name
+    if not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,99}", slug):
+        raise PublishError(f"branch slug must be lowercase letters, digits, '.', '_' or '-': {slug!r}")
     if (run / PUBLISH_DIR / "pr.json").exists():
         raise PublishError(f"{run / PUBLISH_DIR / 'pr.json'} already exists; this run was already prepared")
     manifest = json.loads((run / "run.json").read_text(encoding="utf-8"))
     target = config.doc_collections.get(collection)
     if target is None:
         raise PublishError(f"doc collection {collection!r} is not in the config")
+    if not placements:
+        from .place import pack_placements
+
+        placements = pack_placements(run)
     checked = _check_placements(manifest, target, collection, placements)
     gate = _gate_or_fail(run)
-    files, evidence_dest = _stage_files(run, checked, target, collection)
+    files, evidence_dest = _stage_files(run, checked, target, collection, slug)
 
     source_pr = manifest.get("source_pr")
     draft = not (source_pr and source_pr.get("state") == "merged")
     title = title or default_title(run)
-    branch = f"{BRANCH_PREFIX}{run.name}"
-    message = f"{title}\n\nPrepared by DocForge from run {run.name}. Proposed for human review; not approved."
+    branch = f"{BRANCH_PREFIX}{slug}"
+    message = f"{title}\n\nPrepared by DocForge from run {slug}. Proposed for human review; not approved."
     result = create_branch(checkout, branch, base, files, message)
     _write_body(run, manifest, gate, checked, {c.path: c.change for c in result.changes},
                 branch=branch, draft=draft, evidence_dest=evidence_dest)
@@ -253,9 +272,10 @@ def update_publish(*, run: Path, checkout: Path, config: DocForgeConfig) -> PrPl
     manifest = json.loads((run / "run.json").read_text(encoding="utf-8"))
     checked = _check_placements(manifest, target, plan.repo, [(p["src"], p["dest"]) for p in plan.placements])
     gate = _gate_or_fail(run)
-    files, evidence_dest = _stage_files(run, checked, target, plan.repo)
+    files, evidence_dest = _stage_files(run, checked, target, plan.repo, plan.branch[len(BRANCH_PREFIX):])
     revision = plan.revision + 1
-    message = f"{plan.title} (revision {revision})\n\nRevised by DocForge after review feedback on run {run.name}."
+    message = (f"{plan.title} (revision {revision})\n\nRevised by DocForge after review feedback on run "
+               f"{plan.branch[len(BRANCH_PREFIX):]}.")
     result = update_branch(checkout, plan.branch, plan.commit, files, message)
 
     plan.commit, plan.revision = result.commit, revision
@@ -286,5 +306,89 @@ def mark_ready(run: Path, source_state: str) -> PrPlan:
         plan.source_pr = {**plan.source_pr, "state": "merged"}
     plan.commands = [shlex.join(["gh", "pr", "ready", plan.branch, "--repo", plan.repo])]
     plan.history.append({"at": _now(), "event": "source_merged", "draft": False})
+    save_plan(run, plan)
+    return plan
+
+
+def _github(config: DocForgeConfig, plan: PrPlan, client=None):
+    collection = config.doc_collections.get(plan.repo)
+    if collection is None:
+        raise PublishError(f"doc collection {plan.repo!r} is not in the config")
+    if client is None:
+        from docforge.github import GithubClient, GithubError
+
+        try:
+            client = GithubClient(collection)
+        except GithubError as exc:
+            raise PublishError(str(exc)) from None
+    return collection, client
+
+
+def open_pr(*, run: Path, checkout: Path, config: DocForgeConfig, client=None) -> PrPlan:
+    """Push the suggestion branch and open its pull request, or bring an open one up to date.
+
+    Safe to repeat: an existing pull request for the branch is found and updated, never duplicated.
+    """
+    import os
+
+    from docforge.github import GithubError, push_branch, web_git_url
+
+    run = run.resolve()
+    plan = load_plan(run)
+    if plan.status == "closed":
+        raise PublishError("this suggestion is closed; start a new run instead")
+    collection, client = _github(config, plan, client)
+    git_url = collection.git_url or web_git_url(collection.api_url, plan.repo)
+    body = (run / PUBLISH_DIR / "pr-body.md").read_text(encoding="utf-8")
+    if plan.pushed_commit != plan.commit:
+        push_branch(checkout, plan.branch, plan.commit, git_url, os.environ.get(collection.token_env))
+        plan.pushed_commit = plan.commit
+        plan.history.append({"at": _now(), "event": "pushed", "commit": plan.commit})
+        save_plan(run, plan)
+    try:
+        pr = client.get_pr(plan.repo, plan.pr_number) if plan.pr_number else client.find_pr(plan.repo, plan.branch)
+        if pr and pr.get("state") == "closed":
+            raise PublishError(f"pull request #{pr.get('number')} for {plan.branch} is closed; reopen it on GitHub "
+                               "or start a new run")
+        if pr:
+            if pr.get("body") != body:
+                client.update_pr(plan.repo, pr["number"], body=body)
+            event = "pr_updated"
+        else:
+            pr = client.create_pr(plan.repo, base=plan.base, head=plan.branch, title=plan.title, body=body,
+                                  draft=plan.draft)
+            event = "pr_opened"
+    except GithubError as exc:
+        raise PublishError(str(exc)) from None
+    plan.pr_number, plan.pr_url, plan.pr_node_id = int(pr["number"]), pr.get("html_url"), pr.get("node_id")
+    plan.action = "opened"
+    plan.commands = []
+    plan.history.append({"at": _now(), "event": event, "number": plan.pr_number, "draft": bool(pr.get("draft"))})
+    save_plan(run, plan)
+    return plan
+
+
+def apply_ready(*, run: Path, config: DocForgeConfig, client=None) -> PrPlan:
+    """Mark the pull request ready for review on GitHub, after `mark_ready` recorded that the source shipped."""
+    from docforge.github import GithubError
+
+    run = run.resolve()
+    plan = load_plan(run)
+    if plan.draft:
+        raise PublishError("the source change is not recorded as merged; the pull request stays a draft")
+    if plan.pr_node_id is None:
+        raise PublishError("the pull request has not been opened on GitHub; run docforge publish open first")
+    if plan.ready_applied:
+        return plan
+    _, client = _github(config, plan, client)
+    try:
+        still_draft = client.mark_ready(plan.pr_node_id)
+    except GithubError as exc:
+        raise PublishError(str(exc)) from None
+    if still_draft:
+        raise PublishError("GitHub still reports the pull request as a draft")
+    plan.ready_applied = True
+    plan.commands = []
+    plan.history.append({"at": _now(), "event": "pr_ready", "number": plan.pr_number})
     save_plan(run, plan)
     return plan

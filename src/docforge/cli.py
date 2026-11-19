@@ -359,16 +359,35 @@ def _publish_prepare(args: argparse.Namespace) -> int:
 
 
 def _publish_ready(args: argparse.Namespace) -> int:
-    from docforge.publish import PublishError, mark_ready
+    from docforge.publish import PublishError, apply_ready, load_plan, mark_ready
 
     try:
-        plan = mark_ready(args.run, args.source_state)
-    except PublishError as exc:
+        if not (args.apply and args.source_state == "merged" and not load_plan(args.run).draft):
+            plan = mark_ready(args.run, args.source_state)
+            print(f"Recorded that the source change is merged; {plan.branch} may leave draft.")
+        if args.apply:
+            plan = apply_ready(run=args.run, config=load_config(args.config))
+            print(f"Marked pull request #{plan.pr_number} ready for review: {plan.pr_url or ''}".rstrip(": "))
+            return 0
+    except (ConfigError, PublishError, OSError) as exc:
         print(exc, file=sys.stderr)
         return 1
-    print(f"Recorded that the source change is merged; {plan.branch} may leave draft. A person runs:")
+    print("A person runs:")
     for command in plan.commands:
         print("  " + command)
+    return 0
+
+
+def _publish_open(args: argparse.Namespace) -> int:
+    from docforge.publish import PublishError, open_pr
+
+    try:
+        plan = open_pr(run=args.run, checkout=args.docs_checkout, config=load_config(args.config))
+    except (ConfigError, PublishError, OSError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    state = "draft" if plan.draft else "ready for review"
+    print(f"Pushed {plan.branch} at {plan.commit[:12]}; pull request #{plan.pr_number} ({state}): {plan.pr_url}")
     return 0
 
 
@@ -850,13 +869,14 @@ def main(argv: list[str] | None = None) -> int:
     gate.add_argument("--docs-root", type=Path, default=Path("."), help="docs repo root for --manifest")
     gate.set_defaults(func=_gate)
 
-    publish = sub.add_parser("publish", help="prepare a docs pull request (local only; never pushes)")
+    publish = sub.add_parser("publish", help="prepare a docs pull request; `open` pushes it after approval")
     publish_sub = publish.add_subparsers(dest="publish_command", required=True)
     prepare = publish_sub.add_parser("prepare", help="gate the run, commit pages to a local branch, write the PR")
     prepare.add_argument("run", type=Path)
     prepare.add_argument("--docs-checkout", type=Path, required=True, help="local clone of the docs repo")
-    prepare.add_argument("--place", type=_place_arg, action="append", default=[], required=True,
-                         metavar="RUN-FILE=DOCS-PATH", help="where a run page goes in the docs repo (repeatable)")
+    prepare.add_argument("--place", type=_place_arg, action="append", default=[],
+                         metavar="RUN-FILE=DOCS-PATH",
+                         help="where a run page goes in the docs repo (repeatable; default: the pack's placement)")
     prepare.add_argument("--collection", metavar="OWNER/REPO", help="docs repo (default: the run's --publish-to)")
     prepare.add_argument("--base", default="main", help="branch the pull request targets (default main)")
     prepare.add_argument("--title")
@@ -867,10 +887,17 @@ def main(argv: list[str] | None = None) -> int:
     update.add_argument("--docs-checkout", type=Path, required=True, help="the clone used by publish prepare")
     update.add_argument("--config", default="docforge.yaml")
     update.set_defaults(func=_publish_update)
-    ready = publish_sub.add_parser("ready", help="record that the source change merged; print the ready command")
+    ready = publish_sub.add_parser("ready", help="record that the source change merged; --apply marks it on GitHub")
     ready.add_argument("run", type=Path)
     ready.add_argument("--source-state", required=True, choices=("open", "merged"))
+    ready.add_argument("--apply", action="store_true", help="also mark the pull request ready on GitHub")
+    ready.add_argument("--config", default="docforge.yaml")
     ready.set_defaults(func=_publish_ready)
+    popen = publish_sub.add_parser("open", help="push the branch and open (or update) the draft pull request")
+    popen.add_argument("run", type=Path)
+    popen.add_argument("--docs-checkout", type=Path, required=True, help="the clone used by publish prepare")
+    popen.add_argument("--config", default="docforge.yaml")
+    popen.set_defaults(func=_publish_open)
 
     from docforge.review import CLOSE_REASONS
 
