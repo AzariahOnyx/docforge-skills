@@ -101,8 +101,19 @@ def plan_in_progress() -> dict:
 # --- plans --------------------------------------------------------------------------
 
 
-def plan(articles: list[dict], questions: list[str], *, revision: int, draft: str, run: str | None = None) -> dict:
-    """articles: {"title", "type", "action"} (action: create or update). questions: open questions as text."""
+def unknown_questions(unknown: list[str], open_ids: list[str]) -> dict:
+    listed = ", ".join(open_ids) if open_ids else "none"
+    return doc(para(f"DocForge did not record these answers: {', '.join(unknown)} "
+                    f"{'is' if len(unknown) == 1 else 'are'} not an open question in the current plan. "
+                    "Nothing from the comment was used."),
+               para(f"Open questions: {listed}. Mention DocForge again with each answer on its own line, "
+                    "for example \"Q3: only workspace admins\"."))
+
+
+def plan(articles: list[dict], questions: list[str], *, revision: int, draft: str, run: str | None = None,
+         answered: dict[str, str] | None = None) -> dict:
+    """articles: {"title", "type", "action"} (action: create or update). questions: open questions as text.
+    answered: question label -> answer source ID, for questions the ticket's owner has answered."""
     label = "Documentation plan" + (f" (revision {revision})" if revision else "")
     blocks = [heading(label)]
     if articles:
@@ -114,6 +125,11 @@ def plan(articles: list[dict], questions: list[str], *, revision: int, draft: st
         blocks.append(para("DocForge found no article to write. Mention DocForge with what the plan should cover."))
     blocks.append(heading("Open questions"))
     blocks.append(bullets(questions) if questions else para("None recorded."))
+    if answered:
+        blocks.append(para("Answered: " + ", ".join(f"{q} ({a})" for q, a in sorted(answered.items())) + "."))
+    if questions:
+        blocks.append(para("To answer a question, mention DocForge in a comment with each answer on its own line, "
+                           "for example \"Q3: only workspace admins\". Answers become sources the drafts can cite."))
     blocks.append(para(f"To change the plan, mention DocForge in a comment and say what to change. "
                        f"To draft the documentation, move the ticket to {draft}."
                        + (f" Run: {run}." if run else "")))

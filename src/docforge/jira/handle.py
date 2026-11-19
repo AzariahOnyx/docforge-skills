@@ -74,7 +74,9 @@ def handle(body: bytes, *, config: DocForgeConfig, trigger_name: str, state_root
         state.phase = "drafting"
         state.pending = Pending(action="draft", at=now())
     elif decision.action == "revise":
-        state.pending = Pending(action="revise", at=now(), feedback=decision.feedback, by=event.comment_author)
+        state.pending = Pending(action="revise", at=now(), feedback=decision.feedback, by=event.comment_author,
+                                answers=decision.answers, comment_id=event.comment_id,
+                                comment_created=event.comment_created)
     save_state(state_root, state)
     result["phase"] = state.phase
     return result

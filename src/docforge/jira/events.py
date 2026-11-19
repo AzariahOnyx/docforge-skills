@@ -59,7 +59,9 @@ class TicketEvent:
     attachments: list[Attachment] = field(default_factory=list)
     comment_author: str | None = None
     comment_mentions: list[str] = field(default_factory=list)
-    comment_text: str = ""  # the comment as prose, without mentions
+    comment_text: str = ""  # the comment as prose, one line per paragraph, without mentions
+    comment_id: str | None = None
+    comment_created: str | None = None
 
 
 def _name(value) -> str:
@@ -100,7 +102,8 @@ def comment_body(body) -> tuple[str, list[str]]:
         text = WIKI_MENTION.sub("", body)
     else:
         text = _adf_text(body, mentions)
-    return " ".join(text.split()), list(dict.fromkeys(mentions))
+    lines = [" ".join(line.split()) for line in text.splitlines()]
+    return "\n".join(line for line in lines if line), list(dict.fromkeys(mentions))
 
 
 def parse(body: bytes, delivery_id: str | None = None) -> TicketEvent:
@@ -133,6 +136,8 @@ def parse(body: bytes, delivery_id: str | None = None) -> TicketEvent:
         comment = payload["comment"]
         event.kind = "comment"
         event.comment_author = _account(comment.get("author"))
+        event.comment_id = str(comment["id"]) if comment.get("id") is not None else None
+        event.comment_created = str(comment["created"]) if comment.get("created") else None
         event.comment_text, event.comment_mentions = comment_body(comment.get("body"))
     elif webhook == "jira:issue_updated":
         for item in (payload.get("changelog") or {}).get("items") or []:

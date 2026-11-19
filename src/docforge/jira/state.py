@@ -40,6 +40,9 @@ class Pending(BaseModel):
     at: str
     feedback: str = ""
     by: str | None = None
+    answers: dict[int, str] = Field(default_factory=dict)  # question number -> the owner's answer
+    comment_id: str | None = None
+    comment_created: str | None = None
 
 
 class TicketState(BaseModel):
@@ -51,6 +54,7 @@ class TicketState(BaseModel):
     revision: int = 0
     product: str | None = None
     notes: list[str] = Field(default_factory=list)  # about the ticket's sources, repeated in the plan comment
+    answered: dict[str, str] = Field(default_factory=dict)  # question label (Q03) -> answer source ID (A1)
     pending: Pending | None = None
     processed: list[str] = Field(default_factory=list)
     outbox: list[OutboxEntry] = Field(default_factory=list)

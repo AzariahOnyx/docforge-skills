@@ -2,7 +2,8 @@
 
 Status moves: DocForge reacts only to the `plan` and `draft` statuses and only
 writes `bounce`, `planned` and (as a deliberate one-hop pull-back) `plan`.
-Comments: only an owner's @-mention of the bot can revise a plan.
+Comments: only an owner's @-mention of the bot can revise a plan or answer its
+open questions (lines such as `Q3: ...`).
 
 `decide` is pure: it reads the event, the ticket's state and the trigger, and
 returns a Decision. `handle` applies a decision: state, outbox, ticket moves.
@@ -16,6 +17,7 @@ from dataclasses import dataclass, field
 from docforge.config import JiraTicketTrigger
 
 from . import comments
+from .answers import split_comment
 from .events import TicketEvent
 from .state import TicketState
 
@@ -29,6 +31,7 @@ class Decision:
     move_to: str | None = None
     silent: bool = False  # ignored without recording anything
     feedback: str = ""
+    answers: dict[int, str] = field(default_factory=dict)
     detail: dict = field(default_factory=dict)
 
 
@@ -119,8 +122,12 @@ def decide(event: TicketEvent, state: TicketState | None, trigger: JiraTicketTri
         if phase in ("drafting", "drafted"):
             return Decision("reply", "revision refused after drafting started", "revision_refused",
                             comments.revision_refused())
-        if not event.comment_text.strip():
+        answers, feedback = split_comment(event.comment_text)
+        if not answers and not feedback:
             return Decision("reply", "mention without feedback", "ask_specifics", comments.ask_specifics())
-        return Decision("revise", "owner asked for a revision", feedback=event.comment_text.strip())
+        reason = ("owner answered open questions" if answers and not feedback else
+                  "owner answered open questions and asked for a revision" if answers else
+                  "owner asked for a revision")
+        return Decision("revise", reason, feedback=feedback, answers=answers)
 
     return Decision("ignore", "not a status move or a comment")

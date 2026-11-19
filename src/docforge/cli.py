@@ -746,6 +746,8 @@ def _jira(args: argparse.Namespace) -> int:
             return 1
         print(f"{state.key}: phase {state.phase}, mode {state.mode}, revision {state.revision}, run {state.run or '-'}"
               + (f", pending {state.pending.action}" if state.pending else ""))
+        if state.answered:
+            print("  answered: " + ", ".join(f"{q} ({a})" for q, a in sorted(state.answered.items())))
         for entry in state.outbox:
             print(f"  {entry.at} {entry.kind} {entry.message}: {'sent' if entry.sent else entry.note}")
         return 0

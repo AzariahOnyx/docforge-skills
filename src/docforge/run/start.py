@@ -23,6 +23,8 @@ REPO_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 SOURCE_PR_RE = re.compile(r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([1-9][0-9]*)")
 MAX_QUERIES = 10
+ORIGIN_FIELDS = ("id", "title", "url", "version", "updated", "space", "author", "fetched_at")
+ADDED_HEADING = "## Sources added after the run started"
 HITS_PER_QUERY = 5
 
 
@@ -73,6 +75,9 @@ def _source_note(source: dict) -> str:
     if source.get("kind") == "flow":
         notes.append(f"flow from {origin.get('pdf', 'a PDF')}, {origin.get('steps', '?')} steps; "
                      f"cite steps as [{source['id']}#step3]")
+    elif source.get("kind") == "answer":
+        notes.append(f"answers from the ticket owner, by account {origin.get('author', 'unknown')}; each answer is "
+                     f"under its question's heading; cite lines as [{source['id']}#L7]")
     elif origin:
         notes.append(f"fetched from {source['kind']} {origin['id']}, version {origin.get('version', 'unknown')}")
     if source.get("authority") == "context":
@@ -290,8 +295,7 @@ def start_run(
         }
         entry["kind"] = origin.pop("kind") if origin else "file"
         if origin:
-            entry["origin"] = {k: origin[k] for k in ("id", "title", "url", "version", "updated", "space", "fetched_at")
-                               if k in origin}
+            entry["origin"] = {k: origin[k] for k in ORIGIN_FIELDS if k in origin}
         sources.append(entry)
     for path in flows or []:
         rel = _repo_relative(repo, path)
@@ -377,3 +381,40 @@ def start_run(
         (out / stage.work_order).write_text(_work_order(stage, out_label, manifest, docs is not None, loaded,
                                                         tools_prefix), encoding="utf-8")
     return out
+
+
+def add_sources(out: Path, repo: Path, paths: list[Path], *, note: str) -> list[dict]:
+    """Add sources to a started run: hashed entries in run.json and a section in every work order.
+
+    Only `answer` sources (with a provenance header) can be added; their IDs must be new. Earlier
+    sources, hashes and stage outputs are not changed.
+    """
+    manifest = json.loads((out / "run.json").read_text(encoding="utf-8"))
+    added = []
+    for path in paths:
+        rel = _repo_relative(repo, path)
+        origin = read_provenance(repo / rel)
+        if not origin or origin.get("kind") != "answer":
+            raise RunError(f"{rel}: only answer sources can be added to a started run")
+        sid = Path(rel).stem
+        if not re.fullmatch(r"A[1-9][0-9]{0,3}", sid) or any(s["id"] == sid for s in manifest["sources"]):
+            raise RunError(f"{rel}: source ID {sid!r} is invalid or used twice")
+        if any(s["path"] == rel for s in manifest["sources"]):
+            raise RunError(f"source given twice: {rel}")
+        origin.pop("kind")
+        entry = {"id": sid, "path": rel, "sha256": hashlib.sha256((repo / rel).read_bytes()).hexdigest(),
+                 "authority": "unconfirmed", "kind": "answer",
+                 "origin": {k: origin[k] for k in ORIGIN_FIELDS if k in origin}}
+        manifest["sources"].append(entry)
+        added.append(entry)
+    (out / "run.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    lines = [f"- {s['id']}: `{s['path']}` (sha256 `{s['sha256'][:12]}...`)" + _source_note(s) for s in added]
+    for stage in stages_for(manifest):
+        order = out / stage.work_order
+        if not order.is_file():
+            continue
+        text = order.read_text(encoding="utf-8").rstrip("\n")
+        if ADDED_HEADING not in text:
+            text += "\n\n" + ADDED_HEADING + "\n\n" + note
+        order.write_text(text + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
+    return added
