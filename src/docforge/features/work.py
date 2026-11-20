@@ -369,6 +369,14 @@ def process_feature(config: DocForgeConfig, config_path: Path, repo_name: str, k
                 return failed(outcome)
         if docs_checkout is None:
             return failed(f"doc collection {state.collection} has no checkout for the plan pull request")
+        from docforge.flow import outdated_step
+
+        outcome = outdated_step(run, workspace, config, collection=state.collection, docs=docs_checkout,
+                                code_checkout=checkout, spec_paths=repo.spec_paths, client=backend_client)
+        if outcome == "waiting":
+            return {**result, "result": "waiting", "work_order": "prompts/outdated-pass-1.md"}
+        if outcome not in ("done", "skip"):
+            return failed(outcome)
         try:
             proposed = propose_plan_pr(run, config, collection=state.collection, checkout=docs_checkout,
                                        base=repo.base, trigger=None, client=github_client)

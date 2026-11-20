@@ -69,6 +69,11 @@ class DocCollection(Strict):
     # Where a plan pull request puts ia-plan.md ({slug}: the feature in lowercase with hyphens). The plan is
     # not a docs page, so this path is allowed even outside `filter`.
     plan_path: str = "plans/{slug}/ia-plan.md"
+    # Outdated content finder (B12a): before proposing a plan, find existing pages the change made outdated
+    # (needs `checkout`). Off by default. Pages with these keywords are always reviewed.
+    find_outdated: bool = False
+    must_review: list[str] = Field(default_factory=list)
+    outdated_cap: int = Field(default=25, ge=1, le=200)
     # Review on DocForge's own pull requests (B7b). bot_login: DocForge's GitHub account, so mentions are
     # recognised and its own comments ignored. Only reviewers whose association is listed can ask for a revision.
     bot_login: str | None = Field(default=None, pattern=r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})(?:\[bot\])?$")
@@ -504,7 +509,7 @@ class Backend(Strict):
     fallbacks: bool = True
     max_cost_usd: float = Field(default=5.0, gt=0)
     prices: dict[str, ModelPrice] = Field(default_factory=dict)
-    stages: dict[Literal["analyzer", "drafter", "proofreader"], BackendStage] = Field(default_factory=dict)
+    stages: dict[Literal["analyzer", "drafter", "proofreader", "outdated"], BackendStage] = Field(default_factory=dict)
 
     @field_validator("model")
     @classmethod

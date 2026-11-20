@@ -256,3 +256,35 @@ def test_plan_path_setting_is_checked():
     for bad in ("plans/ia-plan.md", "/plans/{slug}.md", "plans/{slug}/{team}.md", "plans/{slug}.txt"):
         with pytest.raises(ValueError, match="plan_path"):
             DocForgeConfig.model_validate({"doc_collections": {"o/r": {"plan_path": bad}}})
+
+
+def test_outdated_finder_runs_before_the_plan_pr(jira, tmp_path, github, docs):
+    """With find_outdated on, the plan waits for the two verdict passes; the plan PR then reports the check."""
+    from docforge.config import DocForgeConfig
+
+    root, _ = docs
+    (root / "site" / "alerts").mkdir(parents=True)
+    (root / "site" / "alerts" / "settings.md").write_text("---\ntitle: Alert settings\n---\n\n# Alert settings\n\n"
+                                                          "Select **Snooze** to pause alerts.\n")
+    data = plan_config(jira, github, docs).model_dump(by_alias=True, exclude_none=True)
+    data["doc_collections"][COLLECTION].update(checkout=str(root), find_outdated=True)
+    cfg = DocForgeConfig.model_validate(data)
+    _queue(tmp_path / "state", "plan")
+    run_ticket(cfg, tmp_path)
+    run = jira[1] / "tickets" / KEY / "run"
+    _session_plan(run, FIXTURE.read_text())
+    (run / "analysis" / "change-note.json").write_text(json.dumps(
+        {"source": "test", "strings": [{"old": "Snooze", "new": "Pause alerts", "where": "en.json"}], "terms": []}))
+    waiting = run_ticket(cfg, tmp_path)
+    assert waiting["result"] == "waiting" and waiting["work_order"].endswith("outdated-pass-1.md")
+    assert not github.pulls
+    verdicts = {"verdicts": [{"path": "site/alerts/settings.md", "verdict": "affected", "action": "edit",
+                              "passage": "Select **Snooze** to pause alerts.", "reason": "renamed to Pause alerts"}]}
+    for n in (1, 2):
+        (run / "outdated").mkdir(exist_ok=True)
+        (run / "outdated" / f"pass-{n}.json").write_text(json.dumps(verdicts))
+    assert run_ticket(cfg, tmp_path)["result"] == "planned"
+    body = github.pulls[1]["body"]
+    assert "## Outdated content check" in body and "`site/alerts/settings.md`: affected" in body
+    assert '"Select **Snooze** to pause alerts."' in body  # the outdated passage, in the plan PR
+    assert "site/alerts/settings.md" in git(docs[1], "show", "docforge/plan-quiet-hours:plans/quiet-hours/ia-plan.md")

@@ -408,6 +408,20 @@ def process(key: str, *, config: DocForgeConfig, config_path: Path, trigger_name
                 if outcome != "done":
                     return fail(outcome, "plan_failed")
             if _uses_plan_pr(run):
+                from docforge.flow import outdated_step
+
+                collection = config.doc_collections.get(trigger.publish.collection)
+                docs = (config_path.parent / (collection.checkout if collection and collection.checkout else
+                                              trigger.publish.checkout)).resolve()
+                outcome = outdated_step(run, workspace, config, collection=trigger.publish.collection, docs=docs,
+                                        client=backend_client)
+                if outcome == "waiting":
+                    state.note("waiting for a session", stage="outdated content passes",
+                               work_order="prompts/outdated-pass-1.md, prompts/outdated-pass-2.md")
+                    save_state(state_root, state)
+                    return {**result, "result": "waiting", "work_order": str(run / "prompts" / "outdated-pass-1.md")}
+                if outcome not in ("done", "skip"):
+                    return fail(outcome, "plan_failed")
                 writer.comment(state, "plan_pr", _plan_pr_comment(state, run, trigger, trigger_name, config,
                                                                   config_path, github_client))
             else:

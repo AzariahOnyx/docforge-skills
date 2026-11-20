@@ -886,6 +886,108 @@ def _plan_open(args: argparse.Namespace) -> int:
     return 0
 
 
+def _collection_of(config, name):
+    if name is None:
+        return None
+    if name not in config.doc_collections:
+        raise ValueError(f"doc collection {name!r} is not in the config")
+    return config.doc_collections[name]
+
+
+def _outdated_note(args: argparse.Namespace) -> int:
+    from docforge.outdated import note_from_code
+
+    try:
+        note = note_from_code(args.code_checkout, args.base, args.head, spec_paths=args.spec_path, terms=args.term)
+    except (OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    text = json.dumps(note.to_dict(), indent=2) + "\n"
+    if args.out:
+        args.out.write_text(text, encoding="utf-8")
+        print(f"Wrote {args.out}: {len(note.strings)} string change(s), {len(note.spec_changes)} spec change(s), "
+              f"{len(note.terms)} term(s).")
+    else:
+        print(text, end="")
+    return 0
+
+
+def _outdated_shortlist(args: argparse.Namespace) -> int:
+    from docforge.outdated import ChangeNote, build_shortlist
+
+    try:
+        config = load_config(args.config) if Path(args.config).is_file() else None
+        collection = _collection_of(config, args.collection) if config else None
+        note = ChangeNote.from_dict(json.loads(args.note.read_text(encoding="utf-8")))
+        shortlist = build_shortlist(args.docs, note, collection=collection,
+                                    must_review=(collection.must_review if collection else []) + args.must_review,
+                                    cap=args.cap or (collection.outdated_cap if collection else 25))
+    except (ConfigError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    for page in shortlist["pages"]:
+        print(f"{'MUST ' if page['must_review'] else '     '}{page['path']}: {'; '.join(page['reasons'])}")
+    print(f"{len(shortlist['pages'])} of {shortlist['searched_pages']} page(s) shortlisted, "
+          f"{len(shortlist['must_review'])} must review, {shortlist['dropped']} beyond the cap.")
+    return 0
+
+
+def _outdated_run(args: argparse.Namespace) -> int:
+    from docforge.outdated import find_outdated
+
+    try:
+        config = load_config(args.config)
+        manifest = json.loads((args.run / "run.json").read_text(encoding="utf-8"))
+        collection = args.collection or (manifest.get("publish") or {}).get("collection")
+        if not collection:
+            raise ValueError("no doc collection: start the run with --publish-to or pass --collection")
+        outcome = find_outdated(args.run, args.repo.resolve(), config, docs=args.docs, collection=collection,
+                                code_checkout=args.code_checkout, spec_paths=args.spec_path)
+    except (ConfigError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if outcome == "waiting":
+        print("Wrote prompts/outdated-pass-1.md and prompts/outdated-pass-2.md: run each in its own Claude Code "
+              "session, then run this command again.")
+        return 0
+    if outcome != "done":
+        print(outcome, file=sys.stderr)
+        return 1
+    print((args.run / "analysis" / "OUTDATED.md").read_text(encoding="utf-8"), end="")
+    return 0
+
+
+def _outdated_eval(args: argparse.Namespace) -> int:
+    from docforge.outdated.evaluate import EvalError, evaluate, render_eval
+
+    try:
+        config = load_config(args.config) if Path(args.config).is_file() else None
+        collection = _collection_of(config, args.collection) if config else None
+        report = evaluate(args.cases, args.docs, collection=collection,
+                          must_review=collection.must_review if collection else [],
+                          cap=collection.outdated_cap if collection else 25)
+    except (ConfigError, EvalError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(render_eval(report), end="")
+    return 0
+
+
+def _outdated_cases(args: argparse.Namespace) -> int:
+    from docforge.outdated.evaluate import EvalError, propose_cases
+
+    try:
+        config = load_config(args.config) if Path(args.config).is_file() else None
+        collection = _collection_of(config, args.collection) if config else None
+        data = propose_cases(args.docs_checkout, args.out, collection=collection, limit=args.limit)
+    except (ConfigError, EvalError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(f"Wrote {args.out}: {len(data['cases'])} proposed case(s). A person fills in each change note and checks "
+          "the expected pages before `docforge outdated eval`.")
+    return 0
+
+
 def _pack_check(args: argparse.Namespace) -> int:
     from docforge.packs import PackError, load_pack, resolve_pack
 
@@ -1340,6 +1442,47 @@ def main(argv: list[str] | None = None) -> int:
     nslack.add_argument("--pr-url", help="GitHub pull request URL to link")
     nslack.add_argument("--send", action="store_true", help="post the message (otherwise only print it)")
     nslack.set_defaults(func=_notify_slack)
+
+    out_cmd = sub.add_parser("outdated", help="find existing articles a change has made outdated")
+    out_sub = out_cmd.add_subparsers(dest="outdated_command", required=True)
+    onote = out_sub.add_parser("note", help="the change note from a code diff: old and new UI wording")
+    onote.add_argument("--code-checkout", type=Path, required=True)
+    onote.add_argument("--base", required=True)
+    onote.add_argument("--head", required=True)
+    onote.add_argument("--spec-path", action="append", default=[], help="spec file pattern (repeatable)")
+    onote.add_argument("--term", action="append", default=[], help="extra search term (repeatable)")
+    onote.add_argument("--out", type=Path)
+    onote.set_defaults(func=_outdated_note)
+    oshort = out_sub.add_parser("shortlist", help="the pages the verdict passes would read (free)")
+    oshort.add_argument("--note", type=Path, required=True, help="a change-note.json")
+    oshort.add_argument("--docs", type=Path, required=True, help="docs checkout")
+    oshort.add_argument("--collection", help="doc collection (filter, must-review keywords, cap)")
+    oshort.add_argument("--must-review", action="append", default=[])
+    oshort.add_argument("--cap", type=int)
+    oshort.add_argument("--config", default="docforge.yaml")
+    oshort.set_defaults(func=_outdated_shortlist)
+    orun = out_sub.add_parser("run", help="note, shortlist, two verdict passes and the merge for a run")
+    orun.add_argument("run", type=Path)
+    orun.add_argument("--docs", type=Path, required=True, help="docs checkout")
+    orun.add_argument("--repo", type=Path, default=Path("."), help="the folder run.json source paths are relative to")
+    orun.add_argument("--collection")
+    orun.add_argument("--code-checkout", type=Path)
+    orun.add_argument("--spec-path", action="append", default=[])
+    orun.add_argument("--config", default="docforge.yaml")
+    orun.set_defaults(func=_outdated_run)
+    oeval = out_sub.add_parser("eval", help="recall on past changes (shortlist recall is free)")
+    oeval.add_argument("cases", type=Path)
+    oeval.add_argument("--docs", type=Path, required=True)
+    oeval.add_argument("--collection")
+    oeval.add_argument("--config", default="docforge.yaml")
+    oeval.set_defaults(func=_outdated_eval)
+    ocases = out_sub.add_parser("cases", help="propose past-change cases from the docs repository's history")
+    ocases.add_argument("--docs-checkout", type=Path, required=True)
+    ocases.add_argument("--out", type=Path, required=True)
+    ocases.add_argument("--collection")
+    ocases.add_argument("--limit", type=int, default=300)
+    ocases.add_argument("--config", default="docforge.yaml")
+    ocases.set_defaults(func=_outdated_cases)
 
     plan_cmd = sub.add_parser("plan", help="the documentation plan as ia-plan.md and its pull request")
     plan_sub = plan_cmd.add_subparsers(dest="plan_command", required=True)

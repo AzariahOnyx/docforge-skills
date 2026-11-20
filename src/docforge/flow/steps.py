@@ -110,3 +110,19 @@ def publish_drafts(run: Path, config: DocForgeConfig, *, collection: str, checko
         reply(run, plan_record, config, "drafts", f"The drafts for this plan are in {record.pr_url}.", client)
         save_plan(run, plan_record)
     return Published(record, prepared, True)
+
+
+def outdated_step(run: Path, workspace: Path, config: DocForgeConfig, *, collection: str, docs: Path | None,
+                  code_checkout: Path | None = None, spec_paths=(), client=None) -> str:
+    """The outdated content finder before the plan pull request: 'skip' (not switched on for the doc
+    collection, or no docs checkout), 'done', 'waiting' (two session passes) or an error message."""
+    target = config.doc_collections.get(collection)
+    if target is None or not target.find_outdated or docs is None or not docs.is_dir():
+        return "skip"
+    from docforge.outdated import find_outdated
+
+    try:
+        return find_outdated(run, workspace, config, docs=docs, collection=collection, code_checkout=code_checkout,
+                             spec_paths=spec_paths, client=client)
+    except (OSError, ValueError) as exc:
+        return f"outdated content finder: {exc}"

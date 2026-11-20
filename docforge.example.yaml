@@ -12,6 +12,8 @@ doc_collections:
     checkout: ../docs               # local clone used to commit revisions
     bot_login: example-docforge-bot # DocForge's GitHub account: mentions start revisions
     plan_path: plans/{slug}/ia-plan.md  # where plan pull requests put ia-plan.md
+    find_outdated: false            # true: find existing articles a change made outdated before the plan
+    must_review: []                 # keywords whose pages are always reviewed, for example a renamed feature
     max_revisions: 5                # automatic revisions per pull request
     revision_delay_seconds: 120     # wait this long after the last review comment
 

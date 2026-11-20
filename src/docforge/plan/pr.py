@@ -55,6 +55,14 @@ def plan_body(plan: IaPlan, run: Path, dest: str) -> str:
     if passages:
         lines += ["", "## Outdated passages", ""]
         lines += [f"- `{a['Docs path']}` ({a['Action']}): \"{a['Outdated passage']}\"" for a in passages]
+    found = run / "analysis" / "outdated.json"
+    if found.is_file():
+        data = json.loads(found.read_text(encoding="utf-8"))
+        must = [p for p in data.get("pages", []) if p.get("must_review")]
+        lines += ["", f"## Outdated content check ({data.get('searched', 0)} pages searched)", ""]
+        lines += [f"- `{p['path']}`: {p['verdict'].replace('_', ' ')} (must review: "
+                  + "; ".join(p.get("reasons", [])) + ")" for p in must] or ["No page contains the old wording."]
+        lines.append("Details: `analysis/OUTDATED.md` in the run.")
     lines += ["", "To answer a question, comment with each answer on its own line, for example `Q3: only workspace "
               "admins`, mentioning DocForge. Answers become sources the drafts can cite.", ""]
     body = "\n".join(lines)
