@@ -38,6 +38,8 @@ from .run import check_run_plan, run_plan_types
 
 KIND = "plan-pr"
 APPROVED = "analysis/ia-plan.approved.md"
+ORIGINAL = "existing/original"  # published articles as they were on the docs repository's base branch
+EDITED = "existing/edited"  # the same articles with the approved edits
 TYPE_TO_DELIVERABLE = {"overview": "feature/feature-guide.md", "procedural": "how-to/how-to.md",
                        "release-notes": "release-note/release-note.md"}
 ACTIVE = ("changes_requested", "revising", "approved", "pushed")
@@ -168,34 +170,77 @@ def _promote(record) -> None:
             record.status = "changes_requested"
 
 
-def apply_approved_plan(run: Path, plan: IaPlan, *, commit: str, link: str | None) -> dict:
-    """Match the approved plan's articles to the run's deliverables, record them in run.json and rewrite the
-    Drafter and Proofreader work orders. Returns {placements, needs_own_run}."""
+def _copy_existing(run: Path, checkout: Path, base: str, path: str) -> tuple[str, str] | None:
+    """Copy a published article from the docs repository's base branch into the run's existing/original/.
+    Returns (base commit, sha256), or None when the article is not there."""
+    import hashlib
+
+    from docforge.github.push import show_file
+    from docforge.publish.branch import resolve_base
+
+    try:
+        _, commit = resolve_base(checkout, base)
+        text = show_file(checkout, commit, path)
+    except PublishError:
+        return None
+    target = run / ORIGINAL / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    return commit, hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def apply_approved_plan(run: Path, plan: IaPlan, *, commit: str, link: str | None, docs_checkout: Path | None = None,
+                        base: str = "main") -> dict:
+    """Match the approved plan's articles to the run's work, record them in run.json and rewrite the Drafter and
+    Proofreader work orders. New articles become deliverables (one per type). With a docs checkout, existing
+    articles to update or archive become edits: the published article is copied into the run, an archive is
+    marked `status: archived` at once, and updates get paragraph-level fixes from the Drafter (B12b).
+    Returns {placements, edits, needs_own_run}."""
+    from docforge.outdated.fix import mark_archived
     from docforge.run.start import rewrite_work_orders
 
     manifest = json.loads((run / "run.json").read_text(encoding="utf-8"))
     if manifest.get("profile") != "default":
         raise DocsPrError("drafting from an approved plan needs a default-profile run")
     placements: dict[str, str] = {}
+    edits: list[dict] = []
     extra: list[str] = []
+    rows = {r["Docs path"]: r for r in plan.existing}
     for article in plan.articles():
         deliverable = TYPE_TO_DELIVERABLE.get(article["type"] or "")
-        if article["change"] != "create":
-            extra.append(f"{article['title']} ({article['change']} of an existing article)")
+        if article["change"] in ("update", "archive"):
+            copied = _copy_existing(run, docs_checkout, base, article["path"]) if docs_checkout else None
+            if copied is None:
+                where = "not found on the docs repository's base branch" if docs_checkout else "no docs checkout"
+                extra.append(f"{article['title']} ({article['change']} of an existing article; {where})")
+                continue
+            row = rows.get(article["path"], {})
+            edit = {"src": f"{EDITED}/{article['path']}", "dest": article["path"], "action": article["change"],
+                    "title": article["title"], "base_commit": copied[0], "sha256": copied[1],
+                    "change": row.get("Change needed", ""), "passage": row.get("Outdated passage", "")}
+            if article["change"] == "archive":
+                original = (run / ORIGINAL / article["path"]).read_text(encoding="utf-8")
+                target = run / edit["src"]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(mark_archived(original), encoding="utf-8")
+            edits.append(edit)
         elif deliverable is None or deliverable in placements:
             extra.append(f"{article['title']} ({article['type']})")
         else:
             placements[deliverable] = article["path"]
-    if not placements:
+    if not placements and not edits:
         raise DocsPrError("no article in the approved plan matches a draft this run can write "
-                          f"({', '.join(TYPE_TO_DELIVERABLE)})")
+                          f"({', '.join(TYPE_TO_DELIVERABLE)}) or an existing article to edit")
     manifest["deliverables"] = [d for d in DEFAULT_DELIVERABLES if d in placements]
     manifest["approved_plan"] = {"commit": commit, "pull_request": link, "file": APPROVED,
                                  "placements": [{"src": d, "dest": placements[d]} for d in manifest["deliverables"]],
                                  "needs_own_run": extra}
+    if edits:
+        manifest["edits"] = edits
     (run / "run.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     rewrite_work_orders(run, repo_of(run))
-    return {"placements": manifest["approved_plan"]["placements"], "needs_own_run": extra}
+    return {"placements": manifest["approved_plan"]["placements"], "edits": [
+        {"dest": e["dest"], "action": e["action"]} for e in edits], "needs_own_run": extra}
 
 
 def _read_approval(run: Path, record, config: DocForgeConfig, checkout: Path, client) -> dict:
@@ -233,14 +278,17 @@ def _read_approval(run: Path, record, config: DocForgeConfig, checkout: Path, cl
         record.history.append({"at": _now().isoformat(), "event": "revision_cancelled_by_approval",
                                "restored": f"r{latest}"})
     (run / APPROVED).write_text(_with_status_approved(text), encoding="utf-8")
-    applied = apply_approved_plan(run, plan, commit=commit, link=record.pr_url)
+    applied = apply_approved_plan(run, plan, commit=commit, link=record.pr_url, docs_checkout=checkout,
+                                  base=record.base)
     record.status, record.approved_commit = "drafting", commit
     record.history.append({"at": _now().isoformat(), "event": "approval_read", "commit": commit})
     lines = [f"Plan approved at {commit[:12]}. DocForge drafts:"]
     lines += [f"- `{p['dest']}` ({p['src'].split('/')[0]})" for p in applied["placements"]]
+    lines += [f"- `{e['dest']}` ({'archived' if e['action'] == 'archive' else 'paragraph-level fixes'})"
+              for e in applied.get("edits", [])]
     if applied["needs_own_run"]:
-        lines += ["", "These articles need their own run; this run drafts one article of each type and no updates "
-                  "to existing articles yet:"] + [f"- {x}" for x in applied["needs_own_run"]]
+        lines += ["", "These articles need their own run (this run drafts one new article of each type):"] + [
+            f"- {x}" for x in applied["needs_own_run"]]
     reply(run, record, config, "approved", "\n".join(lines), client)
     save_plan(run, record)
     return {"result": "approved", **applied}

@@ -16,7 +16,7 @@ from docforge.config import DocCollection
 from docforge.docs_index import build_index, parse_page, search
 from docforge.sources.provenance import read_file as read_provenance
 
-from .stages import DEFAULT_DELIVERABLES, Stage, stage_outputs, stages_for
+from .stages import DEFAULT_DELIVERABLES, Stage, outputs_for, stage_outputs, stages_for
 
 BACKEND = "claude-code-session"
 REPO_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -146,7 +146,7 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pa
                 tools_prefix: str = "") -> str:
     profile = manifest["profile"]
     stages = stages_for(manifest)
-    outputs = stage_outputs(stage, profile, manifest["deliverables"], ia_plan=bool(manifest.get("ia_plan")))
+    outputs = outputs_for(stage, manifest)
     lines = [
         f"# Stage {stage.number} of {len(stages)}: {stage.name}",
         "",
@@ -165,6 +165,32 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pa
     lines += [f"- {s['id']}: `{s['path']}` (sha256 `{s['sha256'][:12]}...`)" + _source_note(s) for s in manifest["sources"]]
     if stage.key == "analyzer" and manifest.get("ia_plan"):
         lines += _ia_plan_lines(manifest, pack, tools_prefix, out_label)
+    edits = manifest.get("edits", [])
+    if edits and stage.key == "drafter":
+        lines += ["", "## Edits to existing articles", "",
+                  "The approved plan also changes published articles. Their text as published is in the run under "
+                  "`existing/original/<docs path>`. Write `analysis/fixes.json`: "
+                  '`{"fixes": [{"path": "<docs path>", "find": "<exact text from one paragraph>", '
+                  '"replace": "<the corrected text>", "reason": "<why>"}]}`.', "",
+                  "- Change only what the plan asks for, paragraph by paragraph: each `find` must appear exactly once "
+                  "in the article and stay inside one paragraph. Never rewrite the whole article.",
+                  "- Keep the front matter, headings, lists, tables, links and images as they are.",
+                  "- Remove the outdated passage and the old UI wording in `analysis/change-note.json` (if present).",
+                  "- End each replaced paragraph with an evidence marker for its claims, as in the new drafts; list the "
+                  "edited page (`existing/edited/<docs path>`) as the destination in `analysis/COVERAGE.md`.",
+                  "- DocForge applies the fixes and checks them (old wording gone, formatting intact, no image lost, "
+                  "not shrunk); only the changed paragraphs go through the claim gate.", ""]
+        for edit in edits:
+            if edit["action"] == "archive":
+                lines.append(f"- `{edit['dest']}`: archived by DocForge (`status: archived`); no fix needed.")
+            else:
+                lines.append(f"- `{edit['dest']}` (read `existing/original/{edit['dest']}`): {edit.get('change') or 'update'}"
+                             + (f" Outdated passage: \"{edit['passage']}\"" if edit.get("passage") else ""))
+    if edits and stage.key == "proofreader":
+        lines += ["", "## Edits to existing articles", "",
+                  "Also review the edited published articles: compare `existing/original/<path>` with "
+                  "`existing/edited/<path>` and read `analysis/edits.json` (the changed lines and the check results). "
+                  "Report a fix that changes meaning, loses information or leaves the article wrong."]
     approved = manifest.get("approved_plan")
     if approved and stage.key in ("drafter", "proofreader"):
         lines += ["", "## Approved plan", "",
@@ -186,8 +212,7 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pa
         else:
             lines.append("None supplied. Mark the existence of existing documentation UNKNOWN in the content plan.")
     if stage.number > 1:
-        earlier = [f for s in stages if s.number < stage.number for f in stage_outputs(s, profile, manifest["deliverables"],
-                                                                                  ia_plan=bool(manifest.get("ia_plan")))]
+        earlier = [f for s in stages if s.number < stage.number for f in outputs_for(s, manifest)]
         lines += ["", "## Earlier stage outputs", ""] + [f"- `{f}`" for f in earlier]
     if stage.key == "research":
         code = manifest["code"]

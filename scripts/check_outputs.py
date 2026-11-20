@@ -87,7 +87,8 @@ DRAFTS = ("feature/feature-guide.md", "how-to/how-to.md", "release-note/release-
 
 def required_files(root: Path) -> dict:
     """REQUIRED, except that a run drafting from an approved plan (run.json `approved_plan`) needs only the
-    drafts it lists in `deliverables`: the writer's plan decided which articles exist."""
+    drafts it lists in `deliverables` (none, when it only edits existing articles): the writer's plan decided
+    which articles exist."""
     manifest_path = root / "run.json"
     if not manifest_path.is_file():
         return REQUIRED
@@ -98,8 +99,8 @@ def required_files(root: Path) -> dict:
     except (OSError, ValueError):
         return REQUIRED
     deliverables = manifest.get("deliverables") if isinstance(manifest, dict) else None
-    if not manifest.get("approved_plan") or not isinstance(deliverables, list) or not deliverables \
-            or not set(deliverables) <= set(DRAFTS):
+    if not manifest.get("approved_plan") or not isinstance(deliverables, list) or not set(deliverables) <= set(DRAFTS) \
+            or (not deliverables and not manifest.get("edits")):
         return REQUIRED
     return {k: v for k, v in REQUIRED.items() if k not in DRAFTS or k in deliverables}
 
@@ -172,7 +173,8 @@ def main() -> int:
             if not reason:
                 errors.append(f"analysis/COVERAGE.md: {claim} missing rationale")
             if disposition == "INCLUDED":
-                paths = re.findall(r"(?:feature|how-to|release-note)/[\w.-]+\.md", destination)
+                paths = re.findall(r"(?:feature|how-to|release-note)/[\w.-]+\.md|existing/edited/[\w./-]+\.md",
+                                   destination)
                 if not paths or any(not (root / path).is_file() for path in paths):
                     errors.append(f"analysis/COVERAGE.md: {claim} needs an existing reader-facing destination")
             elif destination not in {"—", "-", "None"}:

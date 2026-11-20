@@ -957,6 +957,25 @@ def _outdated_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _outdated_fix(args: argparse.Namespace) -> int:
+    from docforge.outdated.fix import apply_fixes
+
+    try:
+        result = apply_fixes(args.run)
+    except (OSError, ValueError, KeyError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    for dest, item in result["edits"].items():
+        verdict = "PASS" if not item["problems"] else "FAIL"
+        print(f"{verdict}: {dest} ({item['action']}, {item.get('fixes', 0)} fix(es), changed lines {item['ranges']})")
+        for problem in item["problems"]:
+            print(f"  - {problem}")
+    for problem in result["problems"]:
+        if not any(problem.startswith(dest + ":") for dest in result["edits"]):
+            print(f"FAIL: {problem}")
+    return 1 if result["problems"] else 0
+
+
 def _outdated_eval(args: argparse.Namespace) -> int:
     from docforge.outdated.evaluate import EvalError, evaluate, render_eval
 
@@ -1470,6 +1489,9 @@ def main(argv: list[str] | None = None) -> int:
     orun.add_argument("--spec-path", action="append", default=[])
     orun.add_argument("--config", default="docforge.yaml")
     orun.set_defaults(func=_outdated_run)
+    ofix = out_sub.add_parser("fix", help="apply and check the paragraph-level fixes to existing articles")
+    ofix.add_argument("run", type=Path)
+    ofix.set_defaults(func=_outdated_fix)
     oeval = out_sub.add_parser("eval", help="recall on past changes (shortlist recall is free)")
     oeval.add_argument("cases", type=Path)
     oeval.add_argument("--docs", type=Path, required=True)

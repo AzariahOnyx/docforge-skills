@@ -66,6 +66,9 @@ class EvidenceRules(BaseModel):
     blocked: dict[str, str] = Field(default_factory=dict)
     # Claims backed by a flow step. None: numbered steps need no flow backing.
     flow_backed: list[str] | None = None
+    # Edited existing articles (B12b): page path -> changed line ranges [[first, last], ...]. Only statements
+    # that start inside a range are gated; the rest of the page was published before.
+    scopes: dict[str, list[list[int]]] = Field(default_factory=dict)
 
 
 class GateError(Exception):
@@ -78,8 +81,10 @@ def rules_for_run(run: Path) -> EvidenceRules:
     except (OSError, ValueError) as exc:
         raise GateError(f"cannot read run.json: {exc}") from None
     deliverables = [d for d in manifest.get("deliverables", []) if isinstance(d, str)]
+    edited = [e["src"] for e in manifest.get("edits", []) if e.get("action") == "update"]
+    archived = [e["src"] for e in manifest.get("edits", []) if e.get("action") == "archive"]
     known: set[str] = set()
-    allowed: dict[str, set[str]] = {d: set() for d in deliverables}
+    allowed: dict[str, set[str]] = {d: set() for d in deliverables + edited + archived}
 
     handover = run / "analysis" / "HANDOVER.md"
     if handover.is_file():
@@ -105,8 +110,8 @@ def rules_for_run(run: Path) -> EvidenceRules:
         for cid, disposition, destination in COVERAGE_ROW.findall(path.read_text(encoding="utf-8")):
             known.add(cid)
             if disposition == "INCLUDED":
-                for dest in deliverables:
-                    if dest in destination:
+                for dest in deliverables + edited:
+                    if dest in destination or (dest in edited and dest.split("/", 2)[-1] in destination):
                         allowed[dest].add(cid)
 
     blocked: dict[str, str] = {}
@@ -133,8 +138,14 @@ def rules_for_run(run: Path) -> EvidenceRules:
             raise GateError(f"cannot read analysis/resolutions.json: {exc}") from None
 
     flow_backed = _flow_backed(run, manifest) if manifest.get("flow_steps") == "required" else None
+    scopes = {src: [] for src in archived}  # an archived article changes no statement: nothing to gate
+    edits_file = run / "analysis" / "edits.json"
+    if edited and edits_file.is_file():
+        report = json.loads(edits_file.read_text(encoding="utf-8")).get("edits", {})
+        scopes.update({e["src"]: report.get(e["dest"], {}).get("ranges", [])
+                       for e in manifest.get("edits", []) if e.get("action") == "update"})
     return EvidenceRules(known=sorted(known), allowed={k: sorted(v) for k, v in allowed.items()}, blocked=blocked,
-                         flow_backed=flow_backed)
+                         flow_backed=flow_backed, scopes=scopes)
 
 
 def _flow_backed(run: Path, manifest: dict) -> list[str]:
@@ -170,7 +181,11 @@ def check_pages(pages: dict[str, str], rules: EvidenceRules, ledger: str = "the 
     for path, text in sorted(pages.items()):
         allowed = set(rules.allowed.get(path, []))
         cited: set[str] = set()
+        scope = rules.scopes.get(path)
         for s in statements(text):
+            if scope is not None and not any(first <= s.line <= last or s.line <= first <= s.end
+                                             for first, last in scope):
+                continue  # an edited existing article: only the changed statements are gated
             if s.kind == "marker":
                 result.errors.append(GateIssue(path=path, line=s.line, message=s.error))
                 continue
@@ -213,7 +228,8 @@ def gate_run(run: Path, *, write: bool = True) -> GateResult:
     rules = rules_for_run(run)
     pages: dict[str, str] = {}
     missing = []
-    for rel in manifest.get("deliverables", []):
+    edited = [e["src"] for e in manifest.get("edits", []) if e.get("action") == "update"]
+    for rel in manifest.get("deliverables", []) + edited:
         path = run / rel
         if path.is_file():
             pages[rel] = path.read_text(encoding="utf-8")

@@ -84,6 +84,22 @@ def render_body(
         if approved.get("needs_own_run"):
             lines += ["Articles in that plan not drafted here (they need their own run): "
                       + "; ".join(approved["needs_own_run"]) + ".", ""]
+    edits_file = run / "analysis" / "edits.json"
+    if manifest.get("edits") and edits_file.is_file():
+        report = json.loads(edits_file.read_text(encoding="utf-8")).get("edits", {})
+        lines += ["## Edits to existing articles", ""]
+        for edit in manifest["edits"]:
+            item = report.get(edit["dest"], {})
+            status = "checks passed" if not item.get("problems") else "checks failed: " + "; ".join(item["problems"])
+            if edit["action"] == "archive":
+                lines.append(f"- `{edit['dest']}`: marked `status: archived` ({status}).")
+                continue
+            lines.append(f"- `{edit['dest']}`: {item.get('fixes', 0)} paragraph-level fix(es) ({status}).")
+            for change in item.get("changes", []):
+                before = str(change.get("find", "")).replace("\n", " ")[:300]
+                after = re.sub(r"\s*<!--.*?-->", "", str(change.get("replace", "")), flags=re.S).replace("\n", " ")[:300]
+                lines += [f"  - Before: {before}", f"  - After: {after}"]
+        lines.append("")
     lines += ["## Source change", ""]
     if source_pr:
         lines.append(f"- Source PR: `{source_pr['repo']}#{source_pr['number']}` ({source_pr.get('state', 'unknown')})")

@@ -69,14 +69,26 @@ def stages_for(manifest: dict) -> tuple[Stage, ...]:
 IA_PLAN = "analysis/ia-plan.md"
 
 
-def stage_outputs(stage: Stage, profile: str, deliverables: list[str], *, ia_plan: bool = False) -> list[str]:
-    """Run-relative files a stage must produce. `ia_plan`: the run proposes its plan as ia-plan.md."""
+FIXES = "analysis/fixes.json"
+
+
+def outputs_for(stage: Stage, manifest: dict) -> list[str]:
+    """Run-relative files a stage must produce, from the run's manifest."""
+    fixes = any(e.get("action") == "update" for e in manifest.get("edits", []))
+    return stage_outputs(stage, manifest["profile"], manifest["deliverables"], ia_plan=bool(manifest.get("ia_plan")),
+                         fixes=fixes)
+
+
+def stage_outputs(stage: Stage, profile: str, deliverables: list[str], *, ia_plan: bool = False,
+                  fixes: bool = False) -> list[str]:
+    """Run-relative files a stage must produce. `ia_plan`: the run proposes its plan as ia-plan.md. `fixes`: the
+    Drafter also writes paragraph-level fixes to existing articles (analysis/fixes.json)."""
     if stage.key == "analyzer":
         return list(ANALYSIS_FILES) + ([IA_PLAN] if ia_plan else [])
     if stage.key == "research":
         return ["analysis/claims.json", "analysis/CROSS-SOURCE.md"]
     if stage.key == "drafter":
-        outputs = list(deliverables) + ["analysis/COVERAGE.md"]
+        outputs = list(deliverables) + ["analysis/COVERAGE.md"] + ([FIXES] if fixes else [])
         if profile == "custom":
             outputs.append("analysis/evidence.json")
         return outputs

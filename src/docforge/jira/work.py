@@ -447,9 +447,13 @@ def process(key: str, *, config: DocForgeConfig, config_path: Path, trigger_name
                     return {**result, "result": "waiting", "stage": stage}
                 if outcome != "done":
                     return fail(outcome, "draft_failed")
+            from docforge.flow import apply_edits
             from docforge.publish import gate_run
             from docforge.textguard import is_gated
 
+            edit_problems = apply_edits(run)
+            if edit_problems:
+                return fail(f"the edits to existing articles fail their checks ({edit_problems[0]})", "draft_failed")
             if is_gated(run):
                 gate = gate_run(run)
                 if not gate.passed:

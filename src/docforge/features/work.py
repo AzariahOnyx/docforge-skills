@@ -407,8 +407,13 @@ def process_feature(config: DocForgeConfig, config_path: Path, repo_name: str, k
                 state.note("drafting failed", reason=outcome)
                 save_feature(root, state)
                 return {**result, "result": "failed", "reason": outcome}
+        from docforge.flow import apply_edits
         from docforge.publish import gate_run
 
+        edit_problems = apply_edits(run)
+        if edit_problems:
+            return {**result, "result": "failed",
+                    "reason": f"the edits to existing articles fail their checks ({edit_problems[0]})"}
         gate = gate_run(run)
         if not gate.passed:
             first = gate.errors[0]

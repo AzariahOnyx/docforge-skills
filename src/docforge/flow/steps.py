@@ -126,3 +126,13 @@ def outdated_step(run: Path, workspace: Path, config: DocForgeConfig, *, collect
                              spec_paths=spec_paths, client=client)
     except (OSError, ValueError) as exc:
         return f"outdated content finder: {exc}"
+
+
+def apply_edits(run: Path) -> list[str]:
+    """Apply and check the paragraph-level fixes to existing articles, if the run has any. Problems, or []."""
+    manifest = json.loads((run / "run.json").read_text(encoding="utf-8"))
+    if not manifest.get("edits"):
+        return []
+    from docforge.outdated.fix import apply_fixes
+
+    return apply_fixes(run)["problems"]

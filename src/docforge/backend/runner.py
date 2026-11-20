@@ -125,6 +125,10 @@ def _write_files(run: Path, request: StageRequest, data: dict, *, require_all: b
 def _checks(run: Path, repo: Path, stage: Stage, manifest: dict) -> list[str]:
     """Problems the engine finds after a stage; empty means the stage passed its checks."""
     problems: list[str] = []
+    if stage.key == "drafter" and any(e.get("action") == "update" for e in manifest.get("edits", [])):
+        from docforge.outdated.fix import apply_fixes
+
+        problems += [f"edit check: {p}" for p in apply_fixes(run)["problems"]]
     if (stage.key == "drafter" and manifest.get("publish")) or stage.key == "revise":
         from docforge.publish.gate import gate_run
 
@@ -250,14 +254,13 @@ def exec_run(run: Path, repo: Path, config: DocForgeConfig | None, *, only: int 
     if only is not None and only not in [s.number for s in stages]:
         raise BackendError(f"no stage {only}; this run has stages 1 to {len(stages)}")
 
-    from docforge.run.stages import stage_outputs
+    from docforge.run.stages import outputs_for
 
     outcomes: list[StageOutcome] = []
     for stage in stages:
         if only is not None and stage.number != only:
             continue
-        outputs = stage_outputs(stage, manifest["profile"], manifest["deliverables"],
-                                ia_plan=bool(manifest.get("ia_plan")))
+        outputs = outputs_for(stage, manifest)
         if all((run / o).is_file() for o in outputs):
             outcomes.append(StageOutcome(stage.name, "skipped", message="outputs already exist"))
             continue

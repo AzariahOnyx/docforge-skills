@@ -183,7 +183,8 @@ def test_articles_a_run_cannot_draft_are_named(jira, tmp_path, github, docs):
     assert [p["dest"] for p in result["placements"]] == ["site/alerts/notifications/quiet-hours.md",
                                                          "site/alerts/notifications/pause-mobile.md"]
     assert result["needs_own_run"] == ["Quiet Hours FAQ (faq)", "Pause your in-app alerts for 1 hour (procedural)",
-                                       "Alerts overview (update of an existing article)"]
+                                       "Alerts overview (update of an existing article; not found on the docs "
+                                       "repository's base branch)"]
     assert "need their own run" in github.comments[-1]["body"]
 
 

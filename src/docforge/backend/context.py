@@ -19,7 +19,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from docforge.run.stages import Stage, stage_outputs, stages_for
+from docforge.run.stages import Stage, outputs_for, stage_outputs, stages_for
 from docforge.run.status import TOOLS_ROOT
 
 BACKEND_RULES = """You are the backend of DocForge, a documentation engine. You carry out one stage of a \
@@ -183,7 +183,7 @@ def build_request(run: Path, repo: Path, stage: Stage, *, tools_root: Path = TOO
         raise ContextError("the Research stage needs a product checkout and commands; "
                            "run it in a Claude Code session (see its work order)")
     profile, deliverables = manifest["profile"], manifest["deliverables"]
-    outputs = stage_outputs(stage, profile, deliverables, ia_plan=bool(manifest.get("ia_plan")))
+    outputs = outputs_for(stage, manifest)
 
     reads = ([stage.skill] if stage.skill else []) + list(stage.reads)
     if stage.key == "analyzer" and manifest.get("ia_plan"):
@@ -194,11 +194,19 @@ def build_request(run: Path, repo: Path, stage: Stage, *, tools_root: Path = TOO
     user = _source_blocks(manifest, repo)
     earlier = [s for s in stages_for(manifest) if s.number < stage.number]
     for prior in earlier:
-        for rel in stage_outputs(prior, profile, deliverables, ia_plan=bool(manifest.get("ia_plan"))):
+        for rel in outputs_for(prior, manifest):
             path = run / rel
             if not path.is_file():
                 raise ContextError(f"stage {prior.number} ({prior.name}) is not finished: {rel} is missing")
             user.append(_block("run-file", {"path": rel, "stage": prior.name}, _read(path, rel)))
+    edits = manifest.get("edits", [])
+    if edits and stage.key in ("drafter", "proofreader"):
+        extra = ["analysis/change-note.json"] + [f"existing/original/{e['dest']}" for e in edits]
+        if stage.key == "proofreader":
+            extra += [e["src"] for e in edits] + ["analysis/edits.json"]
+        for rel in extra:
+            if (run / rel).is_file():
+                user.append(_block("run-file", {"path": rel, "stage": "existing article"}, _read(run / rel, rel)))
     approved = manifest.get("approved_plan")
     if approved and stage.key in ("drafter", "proofreader") and (run / approved["file"]).is_file():
         user.append(_block("run-file", {"path": approved["file"], "stage": "approved plan"},

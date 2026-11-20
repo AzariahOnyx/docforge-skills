@@ -174,7 +174,7 @@ def _check_placements(manifest: dict, target: DocCollection, collection: str,
                       placements: list[tuple[str, str]]) -> list[tuple[str, str]]:
     if not placements:
         raise PublishError("give at least one --place run-file=docs-path")
-    deliverables = set(manifest.get("deliverables", []))
+    deliverables = set(manifest.get("deliverables", [])) | {e["src"] for e in manifest.get("edits", [])}
     seen: set[str] = set()
     checked = []
     for src, dest in placements:
@@ -188,6 +188,15 @@ def _check_placements(manifest: dict, target: DocCollection, collection: str,
         seen.add(dest)
         checked.append((src, dest))
     return checked
+
+
+def _apply_edits(run: Path) -> None:
+    """Apply and check the Drafter's paragraph-level fixes to existing articles (B12b) before publishing."""
+    from docforge.outdated.fix import apply_fixes
+
+    found = apply_fixes(run)["problems"]
+    if found:
+        raise PublishError(f"the edits to existing articles fail their checks: {'; '.join(found[:5])}")
 
 
 def _gate_or_fail(run: Path) -> GateResult:
@@ -205,7 +214,9 @@ def _stage_files(run: Path, checked: list[tuple[str, str]], target: DocCollectio
     out_dir = run / PUBLISH_DIR
     run_rules = rules_for_run(run)
     by_dest = {dest: run_rules.allowed.get(src, []) for src, dest in checked}
-    evidence = EvidenceManifest(run=run.name, rules=run_rules.model_copy(update={"allowed": by_dest}))
+    scopes = {dest: run_rules.scopes[src] for src, dest in checked if src in run_rules.scopes}
+    evidence = EvidenceManifest(run=run.name, rules=run_rules.model_copy(update={"allowed": by_dest,
+                                                                                  "scopes": scopes}))
     evidence_dest = _manifest_path(target.filter, slug)
     if not target.allows(evidence_dest):
         raise PublishError(f"evidence manifest path {evidence_dest} is outside the {collection} filter")
@@ -217,7 +228,10 @@ def _stage_files(run: Path, checked: list[tuple[str, str]], target: DocCollectio
     for src, dest in checked:
         page = out_dir / "pages" / dest
         page.parent.mkdir(parents=True, exist_ok=True)
-        page.write_text(rewrite_links((run / src).read_text(encoding="utf-8"), src, dest, placed), encoding="utf-8")
+        text = (run / src).read_text(encoding="utf-8")
+        if not src.startswith("existing/"):  # an edited article's links already fit its own path
+            text = rewrite_links(text, src, dest, placed)
+        page.write_text(text, encoding="utf-8")
         files.append((page, dest))
     return files + [(evidence_file, evidence_dest)], evidence_dest
 
@@ -251,10 +265,15 @@ def prepare_publish(
     target = config.doc_collections.get(collection)
     if target is None:
         raise PublishError(f"doc collection {collection!r} is not in the config")
-    if not placements:
+    edits = manifest.get("edits", [])
+    if edits:
+        _apply_edits(run)
+    if not placements and manifest.get("deliverables"):
         from .place import pack_placements
 
         placements = pack_placements(run)
+    placements = list(placements) + [(e["src"], e["dest"]) for e in edits
+                                     if (e["src"], e["dest"]) not in set(placements)]
     checked = _check_placements(manifest, target, collection, placements)
     gate = _gate_or_fail(run)
     files, evidence_dest = _stage_files(run, checked, target, collection, slug)
