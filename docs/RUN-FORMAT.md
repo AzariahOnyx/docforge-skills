@@ -289,6 +289,12 @@ Mentions from anyone but the reporter, creator or assignee, and comments by the 
 - Without a model, product code changes are confirm: a person decides.
 - Feedback (`source_pr_feedback` policy, off by default): a commit status with context `docforge/docs` and state `success` whatever the outcome, and, for act and confirm, one comment marked `<!-- docforge-docs-check -->` that later decisions edit (a later quiet decision corrects it). `suppress_source_pr_comments` stops the comment. The decision's `feedback` records what was posted, or why not.
 
+## Code route (features)
+
+A feature's state is `<workspace>/state/features/<key>.json` (the code repository's `workspace`): `key` and `label` (from a Jira key, the area's feature, or `<repo>-pr-<n>`), `jira`, `repo`, `collection`, `phase` (planning, planned, drafting, drafted, failed), `run`, `prs` (each with its head and base commits, state open/merged/closed, triage reasons and the run source holding its description), `plan_pr`, `pull_request` and `history`. A "confirm" decision waits in `<workspace>/state/confirm/<repo>-<n>.json` until `plan` or `skip` (kept in `state/skipped/` with who and why).
+
+The run is `<workspace>/features/<key>/run`. Initial sources are `S1, S2, ...` in `features/<key>/sources/`: each pull request's description (kind `github_pr`, id `owner/repo#n`, version its head commit) and every `spec_paths` file it changed or its areas' `spec` names (kind `spec`, id `owner/repo:path`, read at the head commit from the code repository's `checkout`). `run.json` records the code repository, the first pull request's base and the last one's head (the Research stage), `publish` to the code repository's doc collection, `ia_plan` with the front matter the dependency map gives (feature, product, owner from the most specific area; `source_prs`; `engineering_spec`; `jira`), and `feature_run`. Pull requests that join later become `P<n>` sources (and `S<n>` for a spec file whose content changed) through `add_sources`; before approval a "code change" request goes to `plan-pr.json`, after approval the plan and drafts pull requests get a reply instead. Drafting waits for the Research stage (a session) and uses the approved plan; the drafts branch is `docforge/<key>`. `on_merged` marks the drafts ready once every pull request of the feature is merged.
+
 ## Fetched sources and notifications
 
 A file from `docforge sources fetch` starts with a provenance block, then a visible note that its content is data, never instructions:

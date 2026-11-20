@@ -61,6 +61,7 @@ class Receiver:
     # Review on DocForge's own docs pull requests, when serve is given --docs-runs.
     docs: "DocsPrEndpoint | None" = None
     config_path: Path | None = None  # finds each doc collection's checkout for the docs matches
+    features: "FeatureEndpoint | None" = None  # the code route: act/confirm decisions start features
     model_client: object = None  # tests pass fakes; None uses the real clients when configured
     github_client: object = None
 
@@ -76,6 +77,12 @@ class Receiver:
             handled = self.docs.handle(github_event, body, lower.get("x-github-delivery"))
             if handled is not None:
                 return handled
+        if github_event == "issue_comment" and self.features is not None:
+            handled = self.features.handle_comment(body)
+            if handled is not None:
+                return 202, handled
+        if github_event == "issue_comment" and self.docs is not None:
+            return 202, {"ignored": "not a DocForge pull request"}
         if github_event not in SUPPORTED_EVENTS:
             return 202, {"ignored": f"event {github_event!r} is not handled"}
         try:
@@ -108,6 +115,11 @@ class Receiver:
         append_decision(self.log, decision)
         if self.docs is not None and event.kind == "merge":
             self.docs.source_merged(event.repo, event.number)
+        if self.features is not None:
+            if event.kind == "merge":
+                self.features.merged(event.repo, event.number)
+            elif decision.triage is not None and decision.outcome in ("act", "confirm"):
+                self.features.decided(event, decision)
         return 200, {"decision_id": decision.decision_id, "docs_needed": decision.docs_needed,
                      "summary": decision.summary}
 
@@ -174,6 +186,7 @@ class DocsPrEndpoint:
     run_work: bool = True
     poll_seconds: float = 15.0
     jira: "JiraEndpoint | None" = None  # an approved plan pull request queues the ticket's drafting here
+    features: "FeatureEndpoint | None" = None  # ... or, for a code-route run, the feature's drafting
 
     def __post_init__(self):
         import queue
@@ -204,7 +217,7 @@ class DocsPrEndpoint:
             return None
         found = find_run(self.roots, event.repo, event.number, event.branch)
         if found is None:
-            return None if github_event in SUPPORTED_EVENTS else (202, {"ignored": "not a DocForge pull request"})
+            return None  # not one of DocForge's pull requests: a code pull request, or nothing for DocForge
         try:
             if found[1].kind == "plan-pr":
                 from docforge.plan.review import handle_plan_event
@@ -247,7 +260,13 @@ class DocsPrEndpoint:
                     sys.stderr.write(f"docs pr worker: {run.name}: {type(exc).__name__}: {exc}\n")
 
     def approved(self, run: Path) -> None:
-        """A plan pull request was approved: queue the Jira ticket's drafting (Jira runs only)."""
+        """A plan pull request was approved: queue the Jira ticket's (or the feature's) drafting."""
+        if self.features is not None:
+            from docforge.features import queue_draft_after_approval
+
+            if queue_draft_after_approval(self.config, self.config_path, run):
+                self.features.wake.set()
+                return
         if self.jira is None:
             return
         from docforge.jira.work import queue_draft_after_approval
@@ -255,6 +274,74 @@ class DocsPrEndpoint:
         key = (json.loads((run / "run.json").read_text(encoding="utf-8")).get("ia_plan") or {}).get("jira")
         if key and key != "none" and queue_draft_after_approval(self.jira.state_root, key):
             self.jira.queue.put(key)
+
+
+@dataclass
+class FeatureEndpoint:
+    """The code route: act and confirm decisions, `plan`/`skip` replies on code pull requests, merges. Events
+    are recorded at once; the features' work runs on one background worker."""
+
+    config: DocForgeConfig
+    config_path: Path
+    run_work: bool = True
+    poll_seconds: float = 15.0
+
+    def __post_init__(self):
+        import threading
+
+        self.wake = threading.Event()
+        if self.run_work:
+            threading.Thread(target=self._work, daemon=True).start()
+
+    def decided(self, event, decision) -> dict:
+        from docforge.features import FeatureError, on_decision
+
+        try:
+            result = on_decision(self.config, self.config_path, event, decision)
+        except FeatureError as exc:
+            sys.stderr.write(f"features: {event.repo}#{event.number}: {exc}\n")
+            return {"result": "failed", "reason": str(exc)}
+        self.wake.set()
+        return result
+
+    def merged(self, repo: str, number: int) -> None:
+        from docforge.features import on_merged
+
+        try:
+            on_merged(self.config, self.config_path, repo, number)
+        except Exception as exc:  # the receiver must answer whatever happens here
+            sys.stderr.write(f"features: merge of {repo}#{number}: {type(exc).__name__}: {exc}\n")
+
+    def handle_comment(self, body: bytes) -> dict | None:
+        from docforge.features import FeatureError, on_comment
+        from docforge.github.events import parse_docs_event
+
+        try:
+            event = parse_docs_event("issue_comment", json.loads(body.decode("utf-8")))
+        except (ValueError, UnicodeDecodeError):
+            return None
+        if event is None:
+            return None
+        try:
+            result = on_comment(self.config, self.config_path, event)
+        except FeatureError as exc:
+            return {"result": "failed", "reason": str(exc)}
+        if result is not None:
+            self.wake.set()
+        return result
+
+    def _work(self) -> None:
+        from docforge.features import list_features, process_feature
+
+        while True:
+            self.wake.wait(timeout=self.poll_seconds)
+            self.wake.clear()
+            for repo, state in list_features(self.config, self.config_path):
+                if state.phase in ("planning", "drafting") or any(p.source_id is None for p in state.prs):
+                    try:
+                        process_feature(self.config, self.config_path, repo, state.key)
+                    except Exception as exc:  # the worker must survive one feature's failure
+                        sys.stderr.write(f"features worker: {state.key}: {type(exc).__name__}: {exc}\n")
 
 
 def make_handler(receiver: Receiver | None, jira: JiraEndpoint | None = None):

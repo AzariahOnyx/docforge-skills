@@ -260,8 +260,15 @@ def _serve(args: argparse.Namespace) -> int:
 
         docs = DocsPrEndpoint(config=config, config_path=Path(args.config), roots=list(args.docs_runs),
                               checkout=args.docs_checkout)
+    features = None
+    if secret and any(r.workspace for r in config.code_repos.values()):
+        from docforge.webhook import FeatureEndpoint
+
+        features = FeatureEndpoint(config=config, config_path=Path(args.config))
+        if docs is not None:
+            docs.features = features
     receiver = (Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout),
-                         docs=docs, config_path=Path(args.config)) if secret else None)
+                         docs=docs, config_path=Path(args.config), features=features) if secret else None)
     jira = None
     if args.jira_trigger:
         if args.jira_trigger not in config.triggers:
@@ -327,6 +334,12 @@ def _pr_run(args: argparse.Namespace) -> int:
                 raise PublishError(f"{args.run} has no pull request record")
 
         def approved(run: Path) -> None:
+            from docforge.features import process_feature, queue_draft_after_approval
+
+            queued = queue_draft_after_approval(config, Path(args.config), run)
+            if queued:
+                results.append(process_feature(config, Path(args.config), *queued))
+                return
             if not (args.jira_trigger and args.jira_state):
                 return
             from docforge.jira.work import process as jira_process, queue_draft_after_approval
@@ -354,6 +367,86 @@ def _pr_run(args: argparse.Namespace) -> int:
         return 1
     print(json.dumps(results, indent=2))
     return 0 if all(r.get("result") != "failed" for r in results) else 1
+
+
+def _feature_handle(args: argparse.Namespace) -> int:
+    from docforge.agent import append_decision, decide
+    from docforge.features import FeatureError, on_comment, on_decision, on_merged
+    from docforge.github.events import parse_docs_event
+    from docforge.sources import DiffError, EventError, changes_for_event, parse_event
+    from docforge.triage.feedback import post_feedback
+
+    try:
+        config = load_config(args.config)
+        payload = json.loads(args.payload.read_text(encoding="utf-8"))
+        if args.event == "issue_comment":
+            event = parse_docs_event("issue_comment", payload)
+            result = on_comment(config, Path(args.config), event) if event else None
+            print(json.dumps(result or {"result": "ignore", "reason": "not a comment on a pull request"}, indent=2))
+            return 0
+        event = parse_event("pull_request", payload)
+        if event.kind == "merge":
+            print(json.dumps(on_merged(config, Path(args.config), event.repo, event.number), indent=2))
+            return 0
+        changed, source = changes_for_event(event.base_sha, event.head_sha, diff_file=args.diff,
+                                            checkout=args.code_checkout)
+        diff_text = args.diff.read_text(encoding="utf-8", errors="replace") if args.diff else ""
+        decision = decide(config, event, changed, diff_source=source, diff_text=diff_text,
+                          ledger=args.log.with_name("triage-costs.jsonl"), config_path=Path(args.config))
+        if decision.triage is not None:
+            t = decision.triage
+            decision.feedback = post_feedback(config, repo=event.repo, number=event.number, sha=event.head_sha,
+                                              outcome=decision.outcome, category=decision.category,
+                                              reasons=decision.reasons, products=t["products"], owners=t["owners"])
+        append_decision(args.log, decision)
+        routed = (on_decision(config, Path(args.config), event, decision)
+                  if decision.triage is not None and decision.outcome in ("act", "confirm") else {"result": "quiet"})
+    except (ConfigError, EventError, DiffError, FeatureError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(json.dumps({"outcome": decision.outcome, "reasons": decision.reasons, **routed}, indent=2))
+    return 0
+
+
+def _feature_run(args: argparse.Namespace) -> int:
+    from docforge.features import FeatureError, list_features, process_feature
+
+    if bool(args.key) == bool(args.all):
+        print("give one feature key, or --all", file=sys.stderr)
+        return 2
+    try:
+        config = load_config(args.config)
+        features = list_features(config, Path(args.config))
+        chosen = [(r, s) for r, s in features if args.all or s.key == args.key]
+        if not chosen:
+            raise FeatureError(f"no feature {args.key!r}")
+        results = [process_feature(config, Path(args.config), repo, state.key, code_checkout=args.code_checkout)
+                   for repo, state in chosen
+                   if not args.all or state.phase in ("planning", "drafting") or any(p.source_id is None for p in state.prs)]
+    except (ConfigError, FeatureError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    print(json.dumps(results, indent=2))
+    return 0 if all(r.get("result") != "failed" for r in results) else 1
+
+
+def _feature_list(args: argparse.Namespace) -> int:
+    from docforge.features import list_features
+
+    try:
+        config = load_config(args.config)
+        features = list_features(config, Path(args.config))
+    except (ConfigError, OSError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    for repo, state in features:
+        prs = ", ".join(f"#{p.number} ({p.state})" for p in state.prs)
+        print(f"{state.key}: {state.label}, {state.phase}, {repo} {prs}"
+              + (f"; plan {state.plan_pr}" if state.plan_pr else "")
+              + (f"; drafts {state.pull_request}" if state.pull_request else ""))
+    if not features:
+        print("no features yet")
+    return 0
 
 
 def _research_packet(args: argparse.Namespace) -> int:
@@ -1019,6 +1112,27 @@ def main(argv: list[str] | None = None) -> int:
                            help="handle review on DocForge's own docs pull requests whose runs are under FOLDER")
     serve_cmd.add_argument("--docs-checkout", type=Path, help="docs clone for revisions (default: the collection's)")
     serve_cmd.set_defaults(func=_serve)
+
+    feat = sub.add_parser("feature", help="the code route: code pull requests that need docs become features")
+    feat_sub = feat.add_subparsers(dest="feature_command", required=True)
+    fhandle = feat_sub.add_parser("handle", help="decide and route one saved code pull request event or comment")
+    fhandle.add_argument("payload", type=Path)
+    fhandle.add_argument("--event", required=True, choices=("pull_request", "issue_comment"))
+    fsrc = fhandle.add_mutually_exclusive_group()
+    fsrc.add_argument("--diff", type=Path, help="unified diff of the pull request")
+    fsrc.add_argument("--code-checkout", type=Path, help="local checkout to diff base..head")
+    fhandle.add_argument("--config", default="docforge.yaml")
+    fhandle.add_argument("--log", type=Path, default=DEFAULT_LOG)
+    fhandle.set_defaults(func=_feature_handle)
+    frun = feat_sub.add_parser("run", help="do a feature's pending work: plan, sources, drafts")
+    frun.add_argument("key", nargs="?")
+    frun.add_argument("--all", action="store_true")
+    frun.add_argument("--code-checkout", type=Path, help="default: the code repo's checkout setting")
+    frun.add_argument("--config", default="docforge.yaml")
+    frun.set_defaults(func=_feature_run)
+    flist = feat_sub.add_parser("list", help="list features and their pull requests")
+    flist.add_argument("--config", default="docforge.yaml")
+    flist.set_defaults(func=_feature_list)
 
     prc = sub.add_parser("pr", help="review on DocForge's own docs pull requests: comments become revisions")
     prc_sub = prc.add_subparsers(dest="pr_command", required=True)

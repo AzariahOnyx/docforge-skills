@@ -25,6 +25,7 @@ SOURCE_PR_RE = re.compile(r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#([1-9][0-9]*)")
 MAX_QUERIES = 10
 ORIGIN_FIELDS = ("id", "title", "url", "version", "updated", "space", "author", "fetched_at")
 ADDED_HEADING = "## Sources added after the run started"
+ADDABLE = {"answer": r"A[1-9][0-9]{0,3}", "github_pr": r"P[1-9][0-9]{0,3}", "spec": r"S[1-9][0-9]{0,3}"}
 HITS_PER_QUERY = 5
 
 
@@ -59,8 +60,12 @@ def _existing_docs(repo: Path, docs: Path | None, sources: list[dict], include: 
         for query in _queries(text, source["path"]):
             hits = search(docs, query, limit=HITS_PER_QUERY, collection=include, match="any")
             queries.append({"source_id": source["id"], "query": query, "hits": [h.model_dump() for h in hits]})
+    try:  # never a local absolute path in run files
+        docs_label = docs.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        docs_label = "<docs checkout>"
     return {
-        "docs_path": str(docs),
+        "docs_path": docs_label,
         "include": include.filter if include else [],
         "pages": len(index.pages),
         "sections": sum(len(p.sections) for p in index.pages),
@@ -435,24 +440,25 @@ def start_run(
 def add_sources(out: Path, repo: Path, paths: list[Path], *, note: str) -> list[dict]:
     """Add sources to a started run: hashed entries in run.json and a section in every work order.
 
-    Only `answer` sources (with a provenance header) can be added; their IDs must be new. Earlier
-    sources, hashes and stage outputs are not changed.
+    Only answer, pull request and spec sources (with a provenance header) can be added, named by their
+    source ID (A3.md, P2.md, S7.md); IDs must be new. Earlier sources, hashes and stage outputs are not changed.
     """
     manifest = json.loads((out / "run.json").read_text(encoding="utf-8"))
     added = []
     for path in paths:
         rel = _repo_relative(repo, path)
         origin = read_provenance(repo / rel)
-        if not origin or origin.get("kind") != "answer":
-            raise RunError(f"{rel}: only answer sources can be added to a started run")
+        kind = (origin or {}).get("kind")
+        if kind not in ADDABLE:
+            raise RunError(f"{rel}: only answer, pull request and spec sources can be added to a started run")
         sid = Path(rel).stem
-        if not re.fullmatch(r"A[1-9][0-9]{0,3}", sid) or any(s["id"] == sid for s in manifest["sources"]):
+        if not re.fullmatch(ADDABLE[kind], sid) or any(s["id"] == sid for s in manifest["sources"]):
             raise RunError(f"{rel}: source ID {sid!r} is invalid or used twice")
         if any(s["path"] == rel for s in manifest["sources"]):
             raise RunError(f"source given twice: {rel}")
         origin.pop("kind")
         entry = {"id": sid, "path": rel, "sha256": hashlib.sha256((repo / rel).read_bytes()).hexdigest(),
-                 "authority": "unconfirmed", "kind": "answer",
+                 "authority": "unconfirmed", "kind": kind,
                  "origin": {k: origin[k] for k in ORIGIN_FIELDS if k in origin}}
         manifest["sources"].append(entry)
         added.append(entry)

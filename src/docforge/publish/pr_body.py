@@ -36,7 +36,8 @@ def source_origin(source: dict) -> str:
         text = (f"Flow PDF {origin.get('pdf', 'unknown')}, {origin.get('steps', '?')} steps, "
                 f"fetched {origin.get('fetched_at', 'unknown')}")
         return text.replace("|", "\\|")
-    label = {"jira": "Jira", "confluence": "Confluence page", "answer": "Ticket owner answers"}.get(
+    label = {"jira": "Jira", "confluence": "Confluence page", "answer": "Ticket owner answers",
+                                                         "github_pr": "Pull request", "spec": "Spec"}.get(
         source.get("kind"), source.get("kind", "?"))
     text = f"{label} {origin.get('id', '?')}"
     if origin.get("space"):

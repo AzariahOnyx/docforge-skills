@@ -83,9 +83,14 @@ code_repos:                         # the dependency map: which code feeds which
   example-org/product-web:
     doc_collection: example-org/docs
     spec_paths: ["specs/**/spec.md"]
+    checkout: ../product-web        # local clone: spec files and diffs are read from it
+    workspace: ../docs-work/code    # features started from this repository's pull requests
+    pack: house
+    audience: workspace admins
     areas:
       - {path: "", products: [core], owner: example-writer}
-      - {path: src/analytics/, products: [analytics], feature: Dashboards, owner: example-writer-2}
+      - {path: src/analytics/, products: [analytics], feature: Dashboards, owner: example-writer-2,
+         spec: specs/dashboards/spec.md}
       - {path: tools/, products: [internal], documented: false}
 
 triage:                             # "docs needed?" for code pull requests

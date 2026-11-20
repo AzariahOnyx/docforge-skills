@@ -207,6 +207,20 @@ def _read_approval(run: Path, record, config: DocForgeConfig, checkout: Path, cl
               client)
         save_plan(run, record)
         return {"result": "failed", "reason": "; ".join(errors[:3])}
+    from docforge.flow import stage_done
+
+    if not stage_done(run, 1):
+        # Approved while a plan revision was still waiting for the Analyzer: the approved plan wins. The plan
+        # set aside for that revision comes back, so the run's analysis matches what was approved.
+        from docforge.jira.work import _restore_plan
+
+        folder = run / "analysis" / "revisions"
+        latest = max((int(p.name[1:]) for p in folder.glob("r*") if p.name[1:].isdigit()), default=None)
+        if latest is None:
+            raise DocsPrError("the run has no finished analysis to draft from")
+        _restore_plan(run, latest)
+        record.history.append({"at": _now().isoformat(), "event": "revision_cancelled_by_approval",
+                               "restored": f"r{latest}"})
     (run / APPROVED).write_text(text, encoding="utf-8")
     applied = apply_approved_plan(run, plan, commit=commit, link=record.pr_url)
     record.status, record.approved_commit = "drafting", commit

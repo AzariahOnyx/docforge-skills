@@ -541,14 +541,15 @@ class CodeArea(Strict):
     path: str = ""
     products: list[str] = Field(min_length=1)
     feature: str | None = None
+    spec: str | None = None  # the feature's spec.md in this repository, read when code here needs docs
     owner: str | None = None  # the owning writer
     documented: bool = True  # false: internal code nobody documents; changes there stay quiet
 
-    @field_validator("path")
+    @field_validator("path", "spec")
     @classmethod
     def _path(cls, value):
-        if value.startswith("/") or ".." in value.split("/"):
-            raise ValueError(f"area path must be a relative prefix: {value!r}")
+        if value is not None and (value.startswith("/") or ".." in value.split("/")):
+            raise ValueError(f"area paths must be relative and stay inside the repository: {value!r}")
         return value
 
 
@@ -561,6 +562,14 @@ class CodeRepo(Strict):
     areas: list[CodeArea] = Field(default_factory=list)
     api_url: str = "https://api.github.com"
     token_env: str = "GITHUB_TOKEN"
+    # Local clone of this repository (relative to docforge.yaml): spec files and diffs are read from it.
+    checkout: str | None = None
+    # Folder (relative to docforge.yaml) for features started from this repository's pull requests:
+    # <workspace>/features/<feature>/ and their state in <workspace>/state/. Keep it in a private repository.
+    workspace: str | None = None
+    pack: str | None = None  # house pack for plans and drafts from this repository
+    audience: str = "readers of the product documentation"
+    base: str = "main"  # the docs repository branch plan and drafts pull requests target
 
     @field_validator("spec_paths")
     @classmethod
@@ -633,6 +642,8 @@ class DocForgeConfig(Strict):
         for name, repo in self.code_repos.items():
             if repo.doc_collection is not None and repo.doc_collection not in self.doc_collections:
                 raise ValueError(f"code_repos.{name}: doc_collection {repo.doc_collection!r} is not in doc_collections")
+            if repo.pack is not None and repo.pack not in self.packs:
+                raise ValueError(f"code_repos.{name}: pack {repo.pack!r} is not in packs")
         return self
 
     @field_validator("doc_collections")

@@ -138,24 +138,7 @@ def gather_sources(config: DocForgeConfig, config_path: Path, trigger: JiraTicke
 # --- stages ----------------------------------------------------------------------------
 
 
-def _stage_done(run: Path, number: int) -> bool:
-    from docforge.run import run_status
-
-    return next(s for s in run_status(run) if s.stage.number == number).complete
-
-
-def _run_stages(run: Path, workspace: Path, config: DocForgeConfig, only: int | None, backend_client) -> str:
-    """'done', 'waiting' (no backend: a session must do the stage) or an error message."""
-    if config.backend is None:
-        return "waiting"
-    from docforge.backend import BackendError, exec_run
-
-    try:
-        outcomes = exec_run(run, workspace, config, only=only, repair=1, client=backend_client)
-    except BackendError as exc:
-        return str(exc)
-    failed = [o for o in outcomes if o.status == "failed"]
-    return f"{failed[0].stage}: {failed[0].message}" if failed else "done"
+from docforge.flow import run_stages as _run_stages, stage_done as _stage_done  # noqa: E402  (shared steps)
 
 
 ANSWERS_NOTE = (
@@ -245,30 +228,21 @@ def _plan_pr_comment(state: TicketState, run: Path, trigger: JiraTicketTrigger, 
                      config: DocForgeConfig, config_path: Path, github_client) -> dict:
     """Check ia-plan.md, prepare the plan pull request (and open it when the policy allows). Raises WorkError
     when the plan file has problems, so the ticket gets a failure comment instead of a broken plan."""
-    from docforge.plan import check_run_plan
-    from docforge.plan.pr import prepare_plan_pr
-    from docforge.publish import PublishError, load_plan, open_pr
+    from docforge.flow import FlowError, propose_plan_pr
 
-    plan, errors = check_run_plan(run, config)
-    if errors:
-        raise WorkError("ia-plan.md has problems: " + "; ".join(errors[:5]))
     checkout = (config_path.parent / trigger.publish.checkout).resolve()
     command = f"docforge plan open {state.run} --docs-checkout <docs checkout>"
     try:
-        if (run / "publish" / "plan-pr.json").is_file():
-            record = load_plan(run, "plan-pr")
-        else:
-            record = prepare_plan_pr(run=run, checkout=checkout, config=config, collection=trigger.publish.collection,
-                                     base=trigger.publish.base)
-            state.note("plan pull request prepared", branch=record.branch, commit=record.commit[:12])
-        state.plan_pr = record.pr_url or record.branch
-        policy = config.resolve_policy(trigger=trigger_name, doc_collection=trigger.publish.collection)["publishing"]
-        if policy.get("auto_create_pr") and record.pr_number is None:
-            record = open_pr(run=run, checkout=checkout, config=config, client=github_client, kind="plan-pr")
-            state.plan_pr = record.pr_url
-            state.note("plan pull request opened", number=record.pr_number, url=record.pr_url)
-    except PublishError as exc:
-        raise WorkError(f"the plan pull request could not be prepared: {exc}") from None
+        proposed = propose_plan_pr(run, config, collection=trigger.publish.collection, checkout=checkout,
+                                   base=trigger.publish.base, trigger=trigger_name, client=github_client)
+    except FlowError as exc:
+        raise WorkError(str(exc)) from None
+    record, plan = proposed.record, proposed.plan
+    if proposed.prepared:
+        state.note("plan pull request prepared", branch=record.branch, commit=record.commit[:12])
+    state.plan_pr = record.pr_url or record.branch
+    if proposed.opened:
+        state.note("plan pull request opened", number=record.pr_number, url=record.pr_url)
     articles = [{"title": a["title"], "type": a["type"] or "existing article", "action": a["change"]}
                 for a in plan.articles()]
     questions = [f"{q['ID']}: {q['Question']}" for q in plan.questions]
@@ -283,37 +257,26 @@ def _publish_lines(state: TicketState, run: Path, trigger: JiraTicketTrigger, tr
     A failure here never undoes the drafts: it is reported on the ticket, and a person can run the
     `docforge publish` commands by hand.
     """
-    from docforge.publish import PublishError, load_plan, open_pr, prepare_publish, save_plan
+    from docforge.flow import publish_drafts
 
     target = trigger.publish
     checkout = (config_path.parent / target.checkout).resolve()
     command = f"docforge publish open {state.run} --docs-checkout <docs checkout>"
-    try:
-        if (run / "publish" / "pr.json").is_file():
-            plan = load_plan(run)
-        else:
-            approved = json.loads((run / "run.json").read_text(encoding="utf-8")).get("approved_plan") or {}
-            placements = [(p["src"], p["dest"]) for p in approved.get("placements", [])]
-            plan = prepare_publish(run=run, checkout=checkout, config=config, collection=target.collection,
-                                   placements=placements, base=target.base, slug=state.key.lower())
-            state.note("pull request prepared", branch=plan.branch, commit=plan.commit[:12])
-        lines = [f"Docs branch: {plan.branch} in {plan.repo} ({len(plan.files)} file(s))."]
-        policy = config.resolve_policy(trigger=trigger_name, doc_collection=target.collection)["publishing"]
-        if not policy.get("auto_create_pr"):
-            return lines + [f"The pull request is not opened automatically. To open it as a draft, a person runs: "
-                            f"{command}"]
-        plan = open_pr(run=run, checkout=checkout, config=config, client=github_client)
-    except PublishError as exc:
-        state.note("pull request not opened", reason=str(exc))
-        return [f"The docs pull request could not be opened: {exc}. A person can run {command} after fixing it."]
+    published = publish_drafts(run, config, collection=target.collection, checkout=checkout, base=target.base,
+                               slug=state.key.lower(), trigger=trigger_name, client=github_client)
+    if published.error:
+        state.note("pull request not opened", reason=published.error)
+        return [f"The docs pull request could not be opened: {published.error}. A person can run {command} after "
+                "fixing it."]
+    plan = published.record
+    if published.prepared:
+        state.note("pull request prepared", branch=plan.branch, commit=plan.commit[:12])
+    lines = [f"Docs branch: {plan.branch} in {plan.repo} ({len(plan.files)} file(s))."]
+    if not published.opened:
+        return lines + [f"The pull request is not opened automatically. To open it as a draft, a person runs: "
+                        f"{command}"]
     state.pull_request = plan.pr_url
     state.note("pull request opened", number=plan.pr_number, url=plan.pr_url)
-    if (run / "publish" / "plan-pr.json").is_file():
-        from docforge.github.docs_pr import reply
-
-        record = load_plan(run, "plan-pr")
-        reply(run, record, config, "drafts", f"The drafts for this plan are in {plan.pr_url}.", github_client)
-        save_plan(run, record)
     return lines + [f"Draft pull request: {plan.pr_url} (stays a draft until the feature ships)."]
 
 
