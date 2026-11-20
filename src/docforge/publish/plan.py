@@ -80,6 +80,12 @@ class PrPlan(BaseModel):
     replies: list[dict] = Field(default_factory=list)
     github_state: str | None = None
     automatic_revisions: int = 0
+    # "pr": the drafts; "plan-pr": the ia-plan.md pull request (B7c). For a plan pull request, `requests`
+    # holds the change requests waiting for the next plan revision and `approved_commit` the commit a
+    # reviewer approved.
+    kind: str = "pr"
+    requests: list[dict] = Field(default_factory=list)
+    approved_commit: str | None = None
 
 
 # A run can have two pull requests: the drafts ("pr") and, for runs with ia-plan.md, the plan ("plan-pr").
@@ -97,11 +103,13 @@ def load_plan(run: Path, kind: str = "pr") -> PrPlan:
     if not path.is_file():
         hint = "docforge publish prepare" if kind == "pr" else "docforge plan prepare"
         raise PublishError(f"{path} not found; run {hint} first")
-    return PrPlan.model_validate_json(path.read_text(encoding="utf-8"))
+    plan = PrPlan.model_validate_json(path.read_text(encoding="utf-8"))
+    plan.kind = kind
+    return plan
 
 
-def save_plan(run: Path, plan: PrPlan, kind: str = "pr") -> None:
-    (run / PUBLISH_DIR / _record(kind)).write_text(plan.model_dump_json(indent=2) + "\n", encoding="utf-8")
+def save_plan(run: Path, plan: PrPlan, kind: str | None = None) -> None:
+    (run / PUBLISH_DIR / _record(kind or plan.kind)).write_text(plan.model_dump_json(indent=2) + "\n", encoding="utf-8")
 
 
 def resolve_commands(commands: list[str], *, run: Path, checkout: Path | None = None) -> list[str]:

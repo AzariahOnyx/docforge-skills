@@ -147,6 +147,7 @@ class DocsPrEndpoint:
     checkout: Path | None = None  # overrides each doc collection's checkout
     run_work: bool = True
     poll_seconds: float = 15.0
+    jira: "JiraEndpoint | None" = None  # an approved plan pull request queues the ticket's drafting here
 
     def __post_init__(self):
         import queue
@@ -179,7 +180,12 @@ class DocsPrEndpoint:
         if found is None:
             return None if github_event in SUPPORTED_EVENTS else (202, {"ignored": "not a DocForge pull request"})
         try:
-            result = handle_docs_event(event, run=found[0], config=self.config, delivery_id=delivery_id)
+            if found[1].kind == "plan-pr":
+                from docforge.plan.review import handle_plan_event
+
+                result = handle_plan_event(event, run=found[0], config=self.config, delivery_id=delivery_id)
+            else:
+                result = handle_docs_event(event, run=found[0], config=self.config, delivery_id=delivery_id)
         except (DocsPrError, OSError, ValueError) as exc:
             return 400, {"error": str(exc)}
         self.wake.set()
@@ -201,13 +207,28 @@ class DocsPrEndpoint:
                     source_merged(self.roots, repo, number, config=self.config)
                 except Exception as exc:  # the worker must survive one failure
                     sys.stderr.write(f"docs pr worker: {repo}#{number}: {type(exc).__name__}: {exc}\n")
-            for run, plan in find_runs(self.roots):
-                if plan.status not in ("changes_requested", "revised") or plan.github_state:
-                    continue
+            from docforge.plan.review import ACTIVE, process_plan_pr
+
+            for run, plan in find_runs(self.roots, ("pr", "plan-pr")):
                 try:
-                    process_revision(run, config=self.config, checkout=self.checkout_for(plan.repo))
+                    if plan.kind == "plan-pr":
+                        if plan.status in ACTIVE:
+                            process_plan_pr(run, config=self.config, checkout=self.checkout_for(plan.repo),
+                                            on_approved=self.approved)
+                    elif plan.status in ("changes_requested", "revised") and not plan.github_state:
+                        process_revision(run, config=self.config, checkout=self.checkout_for(plan.repo))
                 except Exception as exc:
                     sys.stderr.write(f"docs pr worker: {run.name}: {type(exc).__name__}: {exc}\n")
+
+    def approved(self, run: Path) -> None:
+        """A plan pull request was approved: queue the Jira ticket's drafting (Jira runs only)."""
+        if self.jira is None:
+            return
+        from docforge.jira.work import queue_draft_after_approval
+
+        key = (json.loads((run / "run.json").read_text(encoding="utf-8")).get("ia_plan") or {}).get("jira")
+        if key and key != "none" and queue_draft_after_approval(self.jira.state_root, key):
+            self.jira.queue.put(key)
 
 
 def make_handler(receiver: Receiver | None, jira: JiraEndpoint | None = None):

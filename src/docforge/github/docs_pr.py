@@ -44,25 +44,28 @@ def _iso(when: datetime) -> str:
 # --- finding runs ------------------------------------------------------------------------
 
 
-def find_runs(roots: list[Path]) -> list[tuple[Path, PrPlan]]:
-    """Run folders (up to four levels under each root) whose publish/pr.json can be read."""
+def find_runs(roots: list[Path], kinds: tuple[str, ...] = ("pr",)) -> list[tuple[Path, PrPlan]]:
+    """(run, pull request record) for runs up to four levels under each root. `kinds`: "pr" (the drafts)
+    and/or "plan-pr" (the ia-plan.md pull request); each record's `kind` says which it is."""
     found, seen = [], set()
     for root in roots:
         for depth in range(SEARCH_DEPTH + 1):
-            for path in sorted(root.glob("/".join(["*"] * depth + ["publish", "pr.json"]))):
-                run = path.parent.parent.resolve()
-                if run in seen:
-                    continue
-                seen.add(run)
-                try:
-                    found.append((run, load_plan(run)))
-                except (PublishError, ValueError):
-                    continue
+            for kind in kinds:
+                for path in sorted(root.glob("/".join(["*"] * depth + ["publish", f"{kind}.json"]))):
+                    run = path.parent.parent.resolve()
+                    if (run, kind) in seen:
+                        continue
+                    seen.add((run, kind))
+                    try:
+                        found.append((run, load_plan(run, kind)))
+                    except (PublishError, ValueError):
+                        continue
     return found
 
 
-def find_run(roots: list[Path], repo: str, number: int, branch: str | None = None) -> tuple[Path, PrPlan] | None:
-    for run, plan in find_runs(roots):
+def find_run(roots: list[Path], repo: str, number: int, branch: str | None = None,
+             kinds: tuple[str, ...] = ("pr", "plan-pr")) -> tuple[Path, PrPlan] | None:
+    for run, plan in find_runs(roots, kinds):
         if plan.repo.casefold() != repo.casefold():
             continue
         if plan.pr_number == number or (branch is not None and plan.branch == branch and plan.pr_number is None):

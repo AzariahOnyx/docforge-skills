@@ -157,6 +157,19 @@ def _work_order(stage: Stage, out_label: str, manifest: dict, has_docs: bool, pa
     lines += [f"- {s['id']}: `{s['path']}` (sha256 `{s['sha256'][:12]}...`)" + _source_note(s) for s in manifest["sources"]]
     if stage.key == "analyzer" and manifest.get("ia_plan"):
         lines += _ia_plan_lines(manifest, pack, tools_prefix, out_label)
+    approved = manifest.get("approved_plan")
+    if approved and stage.key in ("drafter", "proofreader"):
+        lines += ["", "## Approved plan", "",
+                  f"A writer approved `{approved['file']}` (commit `{approved['commit'][:12]}`"
+                  + (f", {approved['pull_request']}" if approved.get("pull_request") else "") + "). It is the plan "
+                  "of record: where it differs from `analysis/CONTENT-PLAN.md`, follow the approved plan. Draft "
+                  "exactly these articles, at these docs paths:", ""]
+        lines += [f"- `{p['src']}` -> `{p['dest']}`" for p in approved["placements"]]
+        if approved.get("needs_own_run"):
+            lines += ["", "Not drafted in this run (they need their own run): "
+                      + "; ".join(approved["needs_own_run"]) + "."]
+        lines += ["", "The approved plan is a writer's decision about scope, never evidence: every statement still "
+                  "needs claims backed by the sources."]
     if stage.key == "analyzer":
         lines += ["", "## Existing documentation", ""]
         if has_docs:
@@ -454,3 +467,32 @@ def add_sources(out: Path, repo: Path, paths: list[Path], *, note: str) -> list[
             text += "\n\n" + ADDED_HEADING + "\n\n" + note
         order.write_text(text + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
     return added
+
+
+def rewrite_work_orders(out: Path, repo: Path) -> None:
+    """Write the work orders of the stages after the Analyzer again from run.json (for example after an
+    approved plan changed the deliverables). Earlier stages' orders and all outputs are left alone."""
+    from types import SimpleNamespace
+
+    from .status import TOOLS_ROOT
+
+    manifest = json.loads((out / "run.json").read_text(encoding="utf-8"))
+    pack = None
+    if manifest.get("pack"):
+        from docforge.packs import PackError, run_manifest
+
+        try:
+            pack = SimpleNamespace(manifest=run_manifest(out, manifest["pack"]))
+        except PackError as exc:
+            raise RunError(f"pack: {exc}") from None
+    repo = repo.resolve()
+    tools_prefix = "" if repo == TOOLS_ROOT.resolve() else "<docforge>/"
+    try:
+        out_label = out.resolve().relative_to(repo).as_posix()
+    except ValueError:
+        out_label = str(out)
+    has_docs = (out / "analysis" / "docs-index.json").is_file()
+    for stage in stages_for(manifest):
+        if stage.key in ("drafter", "proofreader"):
+            (out / stage.work_order).write_text(_work_order(stage, out_label, manifest, has_docs, pack, tools_prefix),
+                                                encoding="utf-8")

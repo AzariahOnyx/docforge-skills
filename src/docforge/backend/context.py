@@ -199,6 +199,10 @@ def build_request(run: Path, repo: Path, stage: Stage, *, tools_root: Path = TOO
             if not path.is_file():
                 raise ContextError(f"stage {prior.number} ({prior.name}) is not finished: {rel} is missing")
             user.append(_block("run-file", {"path": rel, "stage": prior.name}, _read(path, rel)))
+    approved = manifest.get("approved_plan")
+    if approved and stage.key in ("drafter", "proofreader") and (run / approved["file"]).is_file():
+        user.append(_block("run-file", {"path": approved["file"], "stage": "approved plan"},
+                           _read(run / approved["file"], approved["file"])))
     if stage.key == "analyzer":
         for rel in ("analysis/existing-docs.json", "analysis/docs-index.json"):
             if (run / rel).is_file():

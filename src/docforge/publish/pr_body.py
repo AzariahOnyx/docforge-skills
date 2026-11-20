@@ -76,6 +76,13 @@ def render_body(
     elif draft:
         lines += ["This pull request stays a **draft** until the feature ships.", ""]
 
+    approved = manifest.get("approved_plan")
+    if approved:
+        where = approved.get("pull_request") or "the plan pull request"
+        lines += [f"Drafted from the plan approved in {where} (commit `{approved['commit'][:12]}`).", ""]
+        if approved.get("needs_own_run"):
+            lines += ["Articles in that plan not drafted here (they need their own run): "
+                      + "; ".join(approved["needs_own_run"]) + ".", ""]
     lines += ["## Source change", ""]
     if source_pr:
         lines.append(f"- Source PR: `{source_pr['repo']}#{source_pr['number']}` ({source_pr.get('state', 'unknown')})")

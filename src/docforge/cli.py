@@ -248,6 +248,8 @@ def _serve(args: argparse.Namespace) -> int:
             return 1
         jira = JiraEndpoint(config=config, config_path=Path(args.config), trigger=args.jira_trigger,
                             state_root=args.jira_state, client_factory=_jira_client_factory(config, args.jira_trigger))
+    if docs is not None:
+        docs.jira = jira
     serve(receiver, host=args.host, port=args.port, jira=jira)
     return 0
 
@@ -268,7 +270,12 @@ def _pr_handle(args: argparse.Namespace) -> int:
                 print(json.dumps(source_merged(args.runs, event.repo, event.number, config=config), indent=2))
                 return 0
             raise DocsPrError(f"no DocForge pull request {event.repo}#{event.number} under the given runs")
-        result = handle_docs_event(event, run=found[0], config=config, delivery_id=args.delivery_id)
+        if found[1].kind == "plan-pr":
+            from docforge.plan.review import handle_plan_event
+
+            result = handle_plan_event(event, run=found[0], config=config, delivery_id=args.delivery_id)
+        else:
+            result = handle_docs_event(event, run=found[0], config=config, delivery_id=args.delivery_id)
     except (ConfigError, DocsPrError, OSError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 1
@@ -287,18 +294,40 @@ def _pr_run(args: argparse.Namespace) -> int:
         return 2
     try:
         config = load_config(args.config)
+        from docforge.plan.review import ACTIVE, process_plan_pr
+
         if args.all:
-            runs = [r for r, p in find_runs(args.runs) if p.status in ("changes_requested", "revised")]
+            records = [(r, p) for r, p in find_runs(args.runs, ("pr", "plan-pr"))
+                       if p.status in (ACTIVE if p.kind == "plan-pr" else ("changes_requested", "revised"))]
         else:
-            runs = [args.run]
+            records = [(args.run, load_plan(args.run, kind)) for kind in ("plan-pr", "pr")
+                       if (args.run / "publish" / f"{kind}.json").is_file()]
+            if not records:
+                raise PublishError(f"{args.run} has no pull request record")
+
+        def approved(run: Path) -> None:
+            if not (args.jira_trigger and args.jira_state):
+                return
+            from docforge.jira.work import process as jira_process, queue_draft_after_approval
+
+            key = (json.loads((run / "run.json").read_text(encoding="utf-8")).get("ia_plan") or {}).get("jira")
+            if key and key != "none" and queue_draft_after_approval(args.jira_state, key):
+                results.append(jira_process(key, config=config, config_path=Path(args.config),
+                                            trigger_name=args.jira_trigger, state_root=args.jira_state,
+                                            client_factory=_jira_client_factory(config, args.jira_trigger)))
+
         results = []
-        for run in runs:
-            plan = load_plan(run)
+        now = datetime.max.replace(tzinfo=timezone.utc) if args.no_wait else None
+        for run, plan in records:
             collection = config.doc_collections.get(plan.repo)
             checkout = args.docs_checkout or (
                 (Path(args.config).parent / collection.checkout).resolve() if collection and collection.checkout else None)
-            now = datetime.max.replace(tzinfo=timezone.utc) if args.no_wait else None
-            results.append(process_revision(run, config=config, checkout=checkout, now=now))
+            if plan.kind == "plan-pr":
+                if plan.status in ACTIVE or not args.all:
+                    results.append(process_plan_pr(run, config=config, checkout=checkout, now=now,
+                                                   on_approved=approved))
+            else:
+                results.append(process_revision(run, config=config, checkout=checkout, now=now))
     except (ConfigError, DocsPrError, PublishError, OSError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 1
@@ -975,6 +1004,8 @@ def main(argv: list[str] | None = None) -> int:
     prun.add_argument("--runs", type=Path, action="append", default=[], metavar="FOLDER")
     prun.add_argument("--docs-checkout", type=Path, help="docs clone (default: the doc collection's checkout)")
     prun.add_argument("--no-wait", action="store_true", help="do not wait for the review's quiet period")
+    prun.add_argument("--jira-trigger", help="with --jira-state: an approved plan pull request drafts its ticket")
+    prun.add_argument("--jira-state", type=Path)
     prun.add_argument("--config", default="docforge.yaml")
     prun.set_defaults(func=_pr_run)
 

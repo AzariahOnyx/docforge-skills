@@ -31,6 +31,60 @@ def _scrub(text: str, token: str | None) -> str:
     return text.replace(token, "***") if token else text
 
 
+def _git_env(tmp: str, local: bool, token: str | None) -> dict:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    if not local:
+        helper = Path(tmp) / "askpass.sh"
+        helper.write_text(ASKPASS, encoding="utf-8")
+        helper.chmod(stat.S_IRWXU)
+        env["GIT_ASKPASS"] = str(helper)
+        env["DOCFORGE_PUSH_TOKEN"] = token
+    return env
+
+
+def fetch_branch(checkout: Path, branch: str, git_url: str, token: str | None) -> str:
+    """Fetch a DocForge branch from the remote into refs/docforge-remote/<branch>; return its tip commit.
+
+    Reads only: the checkout's branches, index and working tree are not changed."""
+    if not branch.startswith(BRANCH_PREFIX) or ".." in branch:
+        raise PublishError(f"only DocForge branches ({BRANCH_PREFIX}...) are fetched: {branch!r}")
+    local = git_url.startswith("file:///")
+    if not local and not token:
+        raise PublishError("no GitHub token: cannot fetch")
+    ref = f"refs/docforge-remote/{branch}"
+    with tempfile.TemporaryDirectory(prefix="docforge-fetch-") as tmp:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(checkout), "-c", "credential.helper=", "fetch", "--quiet", "--no-tags", git_url,
+                 f"+refs/heads/{branch}:{ref}"], capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS * 2,
+                check=False, env=_git_env(tmp, local, token))
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise PublishError(f"git fetch failed: {type(exc).__name__}") from None
+    if result.returncode != 0:
+        lines = _scrub((result.stderr or result.stdout).strip(), token).splitlines()
+        raise PublishError(f"git fetch of {branch} failed: {lines[-1] if lines else 'unknown error'}")
+    tip = subprocess.run(["git", "-C", str(checkout), "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                         capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS, check=False).stdout.strip()
+    if not tip:
+        raise PublishError(f"branch {branch} was not found on the remote")
+    return tip
+
+
+def show_file(checkout: Path, commit: str, path: str) -> str:
+    """The text of `path` at `commit` in the checkout (the commit must have been fetched)."""
+    result = subprocess.run(["git", "-C", str(checkout), "show", f"{commit}:{path}"], capture_output=True, text=True,
+                            timeout=GIT_TIMEOUT_SECONDS, check=False)
+    if result.returncode != 0:
+        raise PublishError(f"{path} is not in commit {commit[:12]}")
+    return result.stdout
+
+
+def is_ancestor(checkout: Path, older: str, newer: str) -> bool:
+    return subprocess.run(["git", "-C", str(checkout), "merge-base", "--is-ancestor", older, newer],
+                          capture_output=True, timeout=GIT_TIMEOUT_SECONDS, check=False).returncode == 0
+
+
 def push_branch(checkout: Path, branch: str, expected_commit: str, git_url: str, token: str | None) -> None:
     if not branch.startswith(BRANCH_PREFIX) or ".." in branch or branch.endswith("/"):
         raise PublishError(f"only DocForge branches ({BRANCH_PREFIX}...) are pushed: {branch!r}")
@@ -48,15 +102,8 @@ def push_branch(checkout: Path, branch: str, expected_commit: str, git_url: str,
     if tip != expected_commit:
         raise PublishError(f"branch {branch} has commits DocForge did not record ({tip[:12]} is not "
                            f"{expected_commit[:12]}); nothing was pushed")
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    env["GIT_TERMINAL_PROMPT"] = "0"
     with tempfile.TemporaryDirectory(prefix="docforge-push-") as tmp:
-        if not local:
-            helper = Path(tmp) / "askpass.sh"
-            helper.write_text(ASKPASS, encoding="utf-8")
-            helper.chmod(stat.S_IRWXU)
-            env["GIT_ASKPASS"] = str(helper)
-            env["DOCFORGE_PUSH_TOKEN"] = token
+        env = _git_env(tmp, local, token)
         command = ["git", "-C", str(checkout), "-c", "credential.helper=", "push", "--porcelain", git_url,
                    f"refs/heads/{branch}:refs/heads/{branch}"]
         try:

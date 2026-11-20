@@ -84,7 +84,7 @@ def prepare_plan_pr(*, run: Path, checkout: Path, config: DocForgeConfig, collec
         policy=policy, action="awaiting_approval", files=[c.model_dump() for c in result.changes], gate_passed=True,
         commands=[f"docforge plan open {shlex.quote(str(run.name))} --docs-checkout <docs-checkout>"],
         history=[{"at": _now(), "event": "prepared", "commit": result.commit}], base_commit=result.base_commit,
-        placements=[{"src": IA_PLAN, "dest": dest}],
+        placements=[{"src": IA_PLAN, "dest": dest}], kind=KIND,
     )
     save_plan(run, record, KIND)
     return record

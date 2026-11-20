@@ -31,6 +31,7 @@ class DocsPrEvent:
     path: str | None = None
     line: int | None = None
     created: str | None = None
+    commit: str | None = None  # the commit a review was made on, or the head of a closed pull request
     reason: str = ""
 
 
@@ -75,6 +76,8 @@ def parse_docs_event(github_event: str, payload) -> DocsPrEvent | None:
     if github_event == "pull_request":
         if action == "closed":
             event.kind = "merged" if _get(payload, "pull_request", "merged") is True else "closed"
+            sha = _get(payload, "pull_request", "head", "sha")
+            event.commit = sha if isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha) else None
         else:
             event.reason = f"pull_request {action!r} needs nothing from DocForge"
         return event
@@ -96,6 +99,8 @@ def parse_docs_event(github_event: str, payload) -> DocsPrEvent | None:
         event.kind = "review"
         event.review_id = item.get("id") if isinstance(item.get("id"), int) else None
         event.review_state = str(item.get("state") or "").lower()
+        sha = item.get("commit_id")
+        event.commit = sha if isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha) else None
     elif github_event == "pull_request_review_comment":
         event.kind = "line_comment"
         event.comment_id = item.get("id") if isinstance(item.get("id"), int) else None

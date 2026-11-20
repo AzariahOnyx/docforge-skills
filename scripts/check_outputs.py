@@ -82,6 +82,28 @@ def check_flow_citations(relative: str, body: str, flows: dict, errors: list[str
             errors.append(f"{relative}: [{flow_id}#{locator}]: {problem}")
 
 
+DRAFTS = ("feature/feature-guide.md", "how-to/how-to.md", "release-note/release-note.md")
+
+
+def required_files(root: Path) -> dict:
+    """REQUIRED, except that a run drafting from an approved plan (run.json `approved_plan`) needs only the
+    drafts it lists in `deliverables`: the writer's plan decided which articles exist."""
+    manifest_path = root / "run.json"
+    if not manifest_path.is_file():
+        return REQUIRED
+    try:
+        import json
+
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return REQUIRED
+    deliverables = manifest.get("deliverables") if isinstance(manifest, dict) else None
+    if not manifest.get("approved_plan") or not isinstance(deliverables, list) or not deliverables \
+            or not set(deliverables) <= set(DRAFTS):
+        return REQUIRED
+    return {k: v for k, v in REQUIRED.items() if k not in DRAFTS or k in deliverables}
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python3 scripts/check_outputs.py output/<slug>")
@@ -92,7 +114,7 @@ def main() -> int:
     warnings: list[str] = []
     texts: dict[str, str] = {}
 
-    for relative, headings in REQUIRED.items():
+    for relative, headings in required_files(root).items():
         path = root / relative
         if not path.is_file():
             errors.append(f"Missing {relative}")
@@ -193,7 +215,7 @@ def main() -> int:
         print(f"FAIL: {issue}")
     for issue in warnings:
         print(f"WARNING: {issue}")
-    print(f"{'FAIL' if errors else 'PASS'}: {len(texts)}/{len(REQUIRED)} files checked; "
+    print(f"{'FAIL' if errors else 'PASS'}: {len(texts)}/{len(required_files(root))} files checked; "
           f"{len(errors)} error(s), {len(warnings)} warning(s)")
     print("Structural and line-target checks only; source fidelity requires the Proofreader.")
     return 1 if errors else 0

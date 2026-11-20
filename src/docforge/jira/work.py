@@ -283,7 +283,7 @@ def _publish_lines(state: TicketState, run: Path, trigger: JiraTicketTrigger, tr
     A failure here never undoes the drafts: it is reported on the ticket, and a person can run the
     `docforge publish` commands by hand.
     """
-    from docforge.publish import PublishError, load_plan, open_pr, prepare_publish
+    from docforge.publish import PublishError, load_plan, open_pr, prepare_publish, save_plan
 
     target = trigger.publish
     checkout = (config_path.parent / target.checkout).resolve()
@@ -292,8 +292,10 @@ def _publish_lines(state: TicketState, run: Path, trigger: JiraTicketTrigger, tr
         if (run / "publish" / "pr.json").is_file():
             plan = load_plan(run)
         else:
+            approved = json.loads((run / "run.json").read_text(encoding="utf-8")).get("approved_plan") or {}
+            placements = [(p["src"], p["dest"]) for p in approved.get("placements", [])]
             plan = prepare_publish(run=run, checkout=checkout, config=config, collection=target.collection,
-                                   placements=[], base=target.base, slug=state.key.lower())
+                                   placements=placements, base=target.base, slug=state.key.lower())
             state.note("pull request prepared", branch=plan.branch, commit=plan.commit[:12])
         lines = [f"Docs branch: {plan.branch} in {plan.repo} ({len(plan.files)} file(s))."]
         policy = config.resolve_policy(trigger=trigger_name, doc_collection=target.collection)["publishing"]
@@ -306,6 +308,12 @@ def _publish_lines(state: TicketState, run: Path, trigger: JiraTicketTrigger, tr
         return [f"The docs pull request could not be opened: {exc}. A person can run {command} after fixing it."]
     state.pull_request = plan.pr_url
     state.note("pull request opened", number=plan.pr_number, url=plan.pr_url)
+    if (run / "publish" / "plan-pr.json").is_file():
+        from docforge.github.docs_pr import reply
+
+        record = load_plan(run, "plan-pr")
+        reply(run, record, config, "drafts", f"The drafts for this plan are in {plan.pr_url}.", github_client)
+        save_plan(run, record)
     return lines + [f"Draft pull request: {plan.pr_url} (stays a draft until the feature ships)."]
 
 
@@ -450,6 +458,9 @@ def process(key: str, *, config: DocForgeConfig, config_path: Path, trigger_name
         if action == "draft":
             if state.run is None or not _stage_done(run, 1):
                 raise WorkError("the ticket has no finished plan")
+            if _uses_plan_pr(run) and not json.loads((run / "run.json").read_text(encoding="utf-8")).get(
+                    "approved_plan"):
+                raise WorkError("the plan pull request is not approved yet")
             if not all(_stage_done(run, n) for n in (2, 3)):
                 outcome = _run_stages(run, workspace, config, None, backend_client)
                 if outcome == "waiting":
@@ -499,3 +510,15 @@ def process_all(state_root: Path, **kw) -> list[dict]:
         if pending:
             results.append(process(path.stem, state_root=state_root, **kw))
     return results
+
+
+def queue_draft_after_approval(state_root: Path, key: str) -> bool:
+    """The ticket's plan pull request was approved: queue drafting. Returns False when the ticket is not
+    waiting for that approval (unknown, or not planned)."""
+    state = load_state(state_root, key)
+    if state is None or state.phase != "planned" or not state.plan_pr:
+        return False
+    state.phase, state.pending = "drafting", Pending(action="draft", at=now())
+    state.note("plan pull request approved", plan_pr=state.plan_pr)
+    save_state(state_root, state)
+    return True
