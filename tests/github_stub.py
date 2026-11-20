@@ -17,6 +17,7 @@ class FakeGithub:
         self.token = token
         self.pulls: dict[int, dict] = {}
         self.comments: list[dict] = []
+        self.statuses: list[dict] = []
         self.requests: list[tuple[str, str, dict, dict | None]] = []
         self.fail_next: int | None = None  # HTTP status for the next request, then cleared
         stub = self
@@ -61,11 +62,24 @@ class FakeGithub:
                 return 200, {"errors": [{"message": "not found"}]}
             pr["draft"] = False
             return 200, {"data": {"markPullRequestReadyForReview": {"pullRequest": {"isDraft": False}}}}
+        status = re.fullmatch(r"/repos/([^/]+)/([^/]+)/statuses/([0-9a-f]{40})", parts.path)
+        if status and method == "POST":
+            self.statuses.append({"repo": f"{status.group(1)}/{status.group(2)}", "sha": status.group(3), **body})
+            return 201, self.statuses[-1]
+        edit = re.fullmatch(r"/repos/([^/]+)/([^/]+)/issues/comments/(\d+)", parts.path)
+        if edit and method == "PATCH":
+            comment = next((c for c in self.comments if c["id"] == int(edit.group(3))), None)
+            if comment is None:
+                return 404, {"message": "Not Found"}
+            comment["body"] = body["body"]
+            return 200, comment
         match = re.fullmatch(r"/repos/([^/]+)/([^/]+)/(pulls|issues)(?:/(\d+))?(/comments)?", parts.path)
         if not match:
             return 404, {"message": "Not Found"}
         owner, name, kind, number, comments = match.groups()
         repo = f"{owner}/{name}"
+        if kind == "issues" and comments and method == "GET":
+            return 200, [c for c in self.comments if c["issue"] == int(number)]
         if kind == "issues" and comments and method == "POST":
             comment = {"id": len(self.comments) + 1, "issue": int(number), "body": body["body"]}
             self.comments.append(comment)

@@ -33,6 +33,18 @@ def sign(secret: bytes, body: bytes) -> str:
     return "sha256=" + hmac.new(secret, body, hashlib.sha256).hexdigest()
 
 
+def _diff_text(checkout: Path, base: str, head: str, limit: int) -> str:
+    """The unified diff for the model (at most `limit` characters; the rest is cut)."""
+    import subprocess
+
+    try:
+        result = subprocess.run(["git", "-C", str(checkout), "diff", "--no-color", "--unified=3", base, head],
+                                capture_output=True, text=True, timeout=60, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout[: limit + 1] if result.returncode == 0 else ""
+
+
 def verify_signature(secret: bytes, body: bytes, header: str | None) -> bool:
     if not secret or not header or not header.startswith("sha256="):
         return False
@@ -48,6 +60,9 @@ class Receiver:
     checkouts: dict[str, Path] = field(default_factory=dict)
     # Review on DocForge's own docs pull requests, when serve is given --docs-runs.
     docs: "DocsPrEndpoint | None" = None
+    config_path: Path | None = None  # finds each doc collection's checkout for the docs matches
+    model_client: object = None  # tests pass fakes; None uses the real clients when configured
+    github_client: object = None
 
     def handle(self, headers: Mapping[str, str], body: bytes) -> tuple[int, dict]:
         """Process one delivery. Returns (HTTP status, JSON response)."""
@@ -71,14 +86,25 @@ class Receiver:
         except EventError as exc:
             return 400, {"error": str(exc)}
 
-        changed, source, error = None, None, None
+        changed, source, error, diff_text = None, None, None, ""
         checkout = self.checkouts.get(event.repo.casefold())
         if checkout is not None and event.base_sha and event.head_sha:
             try:
                 changed, source = changes_for_event(event.base_sha, event.head_sha, checkout=checkout)
+                diff_text = _diff_text(checkout, event.base_sha, event.head_sha, self.config.triage.max_diff_chars)
             except DiffError as exc:
                 source, error = f"local checkout of {event.repo}", str(exc)
-        decision = decide(self.config, event, changed, diff_source=source, diff_error=error)
+        decision = decide(self.config, event, changed, diff_source=source, diff_error=error, diff_text=diff_text,
+                          ledger=self.log.with_name("triage-costs.jsonl"), config_path=self.config_path,
+                          client=self.model_client)
+        if decision.triage is not None:
+            from docforge.triage.feedback import post_feedback
+
+            t = decision.triage
+            decision.feedback = post_feedback(self.config, repo=event.repo, number=event.number, sha=event.head_sha,
+                                              outcome=decision.outcome, category=decision.category,
+                                              reasons=decision.reasons, products=t["products"], owners=t["owners"],
+                                              client=self.github_client)
         append_decision(self.log, decision)
         if self.docs is not None and event.kind == "merge":
             self.docs.source_merged(event.repo, event.number)

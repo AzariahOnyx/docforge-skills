@@ -1,9 +1,11 @@
 """The "docs needed?" decision and its research trail.
 
 Every event produces a decision record, including when the answer is no, and
-the record lists each read step taken to reach it. At this stage the decision
-is rule-based triage: a triggered event "needs research"; anything skipped or
-unmatched is "no". Model-based judgement comes with the research step later.
+the record lists each read step taken to reach it. Triggers decide which
+events are looked at; for a triggered pull request (or any pull request in a
+mapped repo when no github_pr trigger is configured), the triage decides the
+outcome: quiet, act, or act but a person confirms (see docforge.triage).
+`docs_needed` stays for older readers: act and confirm are "needs_research".
 """
 
 from __future__ import annotations
@@ -39,6 +41,11 @@ class DocsDecision(BaseModel):
     decided_at: str = Field(default_factory=_now)
     docs_needed: DocsNeeded
     summary: str
+    outcome: Literal["quiet", "act", "confirm"] | None = None
+    category: str | None = None
+    reasons: list[str] = Field(default_factory=list)
+    triage: dict[str, Any] | None = None
+    feedback: dict[str, Any] | None = None  # the advisory status and comment posted (or why not)
     event: dict[str, Any]
     triggers: list[TriggerCheck]
     changed_files: list[str] | None
@@ -52,6 +59,10 @@ def decide(
     *,
     diff_source: str | None = None,
     diff_error: str | None = None,
+    diff_text: str = "",
+    ledger: Path | None = None,
+    config_path: Path | None = None,
+    client=None,
 ) -> DocsDecision:
     trail = [ResearchStep(step="read_event", detail={
         "github_event": event.github_event, "action": event.action, "kind": event.kind,
@@ -84,9 +95,29 @@ def decide(
         needed = "no"
         summary = "; ".join(f"{c.trigger}: {c.outcome} ({c.reasons[0]})" for c in checks)
 
+    outcome = category = triaged = None
+    reasons: list[str] = []
+    mapped = any(name.casefold() == event.repo.casefold() for name in config.code_repos)
+    if event.kind in ("opened", "updated") and (triggered or (not checks and mapped)):
+        from docforge.triage import triage
+
+        result = triage(config, event, changed, diff_text=diff_text, config_path=config_path, client=client,
+                        ledger=ledger or DEFAULT_LOG.with_name("triage-costs.jsonl"))
+        trail.append(ResearchStep(step="triage", detail={"layer": result.layer, "outcome": result.outcome,
+                                                         "category": result.category}))
+        outcome, category, reasons, triaged = result.outcome, result.category, result.reasons, result.to_dict()
+        needed = "no" if outcome == "quiet" else "needs_research"
+        summary = f"{outcome}: " + "; ".join(reasons)
+    elif needed == "no":
+        outcome, reasons = "quiet", [summary]
+
     return DocsDecision(
         docs_needed=needed,
         summary=summary,
+        outcome=outcome,
+        category=category,
+        reasons=reasons,
+        triage=triaged,
         event={"repo": event.repo, "number": event.number, "github_event": event.github_event,
                "action": event.action, "kind": event.kind, "head_sha": event.head_sha, "title": event.title},
         triggers=checks,

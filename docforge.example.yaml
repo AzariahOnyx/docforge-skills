@@ -79,6 +79,20 @@ triggers:
       base: main
       plan_pr: true                   # propose the plan as ia-plan.md in a pull request; approving it approves the plan
 
+code_repos:                         # the dependency map: which code feeds which docs, and who owns it
+  example-org/product-web:
+    doc_collection: example-org/docs
+    spec_paths: ["specs/**/spec.md"]
+    areas:
+      - {path: "", products: [core], owner: example-writer}
+      - {path: src/analytics/, products: [analytics], feature: Dashboards, owner: example-writer-2}
+      - {path: tools/, products: [internal], documented: false}
+
+triage:                             # "docs needed?" for code pull requests
+  model: null                       # set a model to judge product code; without one, a person confirms
+  max_cost_usd_per_pr: 0.10
+  max_cost_usd_per_day: 5.0
+
 policies:
   default:
     publishing:
@@ -86,6 +100,7 @@ policies:
       auto_merge: false
       jira_comments: false          # off: replies go to the ticket's outbox only
       jira_transitions: false
+      source_pr_feedback: false     # true: advisory status (never blocking) and comment on code PRs
     notification:
       slack_channel: null           # set with slack_webhook_env to allow `notify slack --send`
     archiving:

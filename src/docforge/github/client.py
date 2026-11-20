@@ -137,3 +137,21 @@ class GithubClient:
             return bool(result["data"]["markPullRequestReadyForReview"]["pullRequest"]["isDraft"])
         except (KeyError, TypeError):
             raise GithubError("marking the pull request ready returned an unexpected answer") from None
+
+    # --- code pull requests (advisory docs check) ---------------------------------------
+
+    def set_status(self, repo: str, sha: str, *, state: str, context: str, description: str) -> dict:
+        if state not in ("success", "pending", "failure", "error"):
+            raise GithubError(f"unknown status state {state!r}")
+        return self.rest("POST", _repo_path(repo) + f"/statuses/{quote(sha, safe='')}",
+                         {"state": state, "context": context, "description": description[:140]})
+
+    def find_comment(self, repo: str, number: int, marker: str) -> dict | None:
+        """The first comment on the issue or pull request containing `marker` (first 100 comments)."""
+        found = self.rest("GET", _repo_path(repo) + f"/issues/{int(number)}/comments", query={"per_page": "100"})
+        if not isinstance(found, list):
+            raise GithubError("listing comments did not return a list")
+        return next((c for c in found if isinstance(c, dict) and marker in str(c.get("body", ""))), None)
+
+    def update_comment(self, repo: str, comment_id: int, body: str) -> dict:
+        return self.rest("PATCH", _repo_path(repo) + f"/issues/comments/{int(comment_id)}", {"body": body})

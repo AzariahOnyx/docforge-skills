@@ -387,6 +387,9 @@ class Publishing(Strict):
     # Off by default: DocForge then records what it would post in the ticket's outbox.
     jira_comments: bool | None = None
     jira_transitions: bool | None = None
+    # Code pull requests: post the advisory docs status (always "success", never blocking) and, when docs are
+    # needed or a person must confirm, one comment. Off by default: decisions are only logged.
+    source_pr_feedback: bool | None = None
 
 
 class Notification(Strict):
@@ -441,6 +444,7 @@ DEFAULT_POLICY = {
         "auto_merge": False,
         "suppress_source_pr_comments": False,
         "jira_comments": False,
+        "source_pr_feedback": False,
         "jira_transitions": False,
     },
     "notification": {"slack_channel": None, "slack_webhook_env": None},
@@ -518,6 +522,94 @@ class Backend(Strict):
 # --- root ------------------------------------------------------------------
 
 
+# --- dependency map and triage (B7d) -----------------------------------------
+
+
+GLOB_RE = re.compile(r"^[A-Za-z0-9_.*?\[\]{}/@+-]+$")
+
+
+def check_globs(value: list[str]) -> list[str]:
+    for pattern in value:
+        if not GLOB_RE.match(pattern) or pattern.startswith("/") or ".." in pattern.split("/"):
+            raise ValueError(f"not a relative path pattern: {pattern!r}")
+    return value
+
+
+class CodeArea(Strict):
+    """Part of a code repository (a path prefix; "" is the whole repository) and what it belongs to."""
+
+    path: str = ""
+    products: list[str] = Field(min_length=1)
+    feature: str | None = None
+    owner: str | None = None  # the owning writer
+    documented: bool = True  # false: internal code nobody documents; changes there stay quiet
+
+    @field_validator("path")
+    @classmethod
+    def _path(cls, value):
+        if value.startswith("/") or ".." in value.split("/"):
+            raise ValueError(f"area path must be a relative prefix: {value!r}")
+        return value
+
+
+class CodeRepo(Strict):
+    """One entry of the dependency map: a code repository, the docs it feeds and who owns what in it."""
+
+    doc_collection: str | None = None
+    documented: bool = True
+    spec_paths: list[str] = Field(default_factory=lambda: ["spec.md", "**/spec.md"])
+    areas: list[CodeArea] = Field(default_factory=list)
+    api_url: str = "https://api.github.com"
+    token_env: str = "GITHUB_TOKEN"
+
+    @field_validator("spec_paths")
+    @classmethod
+    def _spec_paths(cls, value):
+        return check_globs(value)
+
+    @field_validator("api_url")
+    @classmethod
+    def _api_url(cls, value):
+        return check_service_url(value)
+
+    @field_validator("token_env")
+    @classmethod
+    def _token_env(cls, value):
+        return check_env_name(value)
+
+
+TRIAGE_CATEGORIES = ("tests", "ci_build", "dependencies", "infra", "repo_docs", "ui_text", "feature_flags")
+
+
+class Triage(Strict):
+    """The "docs needed?" decision for code pull requests. Path rules always run; the model runs only for
+    changes the rules cannot decide, and only when `model` is set. Without it, those changes get "confirm"."""
+
+    model: str | None = None
+    api_key_env: str = "ANTHROPIC_API_KEY"
+    effort: Effort = "low"
+    max_tokens: int = Field(default=2000, ge=256, le=16000)
+    max_diff_chars: int = Field(default=40000, ge=1000, le=400000)
+    max_cost_usd_per_pr: float = Field(default=0.10, gt=0)
+    max_cost_usd_per_day: float = Field(default=5.0, gt=0)
+    prices: dict[str, ModelPrice] = Field(default_factory=dict)
+    # Extra path patterns per category, added to DocForge's defaults.
+    paths: dict[Literal["tests", "ci_build", "dependencies", "infra", "repo_docs", "ui_text", "feature_flags"],
+                list[str]] = Field(default_factory=dict)
+
+    @field_validator("api_key_env")
+    @classmethod
+    def _env(cls, value):
+        return check_env_name(value)
+
+    @field_validator("paths")
+    @classmethod
+    def _paths(cls, value):
+        for patterns in value.values():
+            check_globs(patterns)
+        return value
+
+
 class DocForgeConfig(Strict):
     doc_collections: dict[str, DocCollection] = Field(default_factory=dict)
     context_sources: dict[str, ContextSource] = Field(default_factory=dict)
@@ -525,6 +617,23 @@ class DocForgeConfig(Strict):
     policies: Policies = Field(default_factory=Policies)
     packs: dict[str, PackRef] = Field(default_factory=dict)
     backend: Backend | None = None
+    code_repos: dict[str, CodeRepo] = Field(default_factory=dict)  # the dependency map
+    triage: Triage = Field(default_factory=Triage)
+
+    @field_validator("code_repos")
+    @classmethod
+    def _code_repo_keys(cls, value):
+        for key in value:
+            if not REPO_RE.match(key):
+                raise ValueError(f"code_repos key must be owner/repo: {key!r}")
+        return value
+
+    @model_validator(mode="after")
+    def _code_repos_reference_collections(self):
+        for name, repo in self.code_repos.items():
+            if repo.doc_collection is not None and repo.doc_collection not in self.doc_collections:
+                raise ValueError(f"code_repos.{name}: doc_collection {repo.doc_collection!r} is not in doc_collections")
+        return self
 
     @field_validator("doc_collections")
     @classmethod

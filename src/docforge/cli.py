@@ -202,13 +202,34 @@ def _trigger_check(args: argparse.Namespace) -> int:
         event = parse_event(args.event, payload, prior_approvals=args.prior_approvals)
         changed, source = changes_for_event(event.base_sha, event.head_sha, diff_file=args.diff,
                                             checkout=args.checkout)
+        diff_text = ""
+        if args.diff is not None:
+            diff_text = args.diff.read_text(encoding="utf-8", errors="replace")[: config.triage.max_diff_chars + 1]
+        elif args.checkout is not None and event.base_sha and event.head_sha:
+            from docforge.webhook import _diff_text
+
+            diff_text = _diff_text(args.checkout, event.base_sha, event.head_sha, config.triage.max_diff_chars)
     except (ConfigError, EventError, DiffError, OSError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 1
-    decision = decide(config, event, changed, diff_source=source)
+    decision = decide(config, event, changed, diff_source=source, diff_text=diff_text,
+                      ledger=args.log.with_name("triage-costs.jsonl"), config_path=Path(args.config))
     if not args.no_log:
         append_decision(args.log, decision)
         print(f"Logged decision {decision.decision_id} to {args.log}", file=sys.stderr)
+    if getattr(args, "readable", False):
+        t = decision.triage or {}
+        print(f"{(decision.outcome or 'quiet').upper()}"
+              + (f" ({decision.category}, decided by {t.get('layer')})" if decision.category else ""))
+        for reason in decision.reasons or [decision.summary]:
+            print(f"  - {reason}")
+        if t.get("products"):
+            print(f"  Product: {', '.join(t['products'])}"
+                  + (f"; feature: {', '.join(t['features'])}" if t.get("features") else "")
+                  + (f"; writer: {', '.join(t['owners'])}" if t.get("owners") else ""))
+        if t.get("cost_usd"):
+            print(f"  Model cost: ${t['cost_usd']:.4f}")
+        return 0
     print(decision.model_dump_json(indent=2))
     return 0
 
@@ -240,7 +261,7 @@ def _serve(args: argparse.Namespace) -> int:
         docs = DocsPrEndpoint(config=config, config_path=Path(args.config), roots=list(args.docs_runs),
                               checkout=args.docs_checkout)
     receiver = (Receiver(config=config, secret=secret.encode("utf-8"), log=args.log, checkouts=dict(args.checkout),
-                         docs=docs) if secret else None)
+                         docs=docs, config_path=Path(args.config)) if secret else None)
     jira = None
     if args.jira_trigger:
         if args.jira_trigger not in config.triggers:
@@ -639,7 +660,7 @@ def _backfill(args: argparse.Namespace) -> int:
             print(f"Wrote {path}. A person sets docs_needed (yes/no) and labelled_by for each PR.")
         elif command == "replay":
             labels = args.labels or (args.folder / "labels.json" if (args.folder / "labels.json").is_file() else None)
-            report = backfill.replay(args.folder, load_config(args.config), labels)
+            report = backfill.replay(args.folder, load_config(args.config), labels, use_model=args.use_model)
             c = report["counts"]
             print(f"Replayed {report['prs']} PR(s); {report['labelled']} labelled. "
                   f"TP {c['true_positive']}, FP {c['false_positive']}, FN {c['false_negative']}, TN {c['true_negative']}. "
@@ -975,6 +996,16 @@ def main(argv: list[str] | None = None) -> int:
     tcheck.add_argument("--no-log", action="store_true", help="print the decision without logging it")
     tcheck.set_defaults(func=_trigger_check)
 
+    tri = sub.add_parser("triage", help="decide whether a saved code pull request needs docs: quiet, act or confirm")
+    tri.add_argument("payload", type=Path, help="pull_request webhook payload JSON file")
+    tri_source = tri.add_mutually_exclusive_group()
+    tri_source.add_argument("--diff", type=Path, help="unified diff of the pull request")
+    tri_source.add_argument("--checkout", type=Path, help="local checkout to diff base..head")
+    tri.add_argument("--config", default="docforge.yaml")
+    tri.add_argument("--log", type=Path, default=DEFAULT_LOG, help="decision log (JSON lines, appended)")
+    tri.add_argument("--no-log", action="store_true")
+    tri.set_defaults(func=_trigger_check, event="pull_request", prior_approvals=None, readable=True)
+
     serve_cmd = sub.add_parser("serve", help="receive GitHub (and Jira) webhooks; --docs-runs handles review on DocForge PRs")
     serve_cmd.add_argument("--host", default="127.0.0.1")
     serve_cmd.add_argument("--port", type=int, default=8787)
@@ -1151,6 +1182,8 @@ def main(argv: list[str] | None = None) -> int:
     breplay.add_argument("folder", type=Path)
     breplay.add_argument("--config", default="docforge.yaml")
     breplay.add_argument("--labels", type=Path, help="default: the folder's labels.json, if present")
+    breplay.add_argument("--use-model", action="store_true",
+                         help="let the triage model judge undecided PRs (paid calls; off by default)")
     breplay.set_defaults(func=_backfill)
     bprep = bf_sub.add_parser("prepare", help="create direct and staged arms for each benchmark case")
     bprep.add_argument("--cases", type=Path, default=Path("benchmarks/cases.json"))

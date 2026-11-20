@@ -68,8 +68,14 @@ def labellers(path: Path) -> list[str]:
     return sorted({r["labelled_by"].strip() for r in rows if r.get("docs_needed") is not None})
 
 
-def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None) -> dict:
-    """Decide every fetched PR again and compare with the labels. Writes replay-<time>.json and .md."""
+def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None, *, use_model: bool = False,
+           client=None) -> dict:
+    """Decide every fetched PR again and compare with the labels. Writes replay-<time>.json and .md.
+
+    Act and confirm count as "yes". Without `use_model`, the triage model is never called (no cost): PRs the
+    path rules cannot decide come out as confirm, as they would with no model configured."""
+    if not use_model:
+        config = config.model_copy(update={"triage": config.triage.model_copy(update={"model": None})})
     events = sorted((folder / "events").glob("*.json"), key=lambda p: int(p.stem)) if (folder / "events").is_dir() else []
     if not events:
         raise BackfillError(f"no fetched events in {folder}")
@@ -78,6 +84,7 @@ def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None
     independent = bool(by) and not any(m in name.casefold() for name in by for m in GENERATOR_MARKERS)
     rows = []
     counts = {"true_positive": 0, "false_positive": 0, "false_negative": 0, "true_negative": 0}
+    decided = {"quiet": 0, "act": 0, "confirm": 0}
     for path in events:
         number = int(path.stem)
         try:
@@ -87,8 +94,12 @@ def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None
         except (EventError, DiffError, ValueError) as exc:
             rows.append({"number": number, "error": str(exc)})
             continue
-        decision = decide(config, event, changed, diff_source=f"diff {number}")
+        diff_text = diff.read_text(encoding="utf-8", errors="replace")[: config.triage.max_diff_chars + 1] \
+            if diff.is_file() else ""
+        decision = decide(config, event, changed, diff_source=f"diff {number}", diff_text=diff_text,
+                          ledger=folder / "triage-costs.jsonl", client=client)
         predicted = "yes" if decision.docs_needed == "needs_research" else "no"
+        decided[decision.outcome or "quiet"] += 1
         label = labels.get(number)
         outcome = None
         if label is not None:
@@ -96,6 +107,7 @@ def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None
                        ("no", "yes"): "false_negative", ("no", "no"): "true_negative"}[(predicted, label)]
             counts[outcome] += 1
         rows.append({"number": number, "title": event.title, "kind": event.kind, "predicted": predicted,
+                     "decision": decision.outcome or "quiet", "category": decision.category,
                      "label": label, "outcome": outcome, "summary": decision.summary})
     tp, fp, fn = counts["true_positive"], counts["false_positive"], counts["false_negative"]
     report = {
@@ -103,6 +115,8 @@ def replay(folder: Path, config: DocForgeConfig, labels_path: Path | None = None
         "prs": len(rows), "labelled": sum(counts.values()),
         "unscored": [r["number"] for r in rows if r.get("label") is None],
         "counts": counts,
+        "decisions": decided,
+        "model_used": use_model,
         "precision": f"{tp}/{tp + fp}" if tp + fp else "n/a (no predicted yes among labelled PRs)",
         "recall": f"{tp}/{tp + fn}" if tp + fn else "n/a (no labelled yes)",
         "rows": rows,
@@ -129,7 +143,9 @@ def render_replay(report: dict) -> str:
         "| | Labelled yes | Labelled no |", "| --- | --- | --- |",
         f"| DocForge said yes | {c['true_positive']} | {c['false_positive']} |",
         f"| DocForge said no | {c['false_negative']} | {c['true_negative']} |", "",
-        f"Precision: {report['precision']}. Recall: {report['recall']}.", "",
+        f"Precision: {report['precision']}. Recall: {report['recall']}. Act and confirm count as yes.", "",
+        f"Decisions: {report['decisions']['act']} act, {report['decisions']['confirm']} confirm (a person decides), "
+        f"{report['decisions']['quiet']} quiet. Triage model: {'used' if report['model_used'] else 'not used'}.", "",
         "| PR | Title | Event | DocForge | Label | Result | Reason |", "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for r in report["rows"]:
@@ -138,6 +154,6 @@ def render_replay(report: dict) -> str:
             continue
         title = r["title"].replace("|", "\\|")
         summary = r["summary"].replace("|", "\\|")
-        lines.append(f"| {r['number']} | {title} | {r['kind'] or 'ignored'} | {r['predicted']} | "
+        lines.append(f"| {r['number']} | {title} | {r['kind'] or 'ignored'} | {r['decision']} | "
                      f"{r['label'] or 'unlabelled'} | {(r['outcome'] or 'unscored').replace('_', ' ')} | {summary} |")
     return "\n".join(lines) + "\n"

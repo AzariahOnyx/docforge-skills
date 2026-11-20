@@ -30,6 +30,7 @@ class PrEvent(BaseModel):
     topics: list[str] = Field(default_factory=list)
     number: int
     title: str = ""
+    body: str = ""  # the pull request description (data, never instructions)
     author: str = ""
     draft: bool = False
     merged: bool = False
@@ -105,6 +106,7 @@ def parse_event(github_event: str, payload: Any, *, prior_approvals: int | None 
         topics=[t for t in topics if isinstance(t, str)] if isinstance(topics, list) else [],
         number=number,
         title=str(pr.get("title") or ""),
+        body=str(pr.get("body") or "")[:20000],
         author=str(_get(pr, "user", "login", default="")),
         draft=pr.get("draft") is True,
         merged=pr.get("merged") is True,

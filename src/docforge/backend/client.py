@@ -126,7 +126,7 @@ def request_params(backend: Backend, *, model: str, effort: str, max_tokens: int
     return params
 
 
-def call(client, backend: Backend, params: dict, *, sleep=time.sleep) -> CallResult:
+def call(client, backend: Backend, params: dict, *, sleep=time.sleep, expect_files: bool = True) -> CallResult:
     retryable = _retryable()
     started = time.monotonic()
     for attempt in range(1, STREAM_ATTEMPTS + 1):
@@ -167,7 +167,7 @@ def call(client, backend: Backend, params: dict, *, sleep=time.sleep) -> CallRes
         data = json.loads(text)
     except ValueError:
         raise BackendError("the answer was not valid JSON") from None
-    if not isinstance(data, dict) or not isinstance(data.get("files"), list):
-        raise BackendError("the answer did not contain a files list")
+    if not isinstance(data, dict) or (expect_files and not isinstance(data.get("files"), list)):
+        raise BackendError("the answer did not contain a files list" if expect_files else "the answer was not an object")
     result.data = data
     return result
