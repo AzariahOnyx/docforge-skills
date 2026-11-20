@@ -57,7 +57,7 @@ def test_fixture_plan_reads_back():
     ("site/alerts/notifications/pause-for-1-hour.md", "site/alerts/notifications/quiet-hours.md", "used twice"),
     ("site/alerts/notifications/quiet-hours.md", "../secret.md", "relative .md path"),
     ("| Q02 |", "| Question 2 |", "must look like Q01"),
-    ("| C01, C02, C04 |", "| claims 1 and 2 |", "are not claim IDs"),
+    ("| C01, C02, C04 |", "| claims 1 and 2 |", "neither a claim ID"),
     ("| Title | Type | Docs path | Why | Claims |", "| Title | Kind | Docs path | Why | Claims |", "columns must be"),
     ("## Out of scope", "## Not in scope", "missing section: ## Out of scope"),
     ("source_prs: []", "source_prs: [main]", "source_prs must be a list"),

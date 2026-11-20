@@ -1,6 +1,8 @@
 """`ia-plan.md`: the documentation plan a writer reviews and approves as a pull request.
 
-The file has YAML front matter and five sections, each a table with fixed columns (or the line "None.").
+One format for every route (the engine and the docs-writer agent; B12a-0). The file has YAML front
+matter and five sections, each a table with fixed columns (or the line "None."). The first engine
+format's columns are still read and converted, so earlier plans keep working.
 DocForge writes it, a writer may edit it, and DocForge reads the approved version back, so the format is
 checked strictly: `parse_plan` reads it and `check_plan` lists every problem.
 """
@@ -14,18 +16,30 @@ import re
 import yaml
 
 FRONT_KEYS = ("feature", "mode", "product", "category", "owner", "source_prs", "engineering_spec", "release")
-OPTIONAL_KEYS = ("jira", "docforge_run")
+OPTIONAL_KEYS = ("jira", "docforge_run", "decision", "decision_reason", "status")
 MODES = ("Net-New", "Enhancement")
-CHANGES = ("update", "deprecate", "remove")
+ACTIONS = ("update", "archive", "none")
+STATUSES = ("proposed", "approved")
+DECISIONS = ("act", "confirm", "quiet")
 DEFAULT_TYPES = ("overview", "procedural", "release-notes")
+# The unified format (B12a-0): one plan format for the engine and the docs-writer agent.
 SECTIONS = {
-    "Existing articles - impact": ("Article", "Docs path", "Change", "Why", "Claims"),
-    "New articles": ("Title", "Type", "Docs path", "Why", "Claims"),
+    "Existing articles - impact": ("Article", "Docs path", "Action", "Change needed", "Outdated passage", "Evidence"),
+    "New articles": ("Title", "Type", "Docs path", "Why", "Evidence"),
     "Out of scope": ("Topic", "Reason"),
     "Open questions": ("ID", "Question", "Why it matters"),
+    "Spec-versus-code conflicts": ("ID", "Spec says", "Code says", "Where", "Question"),
+}
+# The first engine format (B7c) is still read; its rows are converted to the unified columns.
+FIRST_FORMAT = {
+    "Existing articles - impact": ("Article", "Docs path", "Change", "Why", "Claims"),
+    "New articles": ("Title", "Type", "Docs path", "Why", "Claims"),
     "Spec-versus-code conflicts": ("ID", "Claim", "Spec says", "Code says", "Question"),
 }
+FIRST_ACTIONS = {"update": "update", "deprecate": "archive", "remove": "archive"}
 CLAIM_RE = re.compile(r"^C\d+[A-Z]?$")
+# Evidence: claim IDs (the engine) or source tags (the agent: SPEC:<section>, CODE:<path>:<line>, ...).
+TAG_RE = re.compile(r"^[A-Z][A-Z0-9_]{1,15}:\S.*$")
 SOURCE_PR_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[1-9][0-9]*$")
 FRONT_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
@@ -51,11 +65,16 @@ class IaPlan:
     def conflicts(self) -> list[dict]:
         return self.sections.get("Spec-versus-code conflicts", [])
 
+    @property
+    def approved(self) -> bool:
+        return str(self.front.get("status", "")).casefold() == "approved"
+
     def articles(self) -> list[dict]:
-        """Every article the plan touches: {title, type, path, change} (change "create" for new articles)."""
+        """Every article the plan touches: {title, type, path, change} ("create" for new articles; "update" or
+        "archive" for existing ones; rows with action "none" are listed but need no work)."""
         return ([{"title": a["Title"], "type": a["Type"], "path": a["Docs path"], "change": "create"} for a in self.new]
-                + [{"title": a["Article"], "type": None, "path": a["Docs path"], "change": a["Change"].casefold()}
-                   for a in self.existing])
+                + [{"title": a["Article"], "type": None, "path": a["Docs path"], "change": a["Action"].casefold()}
+                   for a in self.existing if a["Action"].casefold() != "none"])
 
 
 def _cells(line: str) -> list[str]:
@@ -93,8 +112,9 @@ def parse_plan(text: str) -> tuple[IaPlan | None, list[str]]:
                 errors.append(f"## {name}: give a table or the line \"None.\"")
             plan.sections[name] = []
             continue
-        header = _cells(table[0])
-        if tuple(header) != columns:
+        header = tuple(_cells(table[0]))
+        first = FIRST_FORMAT.get(name)
+        if header != columns and header != first:
             errors.append(f"## {name}: the columns must be {' | '.join(columns)} (found {' | '.join(header)})")
             plan.sections[name] = []
             continue
@@ -103,12 +123,26 @@ def parse_plan(text: str) -> tuple[IaPlan | None, list[str]]:
             cells = _cells(line)
             if all(set(c) <= set("-: ") for c in cells):
                 continue
-            if len(cells) != len(columns):
-                errors.append(f"## {name}: a row has {len(cells)} cells instead of {len(columns)}: {line.strip()[:80]}")
+            if len(cells) != len(header):
+                errors.append(f"## {name}: a row has {len(cells)} cells instead of {len(header)}: {line.strip()[:80]}")
                 continue
-            rows.append(dict(zip(columns, cells)))
+            row = dict(zip(header, cells))
+            rows.append(_unify(name, row) if header == first else row)
         plan.sections[name] = rows
     return plan, errors
+
+
+def _unify(section: str, row: dict) -> dict:
+    """A row of the first engine format, in the unified columns."""
+    if section == "Existing articles - impact":
+        return {"Article": row["Article"], "Docs path": row["Docs path"],
+                "Action": FIRST_ACTIONS.get(row["Change"].casefold(), row["Change"]), "Change needed": row["Why"],
+                "Outdated passage": "", "Evidence": row["Claims"]}
+    if section == "New articles":
+        return {"Title": row["Title"], "Type": row["Type"], "Docs path": row["Docs path"], "Why": row["Why"],
+                "Evidence": row["Claims"]}
+    return {"ID": row["ID"], "Spec says": row["Spec says"], "Code says": row["Code says"], "Where": "",
+            "Question": row["Question"], "Claim": row["Claim"]}
 
 
 def _claims(cell: str) -> list[str]:
@@ -135,6 +169,10 @@ def check_plan(plan: IaPlan, *, types: list[str] | None = None, allows=None) -> 
         errors.append("front matter: source_prs must be a list of owner/repo#123 entries")
     if "engineering_spec" in front and not isinstance(front["engineering_spec"], str):
         errors.append("front matter: engineering_spec must be a path, a link or none")
+    if "status" in front and str(front["status"]).casefold() not in STATUSES:
+        errors.append(f"front matter: status must be {' or '.join(STATUSES)}, not {front['status']!r}")
+    if "decision" in front and str(front["decision"]).casefold() not in DECISIONS:
+        errors.append(f"front matter: decision must be {', '.join(DECISIONS)}, not {front['decision']!r}")
 
     allowed_types = list(types or DEFAULT_TYPES)
     paths: list[str] = []
@@ -145,13 +183,14 @@ def check_plan(plan: IaPlan, *, types: list[str] | None = None, allows=None) -> 
             errors.append(f"## New articles: type {row['Type']!r} is not one of {', '.join(allowed_types)}")
         paths.append(row["Docs path"])
     for row in plan.existing:
-        if row["Change"].casefold() not in CHANGES:
-            errors.append(f"## Existing articles - impact: change {row['Change']!r} must be {', '.join(CHANGES)}")
+        if row["Action"].casefold() not in ACTIONS:
+            errors.append(f"## Existing articles - impact: action {row['Action']!r} must be {', '.join(ACTIONS)}")
         paths.append(row["Docs path"])
     for row in plan.new + plan.existing:
-        bad = [c for c in _claims(row["Claims"]) if not CLAIM_RE.match(c)]
+        bad = [c for c in _claims(row["Evidence"]) if not CLAIM_RE.match(c) and not TAG_RE.match(c)]
         if bad:
-            errors.append(f"claims {', '.join(bad)} are not claim IDs like C03 (or write none)")
+            errors.append(f"evidence {', '.join(bad)} is neither a claim ID like C03 nor a source tag like "
+                          "SPEC:<section> (or write none)")
     for path in paths:
         parts = PurePosixPath(path).parts
         if not path.endswith(".md") or path.startswith("/") or ".." in parts or "\\" in path or "`" in path:
@@ -167,7 +206,7 @@ def check_plan(plan: IaPlan, *, types: list[str] | None = None, allows=None) -> 
     for row in plan.conflicts:
         if not re.fullmatch(r"X\d+", row["ID"]):
             errors.append(f"## Spec-versus-code conflicts: ID {row['ID']!r} must look like X1")
-        if not CLAIM_RE.match(row["Claim"]):
+        if "Claim" in row and not CLAIM_RE.match(row["Claim"]):
             errors.append(f"## Spec-versus-code conflicts: claim {row['Claim']!r} must look like C05")
     if not plan.new and not plan.existing:
         errors.append("the plan has no article to create or update")

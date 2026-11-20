@@ -40,7 +40,7 @@ KIND = "plan-pr"
 APPROVED = "analysis/ia-plan.approved.md"
 TYPE_TO_DELIVERABLE = {"overview": "feature/feature-guide.md", "procedural": "how-to/how-to.md",
                        "release-notes": "release-note/release-note.md"}
-ACTIVE = ("changes_requested", "revising", "approved")
+ACTIVE = ("changes_requested", "revising", "approved", "pushed")
 
 
 def _now() -> datetime:
@@ -75,6 +75,17 @@ def handle_plan_event(event: DocsPrEvent, *, run: Path, config: DocForgeConfig, 
         return {**result, "action": "approved" if record.status == "approved" else event.kind}
     if record.github_state or record.status == "closed":
         return {**result, "action": "ignore", "reason": f"the plan pull request is {record.github_state or 'closed'}"}
+    if event.kind == "pushed":
+        if not event.commit or event.commit == record.pushed_commit:
+            return {**result, "action": "ignore", "reason": "DocForge's own push"}
+        if record.status in ("approved", "drafting"):
+            return {**result, "action": "ignore", "reason": "the plan is already approved"}
+        # Someone else pushed: the plan may now say `status: approved`. The next run reads it at this commit.
+        record.history.append({"at": at, "event": "pushed", "by": event.author, "commit": event.commit})
+        record.status, record.approved_commit = "pushed", event.commit
+        _remember(record, delivery_id)
+        save_plan(run, record)
+        return {**result, "action": "pushed", "commit": event.commit}
     if event.kind == "ignore":
         return {**result, "action": "ignore", "reason": event.reason}
     problem = _reviewer_problem(event, collection)
@@ -221,7 +232,7 @@ def _read_approval(run: Path, record, config: DocForgeConfig, checkout: Path, cl
         _restore_plan(run, latest)
         record.history.append({"at": _now().isoformat(), "event": "revision_cancelled_by_approval",
                                "restored": f"r{latest}"})
-    (run / APPROVED).write_text(text, encoding="utf-8")
+    (run / APPROVED).write_text(_with_status_approved(text), encoding="utf-8")
     applied = apply_approved_plan(run, plan, commit=commit, link=record.pr_url)
     record.status, record.approved_commit = "drafting", commit
     record.history.append({"at": _now().isoformat(), "event": "approval_read", "commit": commit})
@@ -233,6 +244,21 @@ def _read_approval(run: Path, record, config: DocForgeConfig, checkout: Path, cl
     reply(run, record, config, "approved", "\n".join(lines), client)
     save_plan(run, record)
     return {"result": "approved", **applied}
+
+
+def _with_status_approved(text: str) -> str:
+    """The approved plan as kept in the run: `status: approved` in its front matter, whatever approved it."""
+    import re
+
+    end = text.find("\n---", 4)
+    if not text.startswith("---\n") or end < 0:
+        return text
+    front = text[4:end]
+    if re.search(r"^status:", front, re.M):
+        front = re.sub(r"^status:.*$", "status: approved", front, count=1, flags=re.M)
+    else:
+        front = front.rstrip("\n") + "\nstatus: approved"
+    return "---\n" + front + text[end:]
 
 
 def process_plan_pr(run: Path, *, config: DocForgeConfig, checkout: Path | None, client=None, backend_client=None,
@@ -252,6 +278,28 @@ def process_plan_pr(run: Path, *, config: DocForgeConfig, checkout: Path | None,
     now = now or _now()
     _promote(record)
     save_plan(run, record)
+
+    if record.status == "pushed":
+        # Approval in the file: a writer set `status: approved` in the plan on the pull request's branch.
+        from docforge.github.push import fetch_branch, show_file
+
+        _, git_url, token = _git(config, record)
+        try:
+            fetch_branch(checkout, record.branch, git_url, token)
+            text = show_file(checkout, record.approved_commit, record.placements[0]["dest"])
+        except PublishError as exc:
+            return {**result, "result": "failed", "reason": str(exc)}
+        plan, _ = read_plan(text, types=run_plan_types(run), allows=collection.allows)
+        if plan is not None and plan.approved:
+            record.status = "approved"
+            record.history.append({"at": now.isoformat(), "event": "approved", "by": "status: approved in the file",
+                                   "commit": record.approved_commit})
+        else:
+            record.status, record.approved_commit = "hand_edited", None  # a person edits the plan: never rewritten
+            record.history.append({"at": now.isoformat(), "event": "hand_edited"})
+            save_plan(run, record)
+            return {**result, "result": "hand_edited"}
+        save_plan(run, record)
 
     if record.status == "approved":
         try:

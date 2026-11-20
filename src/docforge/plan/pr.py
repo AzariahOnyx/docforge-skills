@@ -49,7 +49,12 @@ def plan_body(plan: IaPlan, run: Path, dest: str) -> str:
     lines += ["", f"## Open questions ({len(plan.questions)})", ""]
     lines += [f"- {q['ID']}: {q['Question']}" for q in plan.questions] or ["None."]
     lines += ["", f"## Spec-versus-code conflicts ({len(plan.conflicts)})", ""]
-    lines += [f"- {c['ID']} ({c['Claim']}): {c['Question']}" for c in plan.conflicts] or ["None."]
+    lines += [f"- {c['ID']}" + (f" ({c['Claim']})" if c.get("Claim") else "") + f": {c['Question'] or c['Spec says']}"
+              for c in plan.conflicts] or ["None."]
+    passages = [a for a in plan.existing if a["Outdated passage"]]
+    if passages:
+        lines += ["", "## Outdated passages", ""]
+        lines += [f"- `{a['Docs path']}` ({a['Action']}): \"{a['Outdated passage']}\"" for a in passages]
     lines += ["", "To answer a question, comment with each answer on its own line, for example `Q3: only workspace "
               "admins`, mentioning DocForge. Answers become sources the drafts can cite.", ""]
     body = "\n".join(lines)

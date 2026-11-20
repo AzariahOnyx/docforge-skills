@@ -122,8 +122,11 @@ def _ia_plan_lines(manifest: dict, pack, tools_prefix: str, out_label: str) -> l
              f"Also write `analysis/ia-plan.md`, following `{tools_prefix}templates/ia-plan.md` exactly: the same front "
              "matter keys, section names and table columns. A writer reviews it as a pull request, may edit it, and "
              "DocForge drafts from the approved version.", "",
-             "- New articles are the CREATE rows of the content plan, existing articles the UPDATE rows; DEFER rows "
-             "go to Out of scope with their reason.",
+             "- New articles are the CREATE rows of the content plan, existing articles the UPDATE rows (action "
+             "update, or archive for an article to retire); DEFER rows go to Out of scope with their reason.",
+             "- For an existing article, quote the published sentence that is now wrong in \"Outdated passage\", "
+             "word for word from the docs; leave it empty when the article only needs an addition.",
+             "- Evidence lists the handover's claim IDs (C03) a row rests on, or none.",
              "- Open questions repeat the clarification register's questions with the same IDs. Spec-versus-code "
              "conflicts come from `analysis/cross-source.json`; without it, write \"None. No code was compared.\"",
              f"- Article types: {', '.join(types)}.",

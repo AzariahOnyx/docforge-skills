@@ -83,7 +83,7 @@ Inventory supplied existing documentation, if any. For each topic, record its re
 
 ### ia-plan.md (when the work order asks for it)
 
-Some runs propose their plan to writers as a pull request. When the work order has an "IA plan" section, also write `analysis/ia-plan.md`, following `templates/ia-plan.md` exactly: the same front matter keys, section names and table columns, because DocForge reads the file back after a writer edits it. Derive it from the content plan (CREATE rows become new articles, UPDATE rows existing articles, DEFER rows out of scope) and repeat the clarification register's open questions with the same IDs. Write `unknown` for any front matter value the sources and the work order do not give; never guess an owner, release or category.
+Some runs propose their plan to writers as a pull request. When the work order has an "IA plan" section, also write `analysis/ia-plan.md`, following `templates/ia-plan.md` exactly: the same front matter keys, section names and table columns, because DocForge reads the file back after a writer edits it. Derive it from the content plan (CREATE rows become new articles, UPDATE rows existing articles with action `update` or `archive`, DEFER rows out of scope) and repeat the clarification register's open questions with the same IDs. For each existing article, quote the published sentence that is now wrong in "Outdated passage", word for word; give claim IDs as evidence. The same format is used by the docs-writer agent, so keep it exact. Write `unknown` for any front matter value the sources and the work order do not give; never guess an owner, release or category.
 
 ## Source integrity and mixed formats
 

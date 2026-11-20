@@ -107,7 +107,9 @@ def test_approval_drafts_from_the_approved_plan(jira, tmp_path, github, docs):
     queued = []
     result = process_plan_pr(run, config=cfg, checkout=docs[0], on_approved=queued.append)
     assert result["result"] == "approved" and queued == [run]
-    assert (run / "analysis" / "ia-plan.approved.md").read_text() == git(docs[1], "show", f"{edited}:{PLAN_FILE}") + "\n"
+    kept = (run / "analysis" / "ia-plan.approved.md").read_text()
+    assert kept.replace("\nstatus: approved", "") == git(docs[1], "show", f"{edited}:{PLAN_FILE}") + "\n"
+    assert "\nstatus: approved\n---" in kept  # the approved copy records the approval
     manifest = json.loads((run / "run.json").read_text())
     assert manifest["deliverables"] == ["feature/feature-guide.md", "how-to/how-to.md"]
     assert manifest["approved_plan"]["commit"] == edited and manifest["approved_plan"]["needs_own_run"] == []
@@ -289,3 +291,33 @@ def test_checker_requires_only_the_approved_drafts(tmp_path):
     assert "release-note/release-note.md" not in required and "how-to/how-to.md" in required
     (tmp_path / "run.json").write_text(json.dumps({"deliverables": ["other.md"], "approved_plan": {}}))
     assert checker.required_files(tmp_path) == checker.REQUIRED
+
+
+def _synchronize(commit, sender="writer-1"):
+    return "pull_request", {"action": "synchronize", "repository": {"full_name": REPO}, "sender": {"login": sender},
+                            "pull_request": {"number": 1, "head": {"ref": BRANCH, "sha": commit}}}
+
+
+def test_status_approved_in_the_file_approves_the_plan(jira, tmp_path, github, docs):
+    cfg, run = planned(jira, tmp_path, github, docs)
+    own = load_plan(run, "plan-pr").pushed_commit
+    assert deliver(run, cfg, *_synchronize(own))["action"] == "ignore"  # DocForge's own push
+    approved = writer_push(tmp_path, docs[1], lambda t: t.replace("docforge_run: pulse-77",
+                                                                  "docforge_run: pulse-77\nstatus: approved"))
+    assert deliver(run, cfg, *_synchronize(approved))["action"] == "pushed"
+    queued = []
+    result = process_plan_pr(run, config=cfg, checkout=docs[0], on_approved=queued.append)
+    assert result["result"] == "approved" and queued == [run]
+    assert load_plan(run, "plan-pr").approved_commit == approved
+    assert "status: approved" in (run / "analysis" / "ia-plan.approved.md").read_text()
+
+
+def test_a_push_without_approval_is_a_hand_edit(jira, tmp_path, github, docs):
+    cfg, run = planned(jira, tmp_path, github, docs)
+    edited = writer_push(tmp_path, docs[1], lambda t: t.replace("owner: unknown", "owner: writer-1"))
+    deliver(run, cfg, *_synchronize(edited))
+    assert process_plan_pr(run, config=cfg, checkout=docs[0])["result"] == "hand_edited"
+    assert load_plan(run, "plan-pr").status == "hand_edited"
+    deliver(run, cfg, *approve(edited))  # approving the pull request still works
+    assert process_plan_pr(run, config=cfg, checkout=docs[0])["result"] == "approved"
+    assert "status: approved" in (run / "analysis" / "ia-plan.approved.md").read_text()

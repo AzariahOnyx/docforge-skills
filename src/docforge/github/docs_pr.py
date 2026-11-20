@@ -211,8 +211,8 @@ def handle_docs_event(event: DocsPrEvent, *, run: Path, config: DocForgeConfig, 
         return {**result, "action": event.kind}
     if plan.github_state or plan.status == "closed":
         return {**result, "action": "ignore", "reason": f"the pull request is {plan.github_state or 'closed'}"}
-    if event.kind == "ignore":
-        return {**result, "action": "ignore", "reason": event.reason}
+    if event.kind in ("ignore", "pushed"):
+        return {**result, "action": "ignore", "reason": event.reason or "new commits on the drafts pull request"}
     problem = _reviewer_problem(event, collection)
     if problem:
         return {**result, "action": "ignore", "reason": problem}

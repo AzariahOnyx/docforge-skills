@@ -17,7 +17,7 @@ MAX_TEXT = 4000
 @dataclass
 class DocsPrEvent:
     github_event: str
-    kind: str  # review, line_comment, comment, merged, closed, ignore
+    kind: str  # review, line_comment, comment, merged, closed, pushed, ignore
     repo: str
     number: int
     branch: str | None = None  # absent on issue_comment payloads
@@ -74,10 +74,13 @@ def parse_docs_event(github_event: str, payload) -> DocsPrEvent | None:
     event = DocsPrEvent(github_event, "ignore", repo, number, branch if isinstance(branch, str) else None)
 
     if github_event == "pull_request":
+        sha = _get(payload, "pull_request", "head", "sha")
+        event.commit = sha if isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha) else None
+        event.author = str(_get(payload, "sender", "login", default=""))
         if action == "closed":
             event.kind = "merged" if _get(payload, "pull_request", "merged") is True else "closed"
-            sha = _get(payload, "pull_request", "head", "sha")
-            event.commit = sha if isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha) else None
+        elif action == "synchronize":
+            event.kind = "pushed"  # new commits on the pull request's branch
         else:
             event.reason = f"pull_request {action!r} needs nothing from DocForge"
         return event
