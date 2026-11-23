@@ -14,10 +14,10 @@ This repo already holds the **evidence half**: the Analyzer, Drafter and Proofre
 
 ## Security note: this repo is public
 
-Before any Whatfix PRD, code excerpt, docs content or config with internal names goes in, choose one of these:
+Before any real company PRD, code excerpt, docs content or config with internal names goes in, choose one of these:
 
 - make this repo private, or
-- keep the engine public and keep all Whatfix inputs, outputs and `docforge.yaml` in a separate private repo.
+- keep the engine public and keep all private inputs, outputs and `docforge.yaml` in a separate private repo.
 
 Until then, use only the fictional demo material.
 
@@ -66,7 +66,7 @@ One milestone at a time. Each one ends with passing tests and a short report bef
 2. Knowledge-base rules learned from feedback. Each rule needs approval and is tested against past runs before it goes live.
 3. Backfill: replay past PRs as an evaluation set, using `benchmarks/` as the scoring method.
 4. Jira and Confluence as PRD sources and context; Slack notifications.
-5. Repeatable screenshot capture of Whatfix's extension-style UI in a test account.
+5. Repeatable screenshot capture of a browser-extension-style product UI in a test account.
 6. Changelog and release-note automation; scheduled drift checks.
 
 ## Inputs needed, and when
